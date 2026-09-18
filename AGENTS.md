@@ -29,3 +29,12 @@ TypeScript strict 모드를 유지하고 2칸 들여쓰기를 사용한다. 컴�
 ## 보안과 설정
 
 비밀정보는 `.env.local` 또는 배포 환경에만 저장하고 커밋하지 않는다. 브라우저에는 `NEXT_PUBLIC_SUPABASE_URL`과 publishable key만 노출한다. 서비스 역할 키와 Kiwoom/KRX 자격 증명은 서버 또는 예약 작업에서만 사용하며 로그와 문서 예제에서는 값을 가린다.
+
+## ETF 신호 MVP 작업 연속성
+
+- 정본 문서: `docs/plans/ETF-signal-MVP-plan-v2.2.md`, `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`, `docs/plans/ETF-signal-MVP-v2.2-상세-개발-실행방안.md`
+- 현재 현황·재개 기준: `docs/plans/implementation/`, `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/jobs/2026-09-18-etf-signal-mvp-m0-m1-작업기록.md`
+- 2026-09-18 기준 M0–M1의 구현·Supabase 스키마/RLS 적용은 완료했고, 다음 작업은 M2의 KRX·Kiwoom 수집 결과를 `source_snapshot`과 정규화 테이블에 멱등 저장하는 것이다.
+- `npm test`, `npx tsc --noEmit`, `npm run lint`는 통과했다. `npm run build`는 실행 환경의 Google Fonts 네트워크·Turbopack 권한 제약이 해소된 뒤 재검증한다.
+- Linear 프로젝트·이슈는 실행 상태 추적용이며, 설계·코드의 정본은 위 저장소 문서와 Git이다. 비밀값·토큰·DB 비밀번호를 어떤 기록에도 남기지 않는다.
+- 세션 시작·종료 시에는 `npm run continuity:check`와 연속성 하네스의 작업 기록→정본 문서→Linear→OpenViking 순서를 따른다.

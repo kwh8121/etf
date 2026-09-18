@@ -34,7 +34,7 @@
 
 ## 3. 검토 근거와 원천별 역할
 
-이 노트는 `ETF-signal-MVP-plan-v2.md`, `ETF 일별매매정보_Spec.docx`, `krx_api_report.md`, `kiwoom_api_report.md`, `kiwoom-rest-api-spec.json`, Spec Kit·Superpowers 요약을 근거로 작성했다. 보고서의 운영 API 실측은 해당 문서에 기재된 검증 결과이며, 이번 노트 작성에서 API 호출·코드 실행·백테스트를 새로 수행한 것은 아니다.
+이 노트는 `docs/archive/plans/ETF-signal-MVP-plan-v2.md`, `ETF 일별매매정보_Spec.docx`, `krx_api_report.md`, `kiwoom_api_report.md`, `kiwoom-rest-api-spec.json`, Spec Kit·Superpowers 요약을 근거로 작성했다. 보고서의 운영 API 실측은 해당 문서에 기재된 검증 결과이며, 이번 노트 작성에서 API 호출·코드 실행·백테스트를 새로 수행한 것은 아니다.
 | 원천 | 확인된 제공 범위 | MVP 역할 및 한계 |
 | --- | --- | --- |
 | KRX `etf_bydd_trd` | 기준일별 OHLC, NAV, 거래량·거래대금, 순자산, 좌수, 지수명 등 | 주 수집원. 분배금·기업행동 확정 이력·과거 상품 적격성은 이 endpoint만으로 확정 불가 |

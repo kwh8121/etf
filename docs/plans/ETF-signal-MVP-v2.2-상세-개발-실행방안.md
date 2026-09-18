@@ -5,6 +5,7 @@
 > 상위 로드맵: `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`
 > 개발 방법론: `docs/references/Superpowers 스킬 요약-Codex.md`
 > 진행 모니터링: Linear MCP를 이용한 프로젝트·마일스톤·이슈·상태 업데이트
+> E2E 키·환경 설정: `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`
 > 문서 목적: 로드맵의 각 마일스톤을 실제로 실행 가능한 세부 구현 계획과 개발 작업으로 변환하는 방법을 정의한다.
 
 ## 1. 권장 개발 방법

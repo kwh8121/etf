@@ -2,6 +2,7 @@
 
 > 작성일: 2026-09-17
 > 기준: v2(2026-09-17) + v3 리뷰 검토 결과 반영
+> 이력 문서: `docs/archive/plans/ETF-signal-MVP-plan-v2.md`, `docs/archive/plans/ETF-signal-MVP-plan-v3.md`
 > 문서 성격: **구현 지시서**. v2는 승인 판단용이었고, v2.1은 실제로 무엇을 짤지 고정한다
 > 원칙: 투자·시장 데이터 원천은 **KRX + 키움**으로 제한. 임계값은 전부 초기값(seed)이며 관측 20영업일 후 교체
 
