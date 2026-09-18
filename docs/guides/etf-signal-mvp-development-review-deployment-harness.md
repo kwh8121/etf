@@ -33,14 +33,14 @@
 | 소스 저장소 | 확인됨 | GitHub 원격 `https://github.com/kwh8121/etf.git`, 기본 작업 브랜치 `main` |
 | 웹 애플리케이션 | 확인됨 | Next.js 16.3.5, React 19, TypeScript strict 기반 시작 템플릿 |
 | 인증 경계 | 확인됨 | `lib/supabase/server.ts`, `lib/supabase/proxy.ts`, `app/protected/page.tsx`가 publishable key와 사용자 claims를 사용 |
-| Production build 기준선 | 재검증 대기 | 코드와 무관하게 Google Fonts 다운로드 네트워크 제한 및 Turbopack 프로세스·포트 권한 제약으로 `npm run build`를 완료하지 못했다. 정상 실행 환경에서 다시 검증한다. |
+| Production build 기준선 | 확인됨 | Node `22.23.2`에서 Webpack 경로로 고정한 `npm run build`가 성공했다. |
 | 테스트 러너 | 확인됨 | Vitest와 `npm test`를 구성했고 24개 테스트가 통과했다. |
 | Spec Kit 작업 공간 | 미구성 | `.specify/`, `specs/`가 없다. 개발 진입 Gate에서 생성해야 한다. |
 | 시장 데이터 코드 | M2 일부 구현 | KRX 날짜·파싱·완전성 검증·read-only 클라이언트가 있으며, 영속화·Kiwoom 페이지 처리·backfill은 남아 있다. |
 | 데이터베이스 migration | 확인됨 | 핵심 스키마·RLS·외래 키 인덱스 migration 3건을 원격 Supabase `ETF` 프로젝트에 적용하고 재검증했다. |
 | 예약 수집 workflow | 미구현 | `.github/workflows/ingest.yml`이 없다. |
 | 웹 배포 플랫폼 | 외부 확인 필요 | README의 Vercel 안내는 시작 템플릿 설명이지 이 프로젝트의 배포 완료 증거가 아니다. |
-| Supabase 프로젝트·Storage | 외부 확인 필요 | 코드가 환경 변수를 기대하지만 실제 프로젝트 연결, RLS, private Storage 상태는 확인되지 않았다. |
+| Supabase 프로젝트·RLS | 확인됨 | 원격 `ETF` 프로젝트에 핵심 스키마와 RLS 정책을 적용하고 검증했다. private Storage는 M2 원본 객체 저장 설계 시 별도로 확인한다. |
 | Kiwoom·KRX·Telegram 자격 증명 | 외부 확인 필요 | 계획상 필요하지만 로컬 파일이나 문서에 값을 기록하지 않는다. |
 
 상태가 바뀌면 실제 코드, 설정, 외부 서비스 기록을 먼저 갱신한다. 이 표는 외부 현실을 대신하지 않으며, 확인되지 않은 상태를 `완료`로 바꾸는 근거가 될 수 없다.
@@ -433,30 +433,15 @@ manifest는 secret, 토큰, 전체 API 원본, Telegram 대화 내용을 포함�
 7. 첫 Production은 웹·DB·수집 세 Gate와 사람 승인을 모두 통과한 뒤 수행한다.
 8. F4는 국내 운영과 분리해 배포하고 20개 완전 거래일을 관측한다.
 
-## 15. 현재 알려진 검증 문제
+## 15. Production build 검증 기록
 
-### Production build 실행 환경 제약
+2026-09-18 KST에 Node `22.23.2`와 공식 Webpack 경로로 production build를 검증했다.
 
-2026-09-18 KST 기준 `npm run build`는 현재 실행 환경 제약 때문에 완료하지 못했다. 코드 변경의 TypeScript·테스트·lint 검증은 통과했다.
+- `.nvmrc`로 Node `22.23.2`를 고정하고 `package.json`의 build 명령을 `next build --webpack`으로 변경했다.
+- `npm run build`, `npm test`(24개), `npx tsc --noEmit`, `npm run lint`가 모두 통과했다.
+- Turbopack은 이 실행 환경에서 Google Fonts 네트워크 및 프로세스·포트 생성 권한 제약을 받으므로, 표준 품질 게이트는 Webpack build를 사용한다.
 
-```text
-Google Fonts 다운로드 네트워크 제한 또는 Turbopack 프로세스·포트 생성 권한 거부
-```
-
-확인한 증거는 다음과 같다.
-
-- 실행 환경은 Node 24.14.1, npm 11.12.1, Next.js 16.3.5, TypeScript 5.x다.
-- `npm test`(24개), `npx tsc --noEmit`, `npm run lint`는 통과했다.
-- 샌드박스 실행에서는 Google Fonts 다운로드 네트워크가 제한됐고, 제한 완화 재실행에서는 Turbopack의 프로세스·포트 생성 권한이 거부됐다.
-- 따라서 남은 확인은 코드 수정이 아니라 정상 네트워크와 프로세스 권한을 갖춘 환경에서의 production build 재실행이다.
-
-다음 조치를 R0의 차단 작업으로 둔다.
-
-1. 정상 네트워크와 프로세스·포트 권한을 갖춘 실행 환경에서 `npm run build`를 다시 실행한다.
-2. build exit 0을 기록하고, 실패하면 환경 제약과 코드 오류를 분리해 후속 이슈로 등록한다.
-3. build 성공 증거가 있을 때만 Q3를 통과시킨다.
-
-`typescript.ignoreBuildErrors`로 검사를 생략하거나 build 실패 상태에서 배포를 진행하지 않는다. 이 하네스 작성 작업은 build 실패를 수정하지 않으며, 별도 환경 정비 태스크가 증거와 함께 닫아야 한다.
+`typescript.ignoreBuildErrors`로 검사를 생략하거나 build 실패 상태에서 배포를 진행하지 않는다.
 
 ## 16. 관련 문서
 

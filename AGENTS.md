@@ -20,7 +20,7 @@ TypeScript strict 모드를 유지하고 2칸 들여쓰기를 사용한다. 컴�
 
 ## 테스트 지침
 
-현재 자동화 테스트 러너와 `npm test` 스크립트는 구성되어 있지 않다. 기능 변경에는 가능한 가장 가까운 단위 또는 통합 테스트를 함께 추가하고, 테스트 파일은 `*.test.ts` 또는 `*.test.tsx`로 명명한다. 테스트 도구가 도입되기 전에는 lint, production build, 인증·보호 경로의 수동 확인 결과를 PR에 기록한다.
+Vitest와 `npm test` 스크립트가 구성되어 있다. 기능 변경에는 가능한 가장 가까운 단위 또는 통합 테스트를 함께 추가하고, 테스트 파일은 `*.test.ts` 또는 `*.test.tsx`로 명명한다. 변경 전에는 `npm test`, lint, production build를 실행하고, 인증·보호 경로의 수동 확인 결과를 PR에 기록한다.
 
 ## 커밋과 Pull Request
 
@@ -34,7 +34,7 @@ TypeScript strict 모드를 유지하고 2칸 들여쓰기를 사용한다. 컴�
 
 - 정본 문서: `docs/plans/ETF-signal-MVP-plan-v2.2.md`, `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`, `docs/plans/ETF-signal-MVP-v2.2-상세-개발-실행방안.md`
 - 현재 현황·재개 기준: `docs/plans/implementation/`, `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/jobs/2026-09-18-etf-signal-mvp-m0-m1-작업기록.md`
-- 2026-09-18 기준 M0–M1의 구현·Supabase 스키마/RLS 적용은 완료했고, 다음 작업은 M2의 KRX·Kiwoom 수집 결과를 `source_snapshot`과 정규화 테이블에 멱등 저장하는 것이다.
-- `npm test`, `npx tsc --noEmit`, `npm run lint`는 통과했다. `npm run build`는 실행 환경의 Google Fonts 네트워크·Turbopack 권한 제약이 해소된 뒤 재검증한다.
+- 2026-09-18 기준 M0–M1의 구현·Supabase 스키마/RLS 적용·품질 게이트는 완료했고, 다음 작업은 M2의 KRX·Kiwoom 수집 결과를 `source_snapshot`과 정규화 테이블에 멱등 저장하는 것이다.
+- Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용하며, `npm test`(24개), `npx tsc --noEmit`, `npm run lint`, `npm run build`가 이 환경에서 통과했다.
 - Linear 프로젝트·이슈는 실행 상태 추적용이며, 설계·코드의 정본은 위 저장소 문서와 Git이다. 비밀값·토큰·DB 비밀번호를 어떤 기록에도 남기지 않는다.
 - 세션 시작·종료 시에는 `npm run continuity:check`와 연속성 하네스의 작업 기록→정본 문서→Linear→OpenViking 순서를 따른다.

@@ -50,9 +50,9 @@ M2 착수 전 실제 Supabase 프로젝트에 마이그레이션을 적용해 RL
 
 | 항목 | 결과 | 증거 또는 제한 |
 | --- | --- | --- |
-| Vitest | 통과 | 3개 테스트 파일, 15개 테스트 통과 |
+| Vitest | 통과 | 5개 테스트 파일, 24개 테스트 통과 |
 | TypeScript | 통과 | `npx tsc --noEmit` 종료 코드 0 |
 | ESLint | 통과 | `npm run lint` 종료 코드 0 |
-| production build | 환경 차단 | 샌드박스에서는 Google Fonts 다운로드가 차단됐고, 제한 없는 재실행에서는 Turbopack의 프로세스·포트 생성 권한이 거부됨. 새 코드의 TypeScript·lint·테스트 오류는 없음. |
+| production build | 통과 | Node `22.23.2`에서 공식 Webpack 경로(`next build --webpack`)로 실행한 `npm run build` 종료 코드 0 |
 | 실제 Supabase 적용 | 통과 | 원격 ETF 프로젝트에 핵심 스키마·함수 권한 회수·외래 키 인덱스 migration 3건을 적용하고 테이블·RLS·정책을 재검증 |
-| Linear 프로젝트·마일스톤·초기 이슈 생성 | 통과 | 프로젝트·M0–M6·R1·R2와 `KOR-46`~`KOR-51`을 생성했고, `KOR-49`를 Supabase 외부 검증 대기 상태로 기록 |
+| Linear 프로젝트·마일스톤·초기 이슈 생성 | 통과 | 프로젝트·M0–M6·R1·R2와 `KOR-46`~`KOR-51`을 생성했고, M0–M1 이슈를 완료 처리 |
