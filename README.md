@@ -7,6 +7,12 @@
  The fastest way to build apps with Next.js and Supabase
 </p>
 
+## 프로젝트 문서
+
+- [ETF 일일 신호 MVP 개발·리뷰·배포 하네스](docs/guides/etf-signal-mvp-development-review-deployment-harness.md)
+- [ETF 신호 MVP v2.2 계획](docs/plans/ETF-signal-MVP-plan-v2.2.md)
+- [Spec Kit + Superpowers 개발 흐름](docs/plans/ETF-signal-MVP-v2.2-Spec-Kit-Superpowers-개발흐름-활용계획.md)
+
 <p align="center">
   <a href="#features"><strong>Features</strong></a> ·
   <a href="#demo"><strong>Demo</strong></a> ·

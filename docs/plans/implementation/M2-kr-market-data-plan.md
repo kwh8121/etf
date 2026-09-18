@@ -1,7 +1,7 @@
 # M2 국내 시장 데이터 구현 계획
 
 > 상위 마일스톤: `ETF-signal-MVP-v2.2-ROADMAP.md`의 M2
-> 선행 상태: M0–M1 로컬 구현 완료. 실제 Supabase 적용은 대기 중.
+> 선행 상태: M0–M1 로컬 구현 및 원격 Supabase 스키마·RLS 적용 완료.
 > 상태: KRX 파서·완전성 계약·read-only probe 및 Kiwoom 마스터 probe 통과 / 영속화 E2E는 Supabase 서비스 역할 키 필요
 
 ## 목표
