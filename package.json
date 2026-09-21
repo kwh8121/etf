@@ -11,7 +11,7 @@
     "backfill:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/backfill.ts",
     "signals:kr-price": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/generate-kr-price-signals.ts",
     "report:kr-signals": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/report-kr-signals.ts",
-    "daily:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/run-kr-daily.ts"
+    "daily:kr": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/run-kr-daily.ts"
   },
   "engines": {
     "node": ">=22.23.2 <23"
