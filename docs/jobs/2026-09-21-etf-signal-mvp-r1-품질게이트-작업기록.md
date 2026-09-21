@@ -20,8 +20,9 @@
 ## 외부 상태
 
 - GitHub Actions `workflow_dispatch` 성공 실행: `35564162887`
-- Linear `KOR-52`, `KOR-53`에 R1 보완·검증 증거를 댓글로 동기화했다.
-- OpenViking 장기 메모리 저장은 15초 MCP 응답 시간 초과로 두 번 실패했다. 저장소의 이 작업 기록·AGENTS·정본 ROADMAP은 갱신했으며, 다음 세션 시작 시 OpenViking 상태를 다시 조회·동기화한다.
+- Linear 정합화: 프로젝트를 `In Progress`로 전환하고, 현행 ROADMAP 기준 M3·M4·M5·M6·R1·R2 마일스톤 명칭/설명을 재정렬했다. 완료 이슈 `KOR-52`(M3), `KOR-53`(M4), `KOR-54`(R1)를 연결하고 최신 project update를 기록했다.
+- 불일치 원인: Linear 마일스톤은 초기 초안의 M3~M6 정의를 유지한 채, 이후 ROADMAP의 번호·범위 변경과 R1 완료가 이슈 댓글 수준에서만 반영됐다. 프로젝트 상태·마일스톤 연결·최신 update를 함께 read-back 검증하지 않아 드리프트가 남았다. 연속성 하네스에 마일스톤 대조와 갱신 후 read-back을 추가했다.
+- OpenViking 장기 메모리는 재시도 후 저장 성공(`Stored 2 message(s)`)했다. 즉시 recall은 비동기 추출 인덱스 반영 전일 수 있으므로 다음 세션 시작 시 다시 조회한다.
 - Telegram 및 Supabase 자격 증명·수신처·원문 응답은 기록하지 않는다.
 
 ## 다음 작업
