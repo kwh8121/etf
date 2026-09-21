@@ -17,6 +17,8 @@
 - 전체 Vitest 45개, `npx tsc --noEmit`, `npm run lint`, `npm run build` 통과
 - `.github/workflows/kr-daily.yml`은 Prettier 검사 통과
 - 대시보드 표시 모델의 raw/liquid 분리와 수치 표기 단위 테스트 통과
+- 공개 키 익명 클라이언트의 `signal_run` 조회는 권한 오류·0행으로 끝났다. 익명 접근이 신호 데이터를 읽지 못함을 확인했다.
+- Supabase 보안 권고의 유일한 정보 항목은 `source_snapshot`의 “RLS 활성화·정책 없음”이다. 이는 원본 스냅샷을 인증 사용자에게도 공개하지 않는 확정 설계와 일치하므로 정책을 추가하지 않는다.
 
 ## 남은 E2E
 

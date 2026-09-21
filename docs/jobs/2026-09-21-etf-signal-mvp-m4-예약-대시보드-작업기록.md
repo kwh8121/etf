@@ -12,6 +12,8 @@
 ## 검증
 
 - Vitest 45개, TypeScript, ESLint, Prettier workflow 검사, production build 통과
+- 공개 키 익명 클라이언트는 `signal_run`을 읽지 못했고 0행만 반환했다. RLS 익명 차단을 확인했다.
+- Supabase security advisor의 유일한 정보 항목은 비공개 원본 테이블 `source_snapshot`의 무정책 RLS이며 의도된 설계다.
 
 ## 다음 작업
 
