@@ -17,6 +17,9 @@ describe("Kiwoom workflows", () => {
       expect(workflow).toContain(
         "NODE_OPTIONS: --network-family-autoselection-attempt-timeout=2000",
       );
+      // self-hosted에서 cache: npm은 사용자 계정 전체의 ~/.npm을 GitHub 캐시로 다룬다.
+      // npm 캐시는 runner 디스크에 이미 유지되므로 쓰지 않는다.
+      expect(workflow).not.toContain("cache: npm");
     },
   );
 });
