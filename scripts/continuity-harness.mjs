@@ -1,4 +1,4 @@
-import { access, readdir } from "node:fs/promises";
+import { access, readdir, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -40,7 +40,9 @@ function runGit(args) {
   } catch (error) {
     return {
       ok: false,
-      output: Buffer.isBuffer(error.stderr) ? error.stderr.toString().trim() : "git command failed",
+      output: Buffer.isBuffer(error.stderr)
+        ? error.stderr.toString().trim()
+        : "git command failed",
     };
   }
 }
@@ -50,18 +52,22 @@ const documentStatus = await Promise.all(
 );
 
 const jobDirectory = resolve(root, "docs/jobs");
-const jobFiles = (await readdir(jobDirectory, { withFileTypes: true }))
-  .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-  .map((entry) => `docs/jobs/${entry.name}`)
-  .sort()
-  .reverse();
+const jobFiles = await Promise.all(
+  (await readdir(jobDirectory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map(async (entry) => {
+      const path = `docs/jobs/${entry.name}`;
+      return { path, modifiedAt: (await stat(resolve(root, path))).mtimeMs };
+    }),
+);
+jobFiles.sort((left, right) => right.modifiedAt - left.modifiedAt);
 
 const diffCheck = runGit(["diff", "--check"]);
 const worktree = runGit(["status", "--short"]);
 const result = {
   harness: "etf-signal-mvp-continuity",
   requiredDocuments: documentStatus,
-  latestJob: jobFiles[0] ?? null,
+  latestJob: jobFiles[0]?.path ?? null,
   diffCheck,
   worktree,
   nextRequiredActions: [
@@ -73,6 +79,10 @@ const result = {
 
 console.log(JSON.stringify(result, null, 2));
 
-if (!documentStatus.every((document) => document.exists) || !result.latestJob || !diffCheck.ok) {
+if (
+  !documentStatus.every((document) => document.exists) ||
+  !result.latestJob ||
+  !diffCheck.ok
+) {
   process.exit(1);
 }
