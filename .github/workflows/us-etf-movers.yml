@@ -1,0 +1,39 @@
+name: US ETF movers (P1 experimental)
+
+on:
+  schedule:
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: us-etf-movers-p1
+  cancel-in-progress: false
+
+jobs:
+  ingest-and-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      ENABLE_US_ETF_P1: ${{ vars.ENABLE_US_ETF_P1 }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      KIWOOM_APP_KEY: ${{ secrets.KIWOOM_APP_KEY }}
+      KIWOOM_SECRET_KEY: ${{ secrets.KIWOOM_SECRET_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - id: ingest
+        run: npm run ingest:us-movers
+      - if: steps.ingest.outputs.duplicate != 'true' && steps.ingest.outputs.run_id != ''
+        run: npm run report:us-movers -- --run-id=${{ steps.ingest.outputs.run_id }}

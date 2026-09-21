@@ -35,6 +35,29 @@ export function formatTelegramReport(
   return splitTelegramText(header, [...blocks, disclaimer], maxLength);
 }
 
+export function formatExperimentalTelegramReport(
+  input: {
+    title: string;
+    observedAt: string;
+    runId: string;
+    sections: readonly TelegramReportSection[];
+    disclosure: string;
+  },
+  maxLength = TELEGRAM_MAX_MESSAGE_LENGTH,
+): string[] {
+  const header = `[ETF 신호][US][P1 실험] ${input.title}\n관측: ${input.observedAt}\n실행: ${input.runId}\n${input.disclosure}`;
+  const blocks = input.sections.flatMap((section) =>
+    section.lines.length
+      ? [`${section.title}\n${section.lines.join("\n")}`]
+      : [],
+  );
+  return splitTelegramText(
+    header,
+    [...blocks, "자동매매 또는 매수·매도 추천이 아닌 탐색 결과입니다."],
+    maxLength,
+  );
+}
+
 export async function sendTelegramMessages(input: {
   token: string;
   chatId: string;

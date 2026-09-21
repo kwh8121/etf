@@ -29,6 +29,7 @@ Supabase의 권장 패턴도 서버 전용 모듈에서만 admin client를 만�
 | `KIWOOM_SECRET_KEY`                    | 서버·CI Secret·예약 작업                         | M2 Kiwoom 수집      | Kiwoom OAuth secret key         | 비밀      |
 | `TELEGRAM_BOT_TOKEN`                   | 서버·CI Secret·예약 작업                         | M3 Telegram E2E부터 | Telegram Bot API 인증           | 비밀      |
 | `TELEGRAM_CHAT_ID`                     | 서버·CI Secret·예약 작업                         | M3 Telegram E2E부터 | 허용된 수신 대화 식별자         | 비밀 취급 |
+| `ENABLE_US_ETF_P1`                     | 로컬 `.env`, GitHub Actions Variable, 배포 환경  | M5 미국 실험 실행   | `true`일 때만 미국 P1 활성화    | 공개 가능 |
 
 현재 저장소에 이미 있을 수 있는 `APP_KEY`·`APP_SECRET` 같은 일반 이름은 자동으로 사용하지 않는다. Kiwoom에는 반드시 `KIWOOM_APP_KEY`, `KIWOOM_SECRET_KEY`라는 명시적 계약을 사용한다. 중복 키의 실제 값 비교·복사는 사람이 안전한 비밀 관리 화면에서만 한다.
 
@@ -47,6 +48,9 @@ KIWOOM_SECRET_KEY=<kiwoom-secret-key>
 
 TELEGRAM_BOT_TOKEN=<telegram-bot-token>
 TELEGRAM_CHAT_ID=<approved-chat-id>
+
+# 기본값 off. staging 실측 E2E에서만 true로 바꾼다.
+ENABLE_US_ETF_P1=false
 ```
 
 로컬 확인은 값을 출력하지 않고 변수 존재 여부만 검사한다.
@@ -165,6 +169,23 @@ staging과 production은 KRX·Kiwoom 키도 가능하면 분리한다. 공급자
 6. **신호·대시보드:** raw/liquid 결과가 같은 `signal_run`에 귀속되는지, 인증되지 않은 요청이 보호 테이블을 읽지 못하는지 확인한다.
 7. **Telegram:** staging chat에서 새 `TRADING_COMPLETE` 신호 보고 1건과 `PUBLISH_PENDING`·`PARTIAL`·`FETCH_FAIL`·휴장/중복 중 현재 재현 가능한 상태 보고 1건을 확인한다. `message_id`·HTTP 상태·상태 구분만 기록하고, token, chat ID, 메시지 전문, 투자 추천처럼 오해될 표현은 로그에 남기지 않는다.
 8. **실패 복구:** 의도적으로 KRX/Kiwoom/Telegram 한 공급자를 차단한 뒤 수집·신호·알림이 각각 명시적 실패 상태와 재시도 가능 상태로 남는지 확인한다.
+
+### 5.1 미국 ETF P1 staging E2E
+
+미국 어댑터는 국내 P0와 별도 workflow다. 실제 실행 전 staging 환경에서만 `ENABLE_US_ETF_P1=true`로 설정하고, production은 관측 목적과 수신처가 승인된 뒤에만 같은 값을 설정한다. 이 플래그는 비밀이 아니지만 `true` 전환은 실제 Kiwoom·Supabase 쓰기·Telegram 전송을 발생시킨다.
+
+1. GitHub Environment의 `ENABLE_US_ETF_P1` Variable을 staging에서만 `true`로 설정한다. `us-etf-movers.yml`의 수동 실행을 먼저 사용한다.
+2. `usa10104`, `usa20911` 상승·하락, `usa20511`, `usa20931` 호출의 성공 여부·페이지 수·총 행 수만 확인한다. 원문 응답, access token, 종목별 상세값은 기록하지 않는다.
+3. 같은 실행을 한 번 더 수행한다. `source_snapshot`은 기준 관측 1개와 `duplicate_observation` 1개, 원본 객체 1개, US `signal_run` 1개인지 확인한다. `market_date`는 `null`이어야 한다.
+4. Telegram 수신처가 staging인지 확인한 뒤 P1 전용 메시지 1건을 확인한다. 메시지에는 “실험”과 국내 P0 독립 문구가 있어야 한다.
+5. `ENABLE_US_ETF_P1=false`로 되돌린 후 `npm run ingest:us-movers`, `npm run report:us-movers`가 `DISABLED`로 끝나는지 확인한다. KR workflow와 최근 KR `signal_run`은 변경되지 않아야 한다.
+
+로컬 수동 명령은 다음과 같다. `ENABLE_US_ETF_P1=false`이면 외부 API·DB·Telegram을 호출하지 않는다.
+
+```bash
+npm run ingest:us-movers
+npm run report:us-movers
+```
 
 E2E 완료 기준은 전체 체인이 성공한 경우뿐 아니라, 외부 공급자 실패 시에도 중복 저장·무음 실패·비밀 노출 없이 실패 원인과 재실행 단위가 남는 것이다.
 

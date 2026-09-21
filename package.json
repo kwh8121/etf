@@ -8,9 +8,11 @@
     "test": "vitest run",
     "continuity:check": "node scripts/continuity-harness.mjs check",
     "ingest:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/ingest-kr.ts",
+    "ingest:us-movers": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/ingest-us-movers.ts",
     "backfill:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/backfill.ts",
     "signals:kr-price": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/generate-kr-price-signals.ts",
     "report:kr-signals": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/report-kr-signals.ts",
+    "report:us-movers": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/report-us-movers.ts",
     "daily:kr": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/run-kr-daily.ts"
   },
   "engines": {

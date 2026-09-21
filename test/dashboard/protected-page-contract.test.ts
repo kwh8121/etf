@@ -18,4 +18,12 @@ describe("protected signal dashboard contract", () => {
     expect(protectedPage).toContain("데이터 품질");
     expect(protectedPage).toContain("신호 항목이 없습니다");
   });
+
+  it("keeps the optional US P1 section behind a feature flag and independent query", () => {
+    expect(protectedPage).toContain("isUsEtfP1Enabled()");
+    expect(protectedPage).toContain('.eq("market", "US")');
+    expect(protectedPage).toContain("미국 ETF 등락 · P1 실험");
+    expect(protectedPage).toContain("국내 P0 신호에는 영향이");
+    expect(protectedPage).toContain("없습니다.");
+  });
 });

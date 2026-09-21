@@ -13,6 +13,10 @@ import {
   formatDashboardSignalValue,
   type DashboardSignalRow,
 } from "@/lib/dashboard/kr-signal-view";
+import {
+  isUsEtfP1Enabled,
+  US_ETF_P1_DISCLOSURE,
+} from "@/lib/signals/us-etf-movers";
 import { createClient } from "@/lib/supabase/server";
 
 export const instant = false;
@@ -68,6 +72,32 @@ export default async function ProtectedPage() {
       : sections.length === 0
         ? "검토 필요: 신호 항목이 없습니다."
         : "신호 실행 상태를 확인하세요.";
+  const usEnabled = isUsEtfP1Enabled();
+  const { data: usRun, error: usRunError } = usEnabled
+    ? await supabase
+        .from("signal_run")
+        .select("id,bas_dd,completed_at,status")
+        .eq("market", "US")
+        .eq("strategy_version", "m5-us-etf-movers-p1-v1")
+        .eq("status", "COMPLETED")
+        .order("completed_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null, error: null };
+  const latestUsRun = usRun as SignalRunDatabaseRow | null;
+  const { data: usRows, error: usRowsError } = latestUsRun
+    ? await supabase
+        .from("signal_daily")
+        .select("signal_type,screen,name,value,value_unit,rank")
+        .eq("run_id", latestUsRun.id)
+        .eq("market", "US")
+        .order("signal_type")
+        .order("rank")
+    : { data: [], error: null };
+  const usSections = createDashboardSignalSections(
+    ((usRows ?? []) as SignalDailyDatabaseRow[]).map(toDashboardSignalRow),
+  );
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -146,6 +176,42 @@ export default async function ProtectedPage() {
             ))}
           </div>
         </>
+      )}
+      {usEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle>미국 ETF 등락 · P1 실험</CardTitle>
+            <CardDescription>{US_ETF_P1_DISCLOSURE}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {usRunError || usRowsError ? (
+              <p className="text-sm text-muted-foreground">
+                실험 신호를 불러오지 못했습니다. 국내 P0 신호에는 영향이
+                없습니다.
+              </p>
+            ) : !latestUsRun ? (
+              <p className="text-sm text-muted-foreground">
+                아직 생성된 미국 ETF 실험 신호가 없습니다.
+              </p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {usSections.map((section) => (
+                  <div key={section.title} className="space-y-2 text-sm">
+                    <p className="font-medium">{section.title}</p>
+                    <ol className="space-y-1">
+                      {section.rows.map((row) => (
+                        <li key={`${row.name}-${row.rank}`}>
+                          {row.rank ?? "-"}. {row.name} ·{" "}
+                          {formatDashboardSignalValue(row)}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
