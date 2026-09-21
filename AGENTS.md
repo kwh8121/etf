@@ -34,7 +34,7 @@ Vitest와 `npm test` 스크립트가 구성되어 있다. 기능 변경에는 �
 
 - 정본 문서: `docs/plans/ETF-signal-MVP-plan-v2.2.md`, `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`, `docs/plans/ETF-signal-MVP-v2.2-상세-개발-실행방안.md`
 - 현재 현황·재개 기준: `docs/plans/implementation/`, `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/jobs/2026-09-18-etf-signal-mvp-m0-m1-작업기록.md`
-- 2026-09-21 기준 M0–M2는 완료했고, M3의 국내 P0 신호 계산·저장·비발송 Telegram 보고서까지 구현했다. 다음 정확한 작업은 staging `TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID` 설정 후 `npm run report:kr-signals -- --send` 실발송 E2E를 수행하고 `KOR-52`를 마감하는 것이다.
-- Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용하며, `npm test`(44개), `npx tsc --noEmit`, `npm run lint`, `npm run build`가 이 환경에서 통과했다.
+- 2026-09-21 기준 M0–M3와 M4의 예약 실행·인증 대시보드 구현은 완료했다. 다음 정확한 작업은 staging `TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID` 설정 후 `npm run report:kr-signals -- --send` 실발송 E2E, GitHub production Environment Secret 등록·`workflow_dispatch`, 인증/비인증 `/protected` RLS E2E를 수행하고 `KOR-52`·`KOR-53`을 마감하는 것이다.
+- Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용하며, `npm test`(45개), `npx tsc --noEmit`, `npm run lint`, `npm run build`가 이 환경에서 통과했다.
 - Linear 프로젝트·이슈는 실행 상태 추적용이며, 설계·코드의 정본은 위 저장소 문서와 Git이다. 비밀값·토큰·DB 비밀번호를 어떤 기록에도 남기지 않는다.
 - 세션 시작·종료 시에는 `npm run continuity:check`와 연속성 하네스의 작업 기록→정본 문서→Linear→OpenViking 순서를 따른다.
