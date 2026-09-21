@@ -2,7 +2,7 @@
 
 > 상위 마일스톤: `ETF-signal-MVP-v2.2-ROADMAP.md`의 M4
 > 작업일: 2026-09-21 KST
-> 상태: 예약 워크플로와 읽기 전용 대시보드 구현 완료, 실제 GitHub Actions·인증 브라우저 E2E 대기
+> 상태: 예약 워크플로·읽기 전용 대시보드·GitHub Actions·RLS E2E 완료. R1 품질 게이트 보완 진행 중.
 
 ## 구현 결과
 
@@ -20,11 +20,11 @@
 - 공개 키 익명 클라이언트의 `signal_run` 조회는 권한 오류·0행으로 끝났다. 익명 접근이 신호 데이터를 읽지 못함을 확인했다.
 - Supabase 보안 권고의 유일한 정보 항목은 `source_snapshot`의 “RLS 활성화·정책 없음”이다. 이는 원본 스냅샷을 인증 사용자에게도 공개하지 않는 확정 설계와 일치하므로 정책을 추가하지 않는다.
 
-## 남은 E2E
+## E2E 증거
 
-1. GitHub `production` Environment에 설정 가이드의 Secret을 등록한다.
-2. `workflow_dispatch`로 staging 또는 production에서 한 번 실행한다. 새 KRX 완전 스냅샷이면 신호·Telegram까지, 그렇지 않으면 신호 계산 없이 상태 Telegram 메시지가 남는지 확인한다.
-3. 인증 사용자와 비인증 사용자가 각각 `/protected`에 접근해 로그인 이동·최근 신호 표시·RLS 거부를 확인한다.
-4. Telegram 실발송 전에는 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 staging 수신처로 설정한다.
+1. GitHub `production` Environment Secret·Variable을 등록한 뒤 `workflow_dispatch` 재실행 `35564162887`이 성공했다. 중복 KRX 관측·Kiwoom `FETCH_FAIL`에서 신호 재실행 없이 Telegram 상태 알림 경로가 실행됐다.
+2. 인증되지 않은 `/protected` 요청은 `/auth/login`으로 `307` 이동했다.
+3. 인증된 Supabase 사용자로 `signal_run` RLS 조회는 200과 1행, `source_snapshot`은 200과 0행을 반환했다. 인증 사용자는 신호 데이터만 읽고 원본 스냅샷은 읽지 못한다.
+4. R1 보완에서는 GitHub Actions 동시 실행을 단일 대기열로 제한하고, 대시보드가 `m3-price-movers-v1` 실행만 선택하도록 고정했다. 5거래일 가격수익률 고지는 UI와 Telegram 모두에 표시한다.
 
 토큰, chat ID, API 원문, 서비스 역할 키는 Git·Linear·작업 기록에 남기지 않는다.

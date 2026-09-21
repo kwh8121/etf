@@ -2,7 +2,7 @@
 
 > 상위 마일스톤: `ETF-signal-MVP-v2.2-ROADMAP.md`의 M3
 > 작업일: 2026-09-21 KST
-> 상태: 계산·저장·비발송 보고서 구현 및 Supabase 멱등성 검증 완료. 실제 Telegram 발송 E2E는 수신 키 설정 후 수행한다.
+> 상태: 계산·저장·Telegram 보고 구현 및 GitHub Actions 실발송 E2E 완료. R1 품질 게이트 보완 진행 중.
 
 ## 구현 범위
 
@@ -34,9 +34,13 @@ npm run report:kr-signals
 
 모든 로컬 품질 명령은 Node `22.23.2`에서 통과했다. `npm run build`는 Webpack 경로로 성공했다.
 
-## Telegram 발송 E2E 보류 조건
+## Telegram 발송 E2E 증거
 
-`.env`에 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`가 아직 없어 실제 발송을 실행하지 않았다. 값을 Git·Linear·작업 기록에 남기지 않고 설정한 뒤 다음 명령으로 staging 대화에서만 검증한다.
+- GitHub Actions `workflow_dispatch` 재실행 `35564162887`이 성공했다. 중복 KRX 관측과 Kiwoom `FETCH_FAIL`을 감지해 신호를 재생성하지 않았고, Telegram 상태 알림 전송 결과가 로그에 `telegramSent: true`로 남았다.
+- 새 신호 보고와 상태 알림의 Telegram 비밀값·수신처·메시지 전문은 Git·Linear·작업 기록에 남기지 않았다.
+- 로컬 Node `fetch`의 Telegram 연결 실패는 샌드박스 네트워크 경로 제한으로 분리했다. 같은 Bot API의 IPv4 HTTPS 확인이 성공했으며, 저장소 코드·토큰 형식 문제로 처리하지 않는다.
+
+R1 보완에서는 생성 직후의 정확한 `signal_run.id`만 보고하도록 고정하고, 신호 Telegram 전송 성공 후에만 신규상장 `first_alerted_at`을 갱신한다. 해당 회귀 테스트와 최종 품질 증거는 R1 작업 기록에 남긴다.
 
 ```bash
 npm run report:kr-signals -- --send

@@ -1,6 +1,7 @@
 import type { RankedKrxSignal } from "./kr-price-movers";
 
 export interface KrxListingEventInput {
+  eventKey: string;
   code: string;
   name: string;
   regDay: string | null;
@@ -16,10 +17,16 @@ export interface KrxNewListingSignals {
   sourceSnapshotIds: string[];
 }
 
-export function createKrxNewListingSignals(events: readonly KrxListingEventInput[]): KrxNewListingSignals {
+export function createKrxNewListingSignals(
+  events: readonly KrxListingEventInput[],
+): KrxNewListingSignals {
   const candidates = events
     .filter((event) => event.newInSnapshot && event.firstAlertedAt === null)
-    .sort((left, right) => left.firstSeen.localeCompare(right.firstSeen) || left.code.localeCompare(right.code));
+    .sort(
+      (left, right) =>
+        left.firstSeen.localeCompare(right.firstSeen) ||
+        left.code.localeCompare(right.code),
+    );
 
   return {
     signals: candidates.map((event, index) => ({
@@ -33,6 +40,7 @@ export function createKrxNewListingSignals(events: readonly KrxListingEventInput
       candidates.map((event) => [
         event.code,
         {
+          event_key: event.eventKey,
           reg_day: event.regDay,
           first_seen: event.firstSeen,
           new_in_snapshot: event.newInSnapshot,
@@ -40,6 +48,8 @@ export function createKrxNewListingSignals(events: readonly KrxListingEventInput
         },
       ]),
     ),
-    sourceSnapshotIds: candidates.flatMap((event) => event.sourceSnapshotId ? [event.sourceSnapshotId] : []),
+    sourceSnapshotIds: candidates.flatMap((event) =>
+      event.sourceSnapshotId ? [event.sourceSnapshotId] : [],
+    ),
   };
 }

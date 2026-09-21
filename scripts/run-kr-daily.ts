@@ -43,10 +43,50 @@ export async function runKoreanDailyWorkflow(requestedDate = getKstDate()) {
   }
 
   const signals = await generateKrxPriceSignals();
-  await reportLatestKrxSignals(true);
+  await reportLatestKrxSignals(true, signals.runId);
+  await markNewListingAlerts(signals.runId);
   if (statusAlertRequired)
     await sendKoreanDailyStatus(requestedDate, ingestion);
   return { ingestion, signalRunId: signals.runId, telegramSent: true };
+}
+
+async function markNewListingAlerts(runId: string): Promise<void> {
+  const client = createServiceRoleClient();
+  const { data, error } = await client
+    .from("signal_daily")
+    .select("meta")
+    .eq("run_id", runId)
+    .eq("signal_type", "new_listing");
+  if (error)
+    throw new Error(
+      `Supabase read new listing alerts failed: ${error.message}`,
+    );
+  const eventKeys = [
+    ...new Set((data ?? []).flatMap((row) => eventKeyFromMeta(row.meta))),
+  ];
+  if (eventKeys.length === 0) return;
+  const { error: updateError } = await client
+    .from("listing_event_kr")
+    .update({ first_alerted_at: new Date().toISOString() })
+    .in("event_key", eventKeys)
+    .is("first_alerted_at", null);
+  if (updateError)
+    throw new Error(
+      `Supabase mark new listing alerts failed: ${updateError.message}`,
+    );
+}
+
+function eventKeyFromMeta(meta: unknown): string[] {
+  if (
+    typeof meta !== "object" ||
+    meta === null ||
+    !("event_key" in meta) ||
+    typeof meta.event_key !== "string" ||
+    !meta.event_key
+  ) {
+    return [];
+  }
+  return [meta.event_key];
 }
 
 async function sendKoreanDailyStatus(

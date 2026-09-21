@@ -34,7 +34,18 @@ Vitest와 `npm test` 스크립트가 구성되어 있다. 기능 변경에는 �
 
 - 정본 문서: `docs/plans/ETF-signal-MVP-plan-v2.2.md`, `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`, `docs/plans/ETF-signal-MVP-v2.2-상세-개발-실행방안.md`
 - 현재 현황·재개 기준: `docs/plans/implementation/`, `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/jobs/2026-09-18-etf-signal-mvp-m0-m1-작업기록.md`
-- 2026-09-21 기준 M0–M3와 M4의 예약 실행·인증 대시보드 구현은 완료했다. 다음 정확한 작업은 staging `TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID` 설정 후 `npm run report:kr-signals -- --send` 실발송 E2E, GitHub production Environment Secret 등록·`workflow_dispatch`, 인증/비인증 `/protected` RLS E2E를 수행하고 `KOR-52`·`KOR-53`을 마감하는 것이다.
+- 2026-09-21 기준 M0–M4와 GitHub Actions·Telegram·RLS E2E, R1 국내 P0 MVP 출시 준비 게이트를 완료했다. 최신 작업 기록은 `docs/jobs/2026-09-21-etf-signal-mvp-r1-품질게이트-작업기록.md`다. 다음 구현은 M5 기능 플래그 기반 실험 어댑터 또는 M6 국내 P0 관측 기록이다.
 - Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용하며, `npm test`(45개), `npx tsc --noEmit`, `npm run lint`, `npm run build`가 이 환경에서 통과했다.
 - Linear 프로젝트·이슈는 실행 상태 추적용이며, 설계·코드의 정본은 위 저장소 문서와 Git이다. 비밀값·토큰·DB 비밀번호를 어떤 기록에도 남기지 않는다.
 - 세션 시작·종료 시에는 `npm run continuity:check`와 연속성 하네스의 작업 기록→정본 문서→Linear→OpenViking 순서를 따른다.
+- 기본 개발 실행 루프는 **TDD → 구현 → 포맷 → 대상/전체 테스트 → lint/build → 리뷰 → 문서·Linear·OpenViking 메모리 → 원자적 커밋·푸시**다. 안전하고 되돌릴 수 있는 작업은 이 순서로 중단 없이 계속한다. 운영 데이터·보안·권한·비가역 외부 부작용·요구사항 분기·반복 실패처럼 중요한 이슈에서만 멈추고, 증거·영향·대안을 보고해 승인받는다. 상세 기준은 `docs/guides/etf-signal-mvp-continuity-harness.md`의 “기본 개발 실행 루프와 중단 기준”을 따른다.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

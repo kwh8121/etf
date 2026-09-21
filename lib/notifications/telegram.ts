@@ -23,7 +23,9 @@ export function formatTelegramReport(
       `Telegram message length must be between 100 and ${TELEGRAM_MAX_MESSAGE_LENGTH}`,
     );
   }
-  const header = `[ETF 신호][${input.market}][${input.status}] ${input.basDd}\n원천: ${input.source}\n실행: ${input.runId}`;
+  const disclosure =
+    "5거래일 값은 KRX 종가 기준 가격수익률이며 분배금·기업행동 조정 총수익률이 아닙니다.";
+  const header = `[ETF 신호][${input.market}][${input.status}] ${input.basDd}\n원천: ${input.source}\n실행: ${input.runId}\n${disclosure}`;
   const disclaimer = "자동매매 또는 매수·매도 추천이 아닌 탐색 결과입니다.";
   const blocks = input.sections.flatMap((section) =>
     section.lines.length

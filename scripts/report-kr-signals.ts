@@ -2,7 +2,11 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getRequiredServerSecret } from "../lib/config/server-env.ts";
-import { formatTelegramReport, sendTelegramMessages, type TelegramReportSection } from "../lib/notifications/telegram.ts";
+import {
+  formatTelegramReport,
+  sendTelegramMessages,
+  type TelegramReportSection,
+} from "../lib/notifications/telegram.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 interface SignalRunRow {
@@ -20,16 +24,25 @@ interface SignalDailyRow {
   screen: "raw" | "liquid";
 }
 
-export async function reportLatestKrxSignals(send = false): Promise<{ runId: string; messageCount: number; sent: boolean }> {
+export async function reportLatestKrxSignals(
+  send = false,
+  runId?: string,
+): Promise<{ runId: string; messageCount: number; sent: boolean }> {
   const client = createServiceRoleClient();
-  const { data: run, error: runError } = await client
+  let runQuery = client
     .from("signal_run")
     .select("id,bas_dd,status")
     .eq("market", "KR")
-    .eq("strategy_version", "m3-price-movers-v1")
-    .order("bas_dd", { ascending: false })
-    .limit(1)
-    .single();
+    .eq("strategy_version", "m3-price-movers-v1");
+  if (runId) runQuery = runQuery.eq("id", runId);
+  const { data: run, error: runError } = await (runId
+    ? runQuery.single()
+    : runQuery
+        .order("bas_dd", { ascending: false })
+        .order("completed_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(1)
+        .single());
   throwIfError(runError, "read latest KR signal run");
   const latest = run as SignalRunRow;
   const { data: rows, error: rowError } = await client
@@ -59,7 +72,9 @@ export async function reportLatestKrxSignals(send = false): Promise<{ runId: str
   return { runId: latest.id, messageCount: messages.length, sent: send };
 }
 
-function createSections(rows: readonly SignalDailyRow[]): TelegramReportSection[] {
+function createSections(
+  rows: readonly SignalDailyRow[],
+): TelegramReportSection[] {
   const groups = new Map<string, SignalDailyRow[]>();
   for (const row of rows) {
     const key = `${row.signal_type}:${row.screen}`;
@@ -69,7 +84,9 @@ function createSections(rows: readonly SignalDailyRow[]): TelegramReportSection[
   }
   return [...groups.entries()].map(([key, entries]) => ({
     title: sectionTitle(key),
-    lines: entries.map((entry) => `${entry.rank ?? "-"}. ${entry.name} ${formatValue(entry)}`),
+    lines: entries.map(
+      (entry) => `${entry.rank ?? "-"}. ${entry.name} ${formatValue(entry)}`,
+    ),
   }));
 }
 
@@ -92,12 +109,16 @@ function sectionTitle(key: string): string {
 function formatValue(row: SignalDailyRow): string {
   if (row.value === null) return "";
   const value = Number(row.value);
-  if (row.value_unit === "percent") return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+  if (row.value_unit === "percent")
+    return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
   if (row.value_unit === "ratio") return `${value.toFixed(2)}배`;
   return row.value_unit === "event" ? "신규" : String(value);
 }
 
-function throwIfError(error: { message: string } | null, operation: string): void {
+function throwIfError(
+  error: { message: string } | null,
+  operation: string,
+): void {
   if (error) throw new Error(`Supabase ${operation} failed: ${error.message}`);
 }
 
@@ -106,9 +127,15 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(result));
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1])
+) {
   main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : "Unknown Telegram report failure";
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown Telegram report failure";
     console.error(`KR signal report failed: ${message}`);
     process.exitCode = 1;
   });

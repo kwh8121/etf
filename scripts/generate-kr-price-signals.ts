@@ -2,9 +2,18 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { MARKET_DATA_TRANSFORM_VERSION } from "../lib/market-data/repository.ts";
-import { createKrxPriceMoverSignals, type KrxSignalInputRow } from "../lib/signals/kr-price-movers.ts";
-import { createKrxNewListingSignals, type KrxListingEventInput } from "../lib/signals/kr-new-listings.ts";
-import { persistKrxPriceSignals, persistKrxSignalRows } from "../lib/signals/kr-signal-repository.ts";
+import {
+  createKrxPriceMoverSignals,
+  type KrxSignalInputRow,
+} from "../lib/signals/kr-price-movers.ts";
+import {
+  createKrxNewListingSignals,
+  type KrxListingEventInput,
+} from "../lib/signals/kr-new-listings.ts";
+import {
+  persistKrxPriceSignals,
+  persistKrxSignalRows,
+} from "../lib/signals/kr-signal-repository.ts";
 import { createKrxTurnoverSurges } from "../lib/signals/kr-turnover-surge.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
@@ -24,6 +33,7 @@ interface EtfDailyDatabaseRow {
 }
 
 interface ListingEventDatabaseRow {
+  event_key: string;
   code: string;
   reg_day: string | null;
   first_seen: string;
@@ -64,7 +74,9 @@ export async function generateKrxPriceSignals(): Promise<{
     .order("seq", { ascending: true });
   throwIfError(windowError, "read five-day trading window");
 
-  const start = (window ?? []).find((row) => row.seq === fiveDayStartSeq) as TradingCalendarRow | undefined;
+  const start = (window ?? []).find((row) => row.seq === fiveDayStartSeq) as
+    | TradingCalendarRow
+    | undefined;
   const currentRows = await readEtfDailyRows(client, current.bas_dd);
   const startRows = start ? await readEtfDailyRows(client, start.bas_dd) : [];
   const signals = createKrxPriceMoverSignals(currentRows, {
@@ -82,9 +94,14 @@ export async function generateKrxPriceSignals(): Promise<{
     signals,
     transformVersion: MARKET_DATA_TRANSFORM_VERSION,
   });
-  const priorDates = (window ?? []).filter((row) => row.seq < current.seq).map((row) => row.bas_dd);
+  const priorDates = (window ?? [])
+    .filter((row) => row.seq < current.seq)
+    .map((row) => row.bas_dd);
   const priorRows = await readEtfDailyRowsForDates(client, priorDates);
-  const turnover = createKrxTurnoverSurges(currentRows, groupTurnoverRowsByCode(priorRows));
+  const turnover = createKrxTurnoverSurges(
+    currentRows,
+    groupTurnoverRowsByCode(priorRows),
+  );
   await persistKrxSignalRows(client, {
     runId,
     basDd: current.bas_dd,
@@ -93,7 +110,10 @@ export async function generateKrxPriceSignals(): Promise<{
     signals: turnover.signals,
     valueUnit: "ratio",
     metaByCode: new Map(
-      turnover.signals.map((signal) => [signal.code, { prior_20_day_average_krw: turnover.averageByCode.get(signal.code) }]),
+      turnover.signals.map((signal) => [
+        signal.code,
+        { prior_20_day_average_krw: turnover.averageByCode.get(signal.code) },
+      ]),
     ),
   });
   await persistKrxSignalRows(client, {
@@ -119,7 +139,10 @@ export async function generateKrxPriceSignals(): Promise<{
   };
 }
 
-async function readEtfDailyRows(client: ReturnType<typeof createServiceRoleClient>, basDd: string) {
+async function readEtfDailyRows(
+  client: ReturnType<typeof createServiceRoleClient>,
+  basDd: string,
+) {
   const { data, error } = await client
     .from("etf_daily_kr")
     .select("isu_cd,isu_nm,close_prc,fluc_rt,acc_trdval,acc_trdvol")
@@ -128,7 +151,10 @@ async function readEtfDailyRows(client: ReturnType<typeof createServiceRoleClien
   return (data ?? []).map(toSignalInputRow);
 }
 
-async function readEtfDailyRowsForDates(client: ReturnType<typeof createServiceRoleClient>, basDds: string[]) {
+async function readEtfDailyRowsForDates(
+  client: ReturnType<typeof createServiceRoleClient>,
+  basDds: string[],
+) {
   if (basDds.length === 0) return [];
   const { data, error } = await client
     .from("etf_daily_kr")
@@ -138,7 +164,9 @@ async function readEtfDailyRowsForDates(client: ReturnType<typeof createServiceR
   return (data ?? []).map(toSignalInputRow);
 }
 
-function groupTurnoverRowsByCode(rows: readonly KrxSignalInputRow[]): Map<string, number[]> {
+function groupTurnoverRowsByCode(
+  rows: readonly KrxSignalInputRow[],
+): Map<string, number[]> {
   const valuesByCode = new Map<string, number[]>();
   for (const row of rows) {
     const values = valuesByCode.get(row.code) ?? [];
@@ -148,10 +176,14 @@ function groupTurnoverRowsByCode(rows: readonly KrxSignalInputRow[]): Map<string
   return valuesByCode;
 }
 
-async function readNewListingSignals(client: ReturnType<typeof createServiceRoleClient>) {
+async function readNewListingSignals(
+  client: ReturnType<typeof createServiceRoleClient>,
+) {
   const { data: events, error: eventError } = await client
     .from("listing_event_kr")
-    .select("code,reg_day,first_seen,new_in_snapshot,first_alerted_at,source_snapshot_id")
+    .select(
+      "event_key,code,reg_day,first_seen,new_in_snapshot,first_alerted_at,source_snapshot_id",
+    )
     .eq("new_in_snapshot", true)
     .is("first_alerted_at", null);
   throwIfError(eventError, "read unalerted new listing events");
@@ -163,19 +195,26 @@ async function readNewListingSignals(client: ReturnType<typeof createServiceRole
     .select("code,name")
     .in("code", codes);
   throwIfError(masterError, "read new listing master names");
-  const names = new Map((masters ?? []).map((master) => [master.code, master.name]));
+  const names = new Map(
+    (masters ?? []).map((master) => [master.code, master.name]),
+  );
   return createKrxNewListingSignals(
     (events as ListingEventDatabaseRow[]).flatMap((event) => {
       const name = names.get(event.code);
-      return name ? [{
-        code: event.code,
-        name,
-        regDay: event.reg_day,
-        firstSeen: event.first_seen,
-        newInSnapshot: event.new_in_snapshot,
-        firstAlertedAt: event.first_alerted_at,
-        sourceSnapshotId: event.source_snapshot_id,
-      } satisfies KrxListingEventInput] : [];
+      return name
+        ? [
+            {
+              eventKey: event.event_key,
+              code: event.code,
+              name,
+              regDay: event.reg_day,
+              firstSeen: event.first_seen,
+              newInSnapshot: event.new_in_snapshot,
+              firstAlertedAt: event.first_alerted_at,
+              sourceSnapshotId: event.source_snapshot_id,
+            } satisfies KrxListingEventInput,
+          ]
+        : [];
     }),
   );
 }
@@ -191,7 +230,10 @@ function toSignalInputRow(row: EtfDailyDatabaseRow): KrxSignalInputRow {
   };
 }
 
-function throwIfError(error: { message: string } | null, operation: string): void {
+function throwIfError(
+  error: { message: string } | null,
+  operation: string,
+): void {
   if (error) throw new Error(`Supabase ${operation} failed: ${error.message}`);
 }
 
@@ -200,9 +242,15 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(result));
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1])
+) {
   main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : "Unknown price signal generation failure";
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown price signal generation failure";
     console.error(`KR price signal generation failed: ${message}`);
     process.exitCode = 1;
   });
