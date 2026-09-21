@@ -152,7 +152,7 @@ Supabase CLI의 `link`, `migration list`, `db push --dry-run`, `db push` 동작�
 ### 4.2 권장 환경 분리
 
 - **local:** 개발자 개인 `.env.local`; 실제 운영 Telegram chat으로 전송하지 않는다.
-- **staging:** 별도 Supabase 프로젝트·별도 Telegram 테스트 chat·제한된 API 요청량.
+- **staging:** 별도 Telegram 테스트 chat·제한된 API 요청량. 미국 P1은 2026-09-21 결정에 따라 운영 Supabase를 `market='US'` 격리로 함께 쓴다(5.1 참조).
 - **production:** 보호된 GitHub Environment, 승인자 지정, 운영 DB와 운영 Telegram chat만 사용.
 
 staging과 production은 KRX·Kiwoom 키도 가능하면 분리한다. 공급자가 키 분리를 지원하지 않으면, 실행 주체·IP·호출량을 분리하여 audit log로 추적한다.
@@ -174,10 +174,14 @@ staging과 production은 KRX·Kiwoom 키도 가능하면 분리한다. 공급자
 
 미국 어댑터는 국내 P0와 별도 workflow다. 실제 실행 전 staging 환경에서만 `ENABLE_US_ETF_P1=true`로 설정하고, production은 관측 목적과 수신처가 승인된 뒤에만 같은 값을 설정한다. 이 플래그는 비밀이 아니지만 `true` 전환은 실제 Kiwoom·Supabase 쓰기·Telegram 전송을 발생시킨다.
 
-1. `us-etf-movers.yml`은 GitHub `staging` Environment로 고정되어 있다. 해당 Environment의 `ENABLE_US_ETF_P1` Variable을 staging에서만 `true`로 설정하고 수동 실행을 먼저 사용한다.
+staging 경계(2026-09-21 결정): Supabase는 운영 프로젝트를 쓰고, Telegram만 별도 테스트 그룹으로 보낸다. KR 경로는 `market="KR"`·전략 버전으로 실행을 고른 뒤 `run_id`로만 읽으므로 US 행과 섞이지 않는다.
+
+> **Kiwoom 허용 IP 제한:** Kiwoom 앱 키는 등록된 IP에서만 토큰을 발급한다. GitHub 호스팅 러너는 IP가 매번 바뀌어 등록할 수 없으므로, 현재 이 workflow는 Actions에서 토큰 발급 단계에서 실패한다. 실행 환경을 결정하기 전까지 E2E는 등록된 IP의 로컬 PC에서 수행한다.
+
+1. `us-etf-movers.yml`은 GitHub `staging` Environment로 고정되어 있다. 해당 Environment의 `ENABLE_US_ETF_P1` Variable을 staging에서만 `true`로 설정하고 수동 실행을 먼저 사용한다. 로컬 실행 시에는 `ENABLE_US_ETF_P1=true`와 staging `TELEGRAM_CHAT_ID`를 셸 환경변수로 주입한다(`node --env-file`은 이미 설정된 환경변수를 덮어쓰지 않는다). 한국에서 Telegram으로 보낼 때 node 기본 연결 시도 제한(250ms)을 넘어 `ETIMEDOUT`이 나므로 `NODE_OPTIONS=--network-family-autoselection-attempt-timeout=2000`을 함께 설정한다.
 2. `usa10104`, `usa20911` 상승·하락, `usa20511`, `usa20931` 호출의 성공 여부·페이지 수·총 행 수만 확인한다. 원문 응답, access token, 종목별 상세값은 기록하지 않는다.
-3. 같은 실행을 한 번 더 수행한다. `source_snapshot`은 기준 관측 1개와 `duplicate_observation` 1개, 원본 객체 1개, US `signal_run` 1개인지 확인한다. `market_date`는 `null`이어야 한다.
-4. Telegram 수신처가 staging인지 확인한 뒤 P1 전용 메시지 1건을 확인한다. 메시지에는 “실험”과 국내 P0 독립 문구가 있어야 한다.
+3. 같은 실행을 한 번 더 수행한다. `source_snapshot`은 기준 관측 1개와 `duplicate_observation` 1개, 원본 객체 1개, US `signal_run` 1개인지 확인한다. `market_date`는 `null`이어야 한다. 미국 정규장·프리마켓·애프터마켓 중에는 응답이 계속 바뀌어 두 번째 실행도 새 관측이 되므로, 장이 완전히 닫힌 시간(주말 등)에 수행한다.
+4. Telegram 수신처가 staging인지 확인한 뒤 P1 보고를 확인한다. 메시지에는 “실험”과 국내 P0 독립 문구가 있어야 한다. 현재 보고는 전체 순위를 보내 약 10건으로 나뉜다.
 5. `ENABLE_US_ETF_P1=false`로 되돌린 후 `npm run ingest:us-movers`, `npm run report:us-movers`가 `DISABLED`로 끝나는지 확인한다. KR workflow와 최근 KR `signal_run`은 변경되지 않아야 한다.
 
 로컬 수동 명령은 다음과 같다. `ENABLE_US_ETF_P1=false`이면 외부 API·DB·Telegram을 호출하지 않는다.
