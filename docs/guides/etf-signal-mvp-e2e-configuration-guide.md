@@ -19,16 +19,16 @@ Supabase의 권장 패턴도 서버 전용 모듈에서만 admin client를 만�
 
 ### 2.1 애플리케이션·수집 작업
 
-| 변수 | 위치 | 필수 시점 | 용도 | 공개 여부 |
-| --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | 로컬 `.env.local`, CI Variable/Secret, 배포 환경 | 웹·서버 공통 | Supabase 프로젝트 URL | 공개 가능 |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 동일 | 웹·서버 공통 | 브라우저 Supabase client | 공개 가능 |
-| `SUPABASE_SERVICE_ROLE_KEY` | 서버·CI Secret·예약 작업 | M2 영속화부터 | 원천 스냅샷/수집 결과 서버 저장 | 비밀 |
-| `KRX_API_KEY` | 서버·CI Secret·예약 작업 | M2 KRX 수집 | KRX Open API 인증 | 비밀 |
-| `KIWOOM_APP_KEY` | 서버·CI Secret·예약 작업 | M2 Kiwoom 수집 | Kiwoom OAuth app key | 비밀 |
-| `KIWOOM_SECRET_KEY` | 서버·CI Secret·예약 작업 | M2 Kiwoom 수집 | Kiwoom OAuth secret key | 비밀 |
-| `TELEGRAM_BOT_TOKEN` | 서버·CI Secret·예약 작업 | M3 Telegram E2E부터 | Telegram Bot API 인증 | 비밀 |
-| `TELEGRAM_CHAT_ID` | 서버·CI Secret·예약 작업 | M3 Telegram E2E부터 | 허용된 수신 대화 식별자 | 비밀 취급 |
+| 변수                                   | 위치                                             | 필수 시점           | 용도                            | 공개 여부 |
+| -------------------------------------- | ------------------------------------------------ | ------------------- | ------------------------------- | --------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | 로컬 `.env.local`, CI Variable/Secret, 배포 환경 | 웹·서버 공통        | Supabase 프로젝트 URL           | 공개 가능 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 동일                                             | 웹·서버 공통        | 브라우저 Supabase client        | 공개 가능 |
+| `SUPABASE_SERVICE_ROLE_KEY`            | 서버·CI Secret·예약 작업                         | M2 영속화부터       | 원천 스냅샷/수집 결과 서버 저장 | 비밀      |
+| `KRX_API_KEY`                          | 서버·CI Secret·예약 작업                         | M2 KRX 수집         | KRX Open API 인증               | 비밀      |
+| `KIWOOM_APP_KEY`                       | 서버·CI Secret·예약 작업                         | M2 Kiwoom 수집      | Kiwoom OAuth app key            | 비밀      |
+| `KIWOOM_SECRET_KEY`                    | 서버·CI Secret·예약 작업                         | M2 Kiwoom 수집      | Kiwoom OAuth secret key         | 비밀      |
+| `TELEGRAM_BOT_TOKEN`                   | 서버·CI Secret·예약 작업                         | M3 Telegram E2E부터 | Telegram Bot API 인증           | 비밀      |
+| `TELEGRAM_CHAT_ID`                     | 서버·CI Secret·예약 작업                         | M3 Telegram E2E부터 | 허용된 수신 대화 식별자         | 비밀 취급 |
 
 현재 저장소에 이미 있을 수 있는 `APP_KEY`·`APP_SECRET` 같은 일반 이름은 자동으로 사용하지 않는다. Kiwoom에는 반드시 `KIWOOM_APP_KEY`, `KIWOOM_SECRET_KEY`라는 명시적 계약을 사용한다. 중복 키의 실제 값 비교·복사는 사람이 안전한 비밀 관리 화면에서만 한다.
 
@@ -137,11 +137,11 @@ Supabase CLI의 `link`, `migration list`, `db push --dry-run`, `db push` 동작�
 
 ### 4.1 저장 위치
 
-| 저장소 설정 | 변수 | 이유 |
-| --- | --- | --- |
-| GitHub Actions Variable 또는 배포 환경 변수 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_REF` | 값이 공개 가능하거나 식별자여서 로그 노출 위험이 낮음 |
-| GitHub Actions Secret 또는 배포 환경 Secret | `SUPABASE_SERVICE_ROLE_KEY`, `KRX_API_KEY`, `KIWOOM_APP_KEY`, `KIWOOM_SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | 서버 전용 인증·수신자 정보 |
-| GitHub Actions Secret (migration workflow를 만들 때만) | `SUPABASE_ACCESS_TOKEN` 또는 DB 접근에 필요한 비밀정보 | CI가 Supabase CLI를 인증해야 할 때만 사용 |
+| 저장소 설정                                            | 변수                                                                                                                        | 이유                                                  |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| GitHub Actions Variable 또는 배포 환경 변수            | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_REF`                                  | 값이 공개 가능하거나 식별자여서 로그 노출 위험이 낮음 |
+| GitHub Actions Secret 또는 배포 환경 Secret            | `SUPABASE_SERVICE_ROLE_KEY`, `KRX_API_KEY`, `KIWOOM_APP_KEY`, `KIWOOM_SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | 서버 전용 인증·수신자 정보                            |
+| GitHub Actions Secret (migration workflow를 만들 때만) | `SUPABASE_ACCESS_TOKEN` 또는 DB 접근에 필요한 비밀정보                                                                      | CI가 Supabase CLI를 인증해야 할 때만 사용             |
 
 `NEXT_PUBLIC_` 변수는 빌드 시점에 브라우저 JavaScript로 포함될 수 있다. 따라서 service role key나 공급자 키에 이 접두사를 붙이지 않는다. PR이 외부 기여자에서 온 경우에는 Secret이 주입되는 workflow를 실행하지 않고, 수집·알림·DB 적용은 보호된 브랜치 또는 승인된 환경에서만 실행한다.
 
@@ -163,7 +163,7 @@ staging과 production은 KRX·Kiwoom 키도 가능하면 분리한다. 공급자
 4. **Kiwoom 수집:** OAuth token 획득 뒤 ETF 마스터 응답의 `return_code`, 페이지 연속 여부, 행 수와 기준일 형식만 기록한다. access token은 기록하지 않는다.
 5. **영속화·재실행:** 같은 대상일을 두 번 실행해 원천 snapshot 중복 방지·정규화 upsert·실행 상태를 확인한다.
 6. **신호·대시보드:** raw/liquid 결과가 같은 `signal_run`에 귀속되는지, 인증되지 않은 요청이 보호 테이블을 읽지 못하는지 확인한다.
-7. **Telegram:** staging chat에서 메시지 1건을 보내고 `message_id`·HTTP 상태만 확인한다. token, chat ID, 메시지 내 투자 추천처럼 오해될 표현은 로그에 남기지 않는다.
+7. **Telegram:** staging chat에서 새 `TRADING_COMPLETE` 신호 보고 1건과 `PUBLISH_PENDING`·`PARTIAL`·`FETCH_FAIL`·휴장/중복 중 현재 재현 가능한 상태 보고 1건을 확인한다. `message_id`·HTTP 상태·상태 구분만 기록하고, token, chat ID, 메시지 전문, 투자 추천처럼 오해될 표현은 로그에 남기지 않는다.
 8. **실패 복구:** 의도적으로 KRX/Kiwoom/Telegram 한 공급자를 차단한 뒤 수집·신호·알림이 각각 명시적 실패 상태와 재시도 가능 상태로 남는지 확인한다.
 
 E2E 완료 기준은 전체 체인이 성공한 경우뿐 아니라, 외부 공급자 실패 시에도 중복 저장·무음 실패·비밀 노출 없이 실패 원인과 재실행 단위가 남는 것이다.
