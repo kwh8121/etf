@@ -8,7 +8,9 @@
     "test": "vitest run",
     "continuity:check": "node scripts/continuity-harness.mjs check",
     "ingest:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/ingest-kr.ts",
-    "backfill:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/backfill.ts"
+    "backfill:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/backfill.ts",
+    "signals:kr-price": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/generate-kr-price-signals.ts",
+    "report:kr-signals": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/report-kr-signals.ts"
   },
   "engines": {
     "node": ">=22.23.2 <23"

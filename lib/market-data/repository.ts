@@ -122,6 +122,12 @@ export interface PersistResult {
   duplicate: boolean;
 }
 
+export function createKrxTradingSequenceUpdates(rows: readonly { basDd: string }[]) {
+  return [...rows]
+    .sort((left, right) => left.basDd.localeCompare(right.basDd))
+    .map((row, index) => ({ basDd: row.basDd, seq: index + 1 }));
+}
+
 export function createPayloadSha256(payload: unknown): string {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
@@ -483,6 +489,35 @@ export class SupabaseMarketDataRepository implements MarketDataRepository {
       { onConflict: "bas_dd" },
     );
     throwIfError(error, "upsert KRX trading calendar");
+    if (input.status === "TRADING_COMPLETE") {
+      await this.resequenceCompleteTradingDays();
+    }
+  }
+
+  private async resequenceCompleteTradingDays(): Promise<void> {
+    const { data, error } = await this.client
+      .from("trading_calendar_kr")
+      .select("bas_dd")
+      .eq("status", "TRADING_COMPLETE");
+    throwIfError(error, "read complete KRX trading days for resequencing");
+    const updates = createKrxTradingSequenceUpdates(
+      (data ?? []).map((row) => ({ basDd: row.bas_dd })),
+    );
+
+    for (const update of updates) {
+      const { error: temporaryError } = await this.client
+        .from("trading_calendar_kr")
+        .update({ seq: -1_000_000 - update.seq })
+        .eq("bas_dd", update.basDd);
+      throwIfError(temporaryError, "temporarily resequence KRX trading day");
+    }
+    for (const update of updates) {
+      const { error: sequenceError } = await this.client
+        .from("trading_calendar_kr")
+        .update({ seq: update.seq })
+        .eq("bas_dd", update.basDd);
+      throwIfError(sequenceError, "resequence KRX trading day");
+    }
   }
 
   async upsertEtfDaily(rows: readonly EtfDailyRow[]): Promise<void> {

@@ -4,6 +4,7 @@ import type { KiwoomEtfMasterRecord } from "@/lib/market-data/kiwoom";
 import {
   persistKiwoomMasterSnapshot,
   persistKrxSnapshot,
+  createKrxTradingSequenceUpdates,
   type EtfDailyRow,
   type EtfMasterRow,
   type ExistingMaster,
@@ -111,6 +112,18 @@ class FakeRepository implements MarketDataRepository {
 }
 
 describe("market data repository orchestration", () => {
+  it("orders trading sequence by market date rather than descending backfill insertion order", () => {
+    expect(createKrxTradingSequenceUpdates([
+      { basDd: "2026-09-18" },
+      { basDd: "2026-09-16" },
+      { basDd: "2026-09-17" },
+    ])).toEqual([
+      { basDd: "2026-09-16", seq: 1 },
+      { basDd: "2026-09-17", seq: 2 },
+      { basDd: "2026-09-18", seq: 3 },
+    ]);
+  });
+
   it("persists only a complete KRX snapshot into daily data and assigns the next sequence", async () => {
     const repository = new FakeRepository();
     const validation = validateKrxSnapshot("20260916", [rawKrxRow]);

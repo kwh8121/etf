@@ -42,4 +42,5 @@ describe("market-data foundation migration", () => {
       "create policy \"Authenticated users can read signal results\"",
     );
   });
+
 });

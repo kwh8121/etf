@@ -27,8 +27,8 @@ Supabase의 권장 패턴도 서버 전용 모듈에서만 admin client를 만�
 | `KRX_API_KEY` | 서버·CI Secret·예약 작업 | M2 KRX 수집 | KRX Open API 인증 | 비밀 |
 | `KIWOOM_APP_KEY` | 서버·CI Secret·예약 작업 | M2 Kiwoom 수집 | Kiwoom OAuth app key | 비밀 |
 | `KIWOOM_SECRET_KEY` | 서버·CI Secret·예약 작업 | M2 Kiwoom 수집 | Kiwoom OAuth secret key | 비밀 |
-| `TELEGRAM_BOT_TOKEN` | 서버·CI Secret·예약 작업 | M5 알림부터 | Telegram Bot API 인증 | 비밀 |
-| `TELEGRAM_CHAT_ID` | 서버·CI Secret·예약 작업 | M5 알림부터 | 허용된 수신 대화 식별자 | 비밀 취급 |
+| `TELEGRAM_BOT_TOKEN` | 서버·CI Secret·예약 작업 | M3 Telegram E2E부터 | Telegram Bot API 인증 | 비밀 |
+| `TELEGRAM_CHAT_ID` | 서버·CI Secret·예약 작업 | M3 Telegram E2E부터 | 허용된 수신 대화 식별자 | 비밀 취급 |
 
 현재 저장소에 이미 있을 수 있는 `APP_KEY`·`APP_SECRET` 같은 일반 이름은 자동으로 사용하지 않는다. Kiwoom에는 반드시 `KIWOOM_APP_KEY`, `KIWOOM_SECRET_KEY`라는 명시적 계약을 사용한다. 중복 키의 실제 값 비교·복사는 사람이 안전한 비밀 관리 화면에서만 한다.
 
@@ -56,6 +56,21 @@ node --env-file=.env.local -e "for (const k of ['NEXT_PUBLIC_SUPABASE_URL','NEXT
 ```
 
 이 명령의 출력은 `set`/`missing`만 공유한다. 값, 길이, 앞·뒤 문자열도 공유하지 않는다.
+
+### 2.3 Telegram staging 수신처 설정
+
+1. BotFather에서 전용 봇을 만들고 발급 토큰을 `TELEGRAM_BOT_TOKEN`에만 저장한다.
+2. 운영 대화가 아닌 private staging 대화 또는 그룹을 만들고, 봇을 추가한 뒤 대화를 한 번 시작한다.
+3. Telegram의 공식 업데이트 조회 방식으로 해당 대화의 ID를 확인해 `TELEGRAM_CHAT_ID`에만 저장한다. 이 값은 수신 대상 정보이므로 토큰과 동일하게 Secret으로 취급한다.
+4. 값은 출력하지 말고 존재 여부만 확인한다. 그 후 아래 명령을 한 번만 실행한다.
+
+   ```bash
+   npm run report:kr-signals -- --send
+   ```
+
+5. 성공 증거로는 `sent: true`, 실행 ID, 메시지 수만 남긴다. chat ID, 토큰, 메시지 전문, Telegram 응답 전체는 기록하지 않는다.
+
+`--send` 없는 `npm run report:kr-signals`는 실제 전송을 하지 않는 포맷 스모크 테스트다. 발송 함수는 Telegram `sendMessage` API만 호출하며, 메시지가 길면 각 조각에 실행 추적 메타데이터를 반복한다.
 
 ## 3. Supabase 데이터베이스 연결과 마이그레이션
 
@@ -156,7 +171,7 @@ E2E 완료 기준은 전체 체인이 성공한 경우뿐 아니라, 외부 공�
 ## 6. 현재 상태와 다음 조치
 
 - KRX와 Kiwoom의 읽기 전용 계약 확인은 수행되었고, 키 값은 노출하지 않았다.
-- Supabase 공개 연결 정보와 service-role key는 원격 API 인증을 통과했다. Telegram 키는 M5 착수 전에 별도로 설정 여부를 점검한다.
+- Supabase 공개 연결 정보와 service-role key는 원격 API 인증을 통과했다. Telegram 키는 M3 실발송 E2E 전에 별도로 설정 여부를 점검한다.
 - `supabase/migrations/20260918080411_market_data_foundation.sql`, `20260918080422_restrict_rls_auto_enable_execution.sql`, `20260918080626_add_market_data_foreign_key_indexes.sql`은 원격 ETF DB에 적용되었다.
 - 위 3장의 절차가 끝나기 전까지 Linear `KOR-49`는 `In Review`/`Gate-blocked` 상태를 유지한다.
 
