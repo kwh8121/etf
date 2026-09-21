@@ -1,10 +1,10 @@
-import { assertValidKrxRequestDate } from "@/lib/market-data/krx-date";
+import { assertValidKrxRequestDate } from "./krx-date.ts";
 import {
   InvalidKrxFieldError,
   parseKrxEtfRow,
   type KrxEtfRow,
   type KrxRawEtfRow,
-} from "@/lib/market-data/krx";
+} from "./krx.ts";
 
 export type KrxSnapshotStatus =
   | "TRADING_COMPLETE"

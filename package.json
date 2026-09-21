@@ -6,7 +6,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "continuity:check": "node scripts/continuity-harness.mjs check"
+    "continuity:check": "node scripts/continuity-harness.mjs check",
+    "ingest:kr": "node --env-file=.env --experimental-default-type=module --experimental-strip-types scripts/ingest-kr.ts"
   },
   "engines": {
     "node": ">=22.23.2 <23"

@@ -2,7 +2,7 @@
 
 > 상위 마일스톤: `ETF-signal-MVP-v2.2-ROADMAP.md`의 M2
 > 선행 상태: M0–M1 로컬 구현 및 원격 Supabase 스키마·RLS 적용 완료.
-> 상태: M2-01~05 완료. KRX 파서·완전성 계약·read-only probe, Kiwoom OAuth·`ka10099` 마스터 어댑터, `ka40004` 연속조회·429 동일 커서 재개를 구현·검증했다. 다음은 영속화 E2E(M2-06)다.
+> 상태: M2-01~06 완료. KRX·Kiwoom 수집 계약, 비공개 원본 객체·출처 스냅샷, 정규화 UPSERT와 실제 DB 재실행 멱등성까지 검증했다. 다음은 M2-07 25개 완전 거래일 backfill이다.
 
 ## 목표
 
@@ -17,7 +17,7 @@ KRX `etf_bydd_trd`를 국내 EOD의 권위 스냅샷으로 수집·검증하고,
 | M2-03 | KRX read-only 클라이언트·probe | `lib/market-data/krx-client.ts`, `scripts/probe.ts` | M2-02, `KRX_API_KEY` | 유효 거래일 2개·비거래일 1개 마스킹 결과 |
 | M2-04 | Kiwoom OAuth·`ka10099` 어댑터 | `lib/market-data/kiwoom.ts`, fixture·테스트 | Kiwoom 키 | 토큰 비로그·`regDay`·초기 스냅샷 계약 |
 | M2-05 | `ka40004` 페이지·429 재개 | `lib/market-data/kiwoom-pagination.ts`, 테스트 | M2-04 | 같은 커서 재시도와 `cont-yn=N` 종료 |
-| M2-06 | 스냅샷 저장·멱등성 | `lib/market-data/repository.ts`, `scripts/ingest-kr.ts` | Supabase URL·서비스 역할 키 | 실제 DB 적용·재실행 검증 |
+| M2-06 | 스냅샷 저장·멱등성 | `lib/market-data/repository.ts`, `lib/supabase/service-role.ts`, `scripts/ingest-kr.ts` | Supabase URL·서비스 역할 키 | 실제 DB 적용·재실행 검증 |
 | M2-07 | 25개 완전 거래일 backfill | `scripts/backfill.ts` | M2-06 | `TRADING_COMPLETE` 25일 또는 문서화된 예외 |
 
 ## 완료 기록: M2-04~05
@@ -28,6 +28,17 @@ KRX `etf_bydd_trd`를 국내 EOD의 권위 스냅샷으로 수집·검증하고,
 - 첫 마스터 관측은 기존 전 종목을 신규 상장으로 분류하지 않는다. 이전 코드 집합이 없을 때 신규 상장 후보는 빈 배열이어야 한다.
 - `lib/market-data/kiwoom-pagination.ts`: `ka40004`를 `cont-yn=N`까지 수집하며, 페이지 간 최소 1.25초 간격을 둔다. HTTP 429에서는 `Retry-After`와 최소 간격 중 긴 시간만큼 대기한 뒤 동일 `next-key`로 재개한다.
 - `test/market-data/kiwoom.test.ts`, `test/market-data/kiwoom-pagination.test.ts`로 OAuth 요청 비밀 비노출, 헤더·payload, 잘못된 `regDay`, 누락 커서, 429 동일 커서 재개, 초기 스냅샷 계약을 검증했다.
+
+## 완료 기록: M2-06
+
+2026-09-21 KST에 서비스 역할 전용 영속화 경로를 구현하고 실제 원격 DB에서 재실행했다.
+
+- `lib/supabase/service-role.ts`는 `server-only` 경계를 사용하고, CLI 전용 진입점은 같은 직접 `@supabase/supabase-js` 클라이언트를 사용한다. 세션 영속·자동 갱신·URL 세션 감지를 모두 끈다.
+- `source_snapshot`은 관측마다 고유 `observation_key`와 SHA-256을 기록한다. 같은 콘텐츠는 두 번째 관측을 `duplicate_observation`으로 기록하고, 기존 비공개 객체 경로와 `duplicate_of_snapshot_id`를 재사용한다.
+- 원문 응답은 공개 테이블이나 로그가 아니라 private Storage 버킷 `market-data-source-snapshots`에만 저장한다. 버킷은 public이 아니며 허용 MIME type은 `application/json`이다.
+- `TRADING_COMPLETE` KRX만 `etf_daily_kr`와 순번 있는 `trading_calendar_kr`로 UPSERT한다. `NON_TRADING`·`PUBLISH_PENDING`·`PARTIAL`은 일별 ETF 행을 쓰지 않는다.
+- Kiwoom 첫 마스터 적재는 `etf_master_kr`만 초기화하고, 그 뒤 처음 보인 코드만 `listing_event_kr`에 기록한다.
+- 실제 `npm run ingest:kr -- 20260916`를 두 번 실행했다. 첫 실행은 KRX·Kiwoom 모두 정상 저장, 두 번째 실행은 양쪽 모두 중복 관측으로 처리됐다. DB 확인 결과 KRX 관측 2개(중복 1개), KRX 일별 행 1,171개, `TRADING_COMPLETE` 달력 행, Kiwoom 관측 2개(중복 1개), 마스터 1,171개, 초기 상장 이벤트 0개다.
 
 ## KRX 상태 계약
 

@@ -1,5 +1,5 @@
-import { assertValidKrxRequestDate } from "@/lib/market-data/krx-date";
-import type { KrxRawEtfRow } from "@/lib/market-data/krx";
+import { assertValidKrxRequestDate } from "./krx-date.ts";
+import type { KrxRawEtfRow } from "./krx.ts";
 
 const KRX_ETF_DAILY_ENDPOINT =
   "https://data-dbg.krx.co.kr/svc/apis/etp/etf_bydd_trd";
