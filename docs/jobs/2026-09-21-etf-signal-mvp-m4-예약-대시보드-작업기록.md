@@ -30,3 +30,4 @@
 - 로컬 `.env`에는 `TELEGRAM_CHAT_ID`만 있고 `TELEGRAM_BOT_TOKEN`이 없어 실발송을 시작할 수 없다. `.env.local`은 존재하지 않는다.
 - GitHub `production` Environment는 생성됐고 Telegram Secret 두 개는 등록됐지만, 수집·Supabase Secret 및 공개 Variable은 아직 등록되지 않았다. 따라서 `workflow_dispatch`는 실행하지 않았다.
 - 샌드박스의 첫 Supabase 조회 `fetch failed`는 코드·DB 문제가 아니라 외부 네트워크 제한이었고, 권한 있는 동일 명령이 정상 종료해 원인을 분리했다.
+- GitHub `workflow_dispatch`는 2026-09-18 기준으로 재실행해 성공했다. `.env`가 없는 CI에서 종료하던 문제는 `--env-file-if-exists=.env`로 수정했고, 최종 실행은 중복 KRX 관측·Kiwoom `FETCH_FAIL` 상태에서 신호 재생성 없이 Telegram 상태 알림을 전송했다.
