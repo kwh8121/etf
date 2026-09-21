@@ -1,7 +1,7 @@
 # M5-B — 격리된 미국 ETF 등락 어댑터 구현 계획
 
 > 시작일: 2026-09-21 KST
-> 상태: 구현 완료 · staging E2E 준비 완료 · GitHub 인증 복구 대기
+> 상태: 구현 완료 · staging E2E 보류
 
 ## 정본 결정
 
@@ -17,7 +17,8 @@
 
 ## staging E2E 재개 조건
 
-- GitHub CLI/API 인증을 복구해 `staging` Environment의 변수·Secret과 수동 실행 결과를 확인할 수 있어야 한다.
+- 현재 GitHub `staging` Environment는 삭제되었고 US ETF movers workflow는 비활성화되어 있다. 따라서 staging E2E는 의도적으로 보류한다.
+- 재개 시 staging Environment와 workflow를 다시 활성화한 뒤, 변수·Secret과 수동 실행 결과를 확인한다.
 - staging에는 별도 Supabase 프로젝트와 Telegram 테스트 chat을 사용한다. `production` Environment의 값으로는 P1 실측을 실행하지 않는다.
 - `ENABLE_US_ETF_P1=true`로 수동 실행을 2회 수행해 새 관측 1회·중복 관측 1회·US `signal_run` 1회를 확인한 뒤, 플래그를 `false`로 되돌린다.
 
