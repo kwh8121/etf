@@ -6,6 +6,11 @@ const root = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  experimental: {
+    // TypeScript 5.x supports the compiler API. This avoids the CLI's empty
+    // piped --showConfig output in the current Node 22 build environment.
+    useTypeScriptCli: false,
+  },
   turbopack: {
     root,
   },

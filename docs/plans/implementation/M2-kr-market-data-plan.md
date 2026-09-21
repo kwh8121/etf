@@ -2,7 +2,7 @@
 
 > 상위 마일스톤: `ETF-signal-MVP-v2.2-ROADMAP.md`의 M2
 > 선행 상태: M0–M1 로컬 구현 및 원격 Supabase 스키마·RLS 적용 완료.
-> 상태: KRX 파서·완전성 계약·read-only probe 및 Kiwoom 마스터 probe 통과 / 영속화 E2E는 Supabase 서비스 역할 키 필요
+> 상태: M2-01~05 완료. KRX 파서·완전성 계약·read-only probe, Kiwoom OAuth·`ka10099` 마스터 어댑터, `ka40004` 연속조회·429 동일 커서 재개를 구현·검증했다. 다음은 영속화 E2E(M2-06)다.
 
 ## 목표
 
@@ -19,6 +19,15 @@ KRX `etf_bydd_trd`를 국내 EOD의 권위 스냅샷으로 수집·검증하고,
 | M2-05 | `ka40004` 페이지·429 재개 | `lib/market-data/kiwoom-pagination.ts`, 테스트 | M2-04 | 같은 커서 재시도와 `cont-yn=N` 종료 |
 | M2-06 | 스냅샷 저장·멱등성 | `lib/market-data/repository.ts`, `scripts/ingest-kr.ts` | Supabase URL·서비스 역할 키 | 실제 DB 적용·재실행 검증 |
 | M2-07 | 25개 완전 거래일 backfill | `scripts/backfill.ts` | M2-06 | `TRADING_COMPLETE` 25일 또는 문서화된 예외 |
+
+## 완료 기록: M2-04~05
+
+2026-09-21 KST에 다음 계약을 테스트 우선으로 구현했다.
+
+- `lib/market-data/kiwoom.ts`: `au10001` JSON OAuth 토큰 발급과 `ka10099(mrkt_tp="8")` 마스터 수집. Bearer/API-ID/연속조회 헤더를 고정하고, `return_code`, JSON 응답, 중복 코드, `code`·`name`·실제 달력일 `regDay`를 fail-closed 검증한다.
+- 첫 마스터 관측은 기존 전 종목을 신규 상장으로 분류하지 않는다. 이전 코드 집합이 없을 때 신규 상장 후보는 빈 배열이어야 한다.
+- `lib/market-data/kiwoom-pagination.ts`: `ka40004`를 `cont-yn=N`까지 수집하며, 페이지 간 최소 1.25초 간격을 둔다. HTTP 429에서는 `Retry-After`와 최소 간격 중 긴 시간만큼 대기한 뒤 동일 `next-key`로 재개한다.
+- `test/market-data/kiwoom.test.ts`, `test/market-data/kiwoom-pagination.test.ts`로 OAuth 요청 비밀 비노출, 헤더·payload, 잘못된 `regDay`, 누락 커서, 429 동일 커서 재개, 초기 스냅샷 계약을 검증했다.
 
 ## KRX 상태 계약
 
