@@ -23,3 +23,10 @@
 - 인증/비인증 브라우저 E2E와 RLS 결과 기록
 
 비밀값·원문 응답은 기록하지 않는다. `supabase/.temp/`는 커밋하지 않는다.
+
+## E2E 재점검 (2026-09-21)
+
+- 권한 있는 네트워크에서 `npm run report:kr-signals`를 실행해 최신 KR 신호 run 1건과 메시지 1건 포맷을 확인했다. `--send`를 주지 않았으므로 실제 Telegram 발송은 하지 않았다.
+- 로컬 `.env`에는 `TELEGRAM_CHAT_ID`만 있고 `TELEGRAM_BOT_TOKEN`이 없어 실발송을 시작할 수 없다. `.env.local`은 존재하지 않는다.
+- GitHub `production` Environment는 생성됐고 Telegram Secret 두 개는 등록됐지만, 수집·Supabase Secret 및 공개 Variable은 아직 등록되지 않았다. 따라서 `workflow_dispatch`는 실행하지 않았다.
+- 샌드박스의 첫 Supabase 조회 `fetch failed`는 코드·DB 문제가 아니라 외부 네트워크 제한이었고, 권한 있는 동일 명령이 정상 종료해 원인을 분리했다.
