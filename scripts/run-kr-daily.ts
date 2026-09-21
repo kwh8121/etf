@@ -6,7 +6,10 @@ import { getRequiredServerSecret } from "../lib/config/server-env.ts";
 import { KiwoomClient } from "../lib/market-data/kiwoom.ts";
 import { KrxClient } from "../lib/market-data/krx-client.ts";
 import { SupabaseMarketDataRepository } from "../lib/market-data/repository.ts";
-import { createKoreanDailyStatusReport } from "../lib/notifications/kr-daily-status.ts";
+import {
+  createKoreanDailyStatusReport,
+  shouldSendKoreanDailyStatus,
+} from "../lib/notifications/kr-daily-status.ts";
 import {
   formatTelegramReport,
   sendTelegramMessages,
@@ -33,22 +36,32 @@ export async function runKoreanDailyWorkflow(requestedDate = getKstDate()) {
       secretKey: getRequiredServerSecret("KIWOOM_SECRET_KEY"),
     }),
   });
+  const statusAlertRequired = shouldSendKoreanDailyStatus(ingestion);
   if (ingestion.krx.status !== "TRADING_COMPLETE" || ingestion.krx.duplicate) {
-    const statusReport = createKoreanDailyStatusReport({
-      requestedDate,
-      ...ingestion,
-    });
-    await sendTelegramMessages({
-      token: getRequiredServerSecret("TELEGRAM_BOT_TOKEN"),
-      chatId: getRequiredServerSecret("TELEGRAM_CHAT_ID"),
-      messages: formatTelegramReport(statusReport),
-    });
+    await sendKoreanDailyStatus(requestedDate, ingestion);
     return { ingestion, signalRunId: null, telegramSent: true };
   }
 
   const signals = await generateKrxPriceSignals();
   await reportLatestKrxSignals(true);
+  if (statusAlertRequired)
+    await sendKoreanDailyStatus(requestedDate, ingestion);
   return { ingestion, signalRunId: signals.runId, telegramSent: true };
+}
+
+async function sendKoreanDailyStatus(
+  requestedDate: string,
+  ingestion: Awaited<ReturnType<typeof runKoreanMarketIngestion>>,
+): Promise<void> {
+  const statusReport = createKoreanDailyStatusReport({
+    requestedDate,
+    ...ingestion,
+  });
+  await sendTelegramMessages({
+    token: getRequiredServerSecret("TELEGRAM_BOT_TOKEN"),
+    chatId: getRequiredServerSecret("TELEGRAM_CHAT_ID"),
+    messages: formatTelegramReport(statusReport),
+  });
 }
 
 function getKstDate(): string {

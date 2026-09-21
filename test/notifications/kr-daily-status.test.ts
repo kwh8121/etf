@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createKoreanDailyStatusReport } from "../../lib/notifications/kr-daily-status";
+import {
+  createKoreanDailyStatusReport,
+  shouldSendKoreanDailyStatus,
+} from "../../lib/notifications/kr-daily-status";
 
 describe("Korean daily status reports", () => {
   it.each([
@@ -45,4 +48,21 @@ describe("Korean daily status reports", () => {
       ]);
     },
   );
+
+  it("requires a status alert when Kiwoom fails after a new complete KRX snapshot", () => {
+    expect(
+      shouldSendKoreanDailyStatus({
+        krx: {
+          status: "TRADING_COMPLETE",
+          duplicate: false,
+          snapshotId: "krx-snapshot",
+        },
+        kiwoom: {
+          status: "FETCH_FAIL",
+          duplicate: false,
+          snapshotId: "kiwoom-snapshot",
+        },
+      }),
+    ).toBe(true);
+  });
 });

@@ -33,6 +33,16 @@ export function createKoreanDailyStatusReport(
   };
 }
 
+export function shouldSendKoreanDailyStatus(
+  input: Omit<KoreanDailyStatusInput, "requestedDate">,
+): boolean {
+  return (
+    input.krx.status !== "TRADING_COMPLETE" ||
+    input.krx.duplicate ||
+    input.kiwoom.status === "FETCH_FAIL"
+  );
+}
+
 function resolveTelegramStatus(
   input: KoreanDailyStatusInput,
 ): TelegramReportInput["status"] {
