@@ -157,6 +157,26 @@ Supabase CLI의 `link`, `migration list`, `db push --dry-run`, `db push` 동작�
 
 staging과 production은 KRX·Kiwoom 키도 가능하면 분리한다. 공급자가 키 분리를 지원하지 않으면, 실행 주체·IP·호출량을 분리하여 audit log로 추적한다.
 
+### 4.3 Kiwoom self-hosted runner 운영
+
+Kiwoom을 호출하는 `kr-daily.yml`·`us-etf-movers.yml`은 Kiwoom 허용 IP로 등록된 PC의 self-hosted runner에서 실행한다(2026-09-21 전환).
+
+| 항목             | 값                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| runner 이름·라벨 | `kohdekt-wsl` · `self-hosted, Linux, X64, kiwoom`                                   |
+| 설치 위치        | WSL2 `~/actions-runner-etf` (디렉터리 권한 700, `.credentials` 600)                 |
+| 실행 방식        | systemd 사용자 서비스 `actions-runner-etf.service` (linger 사용, 로그인 없이 유지)  |
+| 저장소 보호      | fork PR workflow 실행은 모든 외부 기여자에게 승인 필요(`all_external_contributors`) |
+
+- 상태·로그: `systemctl --user status actions-runner-etf`, `journalctl --user -u actions-runner-etf -n 50`
+- 재시작: `systemctl --user restart actions-runner-etf`
+- GitHub 쪽 상태: `gh api repos/kwh8121/etf/actions/runners --jq '.runners[] | "\(.name) \(.status)"'`
+- 예약 시각(평일 07:30 KST US, 19:15 KST KR)에 PC와 WSL이 켜져 있어야 한다. runner가 꺼져 있으면 job은 대기열에서 기다렸다가 runner가 켜지면 실행된다.
+- 공인 IP가 바뀌면 Kiwoom 토큰 발급이 다시 실패한다. 이때는 Kiwoom 허용 IP를 갱신한다.
+- self-hosted에서는 `setup-node`의 `cache: npm`을 쓰지 않는다. 사용자 계정 전체의 `~/.npm`(약 24GB)을 대상으로 해 후처리 단계가 멈췄다. npm 캐시는 runner 디스크에 유지된다.
+- runner는 현재 사용자 계정 권한으로 실행되어 운영 `.env`, gh keyring, 다른 프로젝트에 접근할 수 있다. 비밀번호 없는 sudo가 없어 전용 Linux 사용자는 만들지 않았다. 분리가 필요하면 전용 사용자로 재설치한다.
+- 이 저장소에 `pull_request` 계열 트리거로 self-hosted runner를 쓰는 workflow를 추가하지 않는다.
+
 ## 5. E2E 실행 체크리스트
 
 아래는 기능이 M2~M5에서 연결된 뒤 수행하는 순서다. 아직 구현되지 않은 CLI·Route Handler를 가정해 임의 명령을 만들지 않으며, 각 단계에서 해당 마일스톤의 실제 진입점을 사용한다.
@@ -176,7 +196,7 @@ staging과 production은 KRX·Kiwoom 키도 가능하면 분리한다. 공급자
 
 staging 경계(2026-09-21 결정): Supabase는 운영 프로젝트를 쓰고, Telegram만 별도 테스트 그룹으로 보낸다. KR 경로는 `market="KR"`·전략 버전으로 실행을 고른 뒤 `run_id`로만 읽으므로 US 행과 섞이지 않는다.
 
-> **Kiwoom 허용 IP 제한:** Kiwoom 앱 키는 등록된 IP에서만 토큰을 발급한다. GitHub 호스팅 러너는 IP가 매번 바뀌어 등록할 수 없으므로, 현재 이 workflow는 Actions에서 토큰 발급 단계에서 실패한다. 실행 환경을 결정하기 전까지 E2E는 등록된 IP의 로컬 PC에서 수행한다.
+> **Kiwoom 허용 IP 제한:** Kiwoom 앱 키는 등록된 IP에서만 토큰을 발급한다. GitHub 호스팅 러너는 IP가 매번 바뀌어 등록할 수 없으므로, Kiwoom을 호출하는 workflow는 등록 IP의 self-hosted runner(`runs-on: [self-hosted, linux, x64, kiwoom]`)에서 실행한다. 운영 절차는 4.3을 따른다.
 
 1. `us-etf-movers.yml`은 GitHub `staging` Environment로 고정되어 있다. 해당 Environment의 `ENABLE_US_ETF_P1` Variable을 staging에서만 `true`로 설정하고 수동 실행을 먼저 사용한다. 로컬 실행 시에는 `ENABLE_US_ETF_P1=true`와 staging `TELEGRAM_CHAT_ID`를 셸 환경변수로 주입한다(`node --env-file`은 이미 설정된 환경변수를 덮어쓰지 않는다). 한국에서 Telegram으로 보낼 때 node 기본 연결 시도 제한(250ms)을 넘어 `ETIMEDOUT`이 나므로 `NODE_OPTIONS=--network-family-autoselection-attempt-timeout=2000`을 함께 설정한다.
 2. `usa10104`, `usa20911` 상승·하락, `usa20511`, `usa20931` 호출의 성공 여부·페이지 수·총 행 수만 확인한다. 원문 응답, access token, 종목별 상세값은 기록하지 않는다.

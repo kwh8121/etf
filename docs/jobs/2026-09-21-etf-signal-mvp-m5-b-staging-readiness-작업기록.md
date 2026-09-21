@@ -54,3 +54,21 @@
 ### 남은 과제
 
 `docs/plans/implementation/M5-us-p1-adapter-plan.md`의 "남은 과제"를 따른다. Kiwoom 실행 위치 결정, 휴장 시간 중복 관측 실측, 저장 원자성, 보고 분량 결정이다.
+
+## self-hosted runner 전환 (2026-09-21 18:50–, Claude Code)
+
+### 결정
+
+- Kiwoom 실행 위치: 등록 IP PC(WSL2)의 GitHub self-hosted runner. Vercel은 상주 runner를 둘 수 없고 Static IPs가 Pro 요금제에 프로젝트당 월 $100라 제외했다.
+
+### 외부 상태 변경
+
+- runner `kohdekt-wsl`(v2.337.0, label `kiwoom`)을 `~/actions-runner-etf`에 설치하고 systemd 사용자 서비스 `actions-runner-etf.service`로 등록했다. 릴리스 SHA-256을 대조했다.
+- 저장소 fork PR workflow 승인 정책을 `first_time_contributors`에서 `all_external_contributors`로 강화했다.
+- `us-etf-movers.yml`: `runs-on: [self-hosted, linux, x64, kiwoom]`, `NODE_OPTIONS` 추가, `cache: npm` 제거(`bfef5b4`, `a27d65e`).
+- US 실행: 첫 실행(`35585826513`)은 `cache: npm` 후처리가 24GB `~/.npm`을 다루며 멈춰 취소했다. 수정 후 플래그 `false` 실행(`35587186201`) 성공, 플래그 `true` 실행(`35587346715`)에서 Kiwoom 수집·US 실행 `090b454e…` 저장·staging 보고 11건 성공. 실행 후 플래그 `false` 복귀.
+- `kr-daily.yml`: 같은 전환을 적용했다. 오늘 19:15 KST 예약 실행이 20:18까지 시작되지 않아 전환을 푸시했다. runner에서 도는 첫 KR 운영 실행은 다음 예약 실행이다.
+
+### 확인된 위험
+
+- **예약 실행 이력 0건**: 저장소 전체에 `schedule` 이벤트 실행이 한 번도 없다. KR workflow는 2026-09-21 13:18 KST에 추가되어 오늘 19:15가 첫 예약이었으나 1시간 넘게 시작되지 않았다. GitHub는 부하가 높을 때 예약 실행을 지연하거나 누락할 수 있다. 다음 예약 실행(평일 07:30 US, 19:15 KR)이 실제로 시작되는지 확인해야 한다.

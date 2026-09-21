@@ -1,7 +1,7 @@
 # M5-B — 격리된 미국 ETF 등락 어댑터 구현 계획
 
 > 시작일: 2026-09-21 KST
-> 상태: 구현 완료 · 로컬 E2E 완료(중복 관측 실측 미검증) · GitHub Actions 실행 차단(Kiwoom 허용 IP)
+> 상태: 구현 완료 · self-hosted runner E2E 완료(중복 관측 실측 미검증)
 
 ## 정본 결정
 
@@ -25,15 +25,16 @@
 
 ## staging E2E 결과 (2026-09-21)
 
-| 단계                        | 결과                                                                                                                                                                                                                                |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub Actions 수동 실행    | 실패. Kiwoom 토큰 발급이 `return_code != 0`. 같은 키가 로컬에서는 성공하고, KR daily도 Actions에서 `kiwoomStatus: FETCH_FAIL`이다. Kiwoom 앱 키의 허용 IP 제한으로 판단한다(Actions가 받은 `return_msg`는 로그에 남지 않아 미확인). |
-| 로컬 1차(수정 전)           | `usa20931 result_list contains a malformed record`로 수집 실패. 저장 전 실패라 DB 변화 없음.                                                                                                                                        |
-| 로컬 1차(`rank` 수정 후)    | 저장 중 `ON CONFLICT DO UPDATE command cannot affect row a second time`. `signal_run`이 `COMPLETED`로 남고 신호 0건. 사용자 승인 후 해당 3건(run·snapshot·원본 객체)을 ID 지정 삭제했다.                                            |
-| 로컬 1차(중복 코드 수정 후) | 새 관측, US `signal_run` 1건(신호 2,406행), `market_date=null`. Telegram 보고 10건이 staging 그룹으로 전송됐다.                                                                                                                     |
-| 로컬 2차                    | 중복 관측이 아니라 새 관측(신호 2,415행)과 보고 10건. 실행 시각(KST 18시대)에 미국 프리마켓이 열려 있어 응답 내용이 계속 바뀌었다.                                                                                                  |
-| 플래그 off                  | 로컬 `ingest`·`report` 모두 `DISABLED`, GitHub staging 플래그 `false`.                                                                                                                                                              |
-| KR 비간섭                   | 최신 KR `signal_run`(`d1ea739a…`)과 KR 실행 수(3)가 E2E 전후 동일하다.                                                                                                                                                              |
+| 단계                        | 결과                                                                                                                                                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Actions 수동 실행    | 실패. Kiwoom 토큰 발급이 `return_code != 0`. 같은 키가 로컬에서는 성공하고, KR daily도 Actions에서 `kiwoomStatus: FETCH_FAIL`이다. Kiwoom 앱 키의 허용 IP 제한으로 판단한다(Actions가 받은 `return_msg`는 로그에 남지 않아 미확인).            |
+| 로컬 1차(수정 전)           | `usa20931 result_list contains a malformed record`로 수집 실패. 저장 전 실패라 DB 변화 없음.                                                                                                                                                   |
+| 로컬 1차(`rank` 수정 후)    | 저장 중 `ON CONFLICT DO UPDATE command cannot affect row a second time`. `signal_run`이 `COMPLETED`로 남고 신호 0건. 사용자 승인 후 해당 3건(run·snapshot·원본 객체)을 ID 지정 삭제했다.                                                       |
+| 로컬 1차(중복 코드 수정 후) | 새 관측, US `signal_run` 1건(신호 2,406행), `market_date=null`. Telegram 보고 10건이 staging 그룹으로 전송됐다.                                                                                                                                |
+| 로컬 2차                    | 중복 관측이 아니라 새 관측(신호 2,415행)과 보고 10건. 실행 시각(KST 18시대)에 미국 프리마켓이 열려 있어 응답 내용이 계속 바뀌었다.                                                                                                             |
+| 플래그 off                  | 로컬 `ingest`·`report` 모두 `DISABLED`, GitHub staging 플래그 `false`.                                                                                                                                                                         |
+| KR 비간섭                   | 최신 KR `signal_run`(`d1ea739a…`)과 KR 실행 수(3)가 E2E 전후 동일하다.                                                                                                                                                                         |
+| self-hosted runner          | 등록 IP PC의 runner(`kohdekt-wsl`, label `kiwoom`)에서 플래그 `false` 실행(`35587186201`)은 `DISABLED`, 플래그 `true` 실행(`35587346715`)은 Kiwoom 수집·저장(`090b454e…`)·staging 보고 11건까지 성공했다. 실행 후 플래그를 `false`로 되돌렸다. |
 
 ### 발견·수정한 결함
 
@@ -42,7 +43,7 @@
 
 ### 남은 과제
 
-- **GitHub Actions에서 Kiwoom 호출 불가**: US P1은 Kiwoom에만 의존하므로 현재 예약 workflow로는 동작하지 않는다. self-hosted runner(등록 IP), 고정 IP 실행 환경, 또는 로컬 예약 실행 중 하나를 결정해야 한다. 같은 원인으로 운영 KR daily의 Kiwoom 수집도 매일 `FETCH_FAIL`이다.
+- **Kiwoom 실행 위치(결정·전환 완료)**: GitHub 호스팅 러너는 Kiwoom 허용 IP에 등록할 수 없어, 등록 IP PC의 self-hosted runner로 전환했다. 운영 절차는 `docs/guides/etf-signal-mvp-e2e-configuration-guide.md` 4.3에 있다. PC와 WSL이 예약 시각에 켜져 있어야 하고, 공인 IP가 바뀌면 Kiwoom 허용 IP를 갱신해야 한다. 상시 가동이 필요해지면 고정 IP 서버로 runner를 옮긴다.
 - **중복 관측 실측**: 미국 장이 완전히 닫힌 시간(주말 등)에 2회 실행해 `duplicate_observation`과 보고 생략을 확인한다. 단위 테스트는 통과했다.
 - **저장 원자성**: US·KR 모두 `signal_run`을 `COMPLETED`로 먼저 쓰고 신호 행을 나중에 쓴다. 신호 저장이 실패하면 완료된 빈 실행이 남고, US는 같은 내용 재관측을 중복으로 처리해 스스로 복구하지 못한다.
 - **보고 분량**: 전체 순위(약 2,400행)를 보내 한 번에 Telegram 메시지 10건이 된다. 가이드의 "P1 전용 메시지 1건" 기대와 다르므로 상위 N개 제한 여부를 정해야 한다.
