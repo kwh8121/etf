@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { getRequiredServerSecret } from "../lib/config/server-env.ts";
 import { KiwoomClient } from "../lib/market-data/kiwoom.ts";
@@ -9,21 +11,25 @@ import {
   persistKiwoomMasterFetchFailure,
   persistKrxFetchFailure,
   persistKrxSnapshot,
+  type MarketDataRepository,
   SupabaseMarketDataRepository,
 } from "../lib/market-data/repository.ts";
 import { validateKrxSnapshot } from "../lib/market-data/krx-validation.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
-interface IngestionDependencies {
+export interface KrxIngestionDependencies {
   requestedDate: string;
   observedDate: string;
   observationKey: () => string;
-  repository: SupabaseMarketDataRepository;
+  repository: MarketDataRepository;
   krxClient: KrxClient;
+}
+
+export interface IngestionDependencies extends KrxIngestionDependencies {
   kiwoomClient: KiwoomClient;
 }
 
-export async function runKoreanMarketIngestion(dependencies: IngestionDependencies) {
+export async function runKrxIngestion(dependencies: KrxIngestionDependencies) {
   assertValidKrxRequestDate(dependencies.requestedDate);
   const previousCompleteRowCount = await dependencies.repository.getLatestCompleteRowCount();
   let krxResult: { status: string; snapshotId: string; duplicate: boolean } | undefined;
@@ -56,6 +62,14 @@ export async function runKoreanMarketIngestion(dependencies: IngestionDependenci
     krxResult = { status: validation.status, ...persisted };
   }
 
+  if (!krxResult) {
+    throw new Error("KRX ingestion did not produce a result");
+  }
+
+  return krxResult;
+}
+
+export async function runKiwoomMasterSync(dependencies: IngestionDependencies) {
   let kiwoomResult:
     | { status: string; snapshotId: string; duplicate: boolean; newListingCount: number }
     | undefined;
@@ -83,11 +97,17 @@ export async function runKoreanMarketIngestion(dependencies: IngestionDependenci
     kiwoomResult = { status: "COMPLETE", ...persisted };
   }
 
-  if (!krxResult || !kiwoomResult) {
-    throw new Error("Korean market ingestion did not produce both source results");
+  if (!kiwoomResult) {
+    throw new Error("Kiwoom master sync did not produce a result");
   }
 
-  return { krx: krxResult, kiwoom: kiwoomResult };
+  return kiwoomResult;
+}
+
+export async function runKoreanMarketIngestion(dependencies: IngestionDependencies) {
+  const krx = await runKrxIngestion(dependencies);
+  const kiwoom = await runKiwoomMasterSync(dependencies);
+  return { krx, kiwoom };
 }
 
 function getKstDate(): string {
@@ -121,7 +141,7 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(result));
 }
 
-if (process.argv[1]?.endsWith("ingest-kr.ts")) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   main().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : "Unknown ingestion failure";
     console.error(`ingest-kr failed: ${message}`);

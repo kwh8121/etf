@@ -1,8 +1,8 @@
 # ETF 신호 MVP v2.2 — M2 수집·영속화 작업 기록
 
 > 작업일: 2026-09-21 KST
-> 범위: M2-04 OAuth·`ka10099` 마스터 수집, M2-05 `ka40004` 연속조회·429 재개, M2-06 영속화·멱등성
-> 상태: 완료 — 다음은 M2-07 25개 완전 거래일 backfill
+> 범위: M2-04 OAuth·`ka10099` 마스터 수집, M2-05 `ka40004` 연속조회·429 재개, M2-06 영속화·멱등성, M2-07 25거래일 backfill
+> 상태: M2 완료 — 다음은 M3 국내 P0 신호 생성
 
 ## 구현 결과
 
@@ -16,6 +16,8 @@
 - `lib/market-data/repository.ts`와 `scripts/ingest-kr.ts`로 KRX·Kiwoom 관측을 SHA-256 기준으로 추적하고 정규 테이블에 UPSERT한다. 원문은 private Storage 버킷에만 보관하며 로그·Git·Linear에는 남기지 않는다.
 - `supabase/migrations/20260921110000_add_private_source_snapshot_bucket.sql`로 private `market-data-source-snapshots` 버킷을 선언·원격 적용했다.
 - 실제 `npm run ingest:kr -- 20260916`를 두 번 실행했다. 첫 실행은 KRX 1,171행·Kiwoom 마스터 1,171행을 저장했고, 재실행은 두 원천 모두 `duplicate_observation`으로 처리했다. 초기 마스터 실행에서는 상장 이벤트를 만들지 않았다.
+- `scripts/backfill.ts`를 추가해 KRX만 날짜 역순으로 수집하고 DB의 실제 완전 거래일 수를 매 성공 뒤 다시 읽도록 했다. 이미 저장된 날짜 재관측은 목표 수를 중복 계산하지 않는다.
+- 실제 원격 DB에서 `TRADING_COMPLETE` 25개(`2026-08-14`~`2026-09-18`), 중복 없는 `(bas_dd, isu_cd)`, KRX 관측 40개(중복 관측 2개)를 확인했다. 목표 충족 뒤 재실행은 외부 요청 없이 종료한다.
 
 ## 검증 증거
 
@@ -28,12 +30,13 @@
 | ESLint | `npm run lint` 통과 (경고 0) |
 | production build | Node 22.23.2, `npm run build` 통과 |
 | 실제 Supabase E2E | KRX 관측 2(중복 1), 일별 행 1,171, `TRADING_COMPLETE` 달력 1, Kiwoom 관측 2(중복 1), 마스터 1,171, private 버킷 확인 |
+| Backfill E2E | `TRADING_COMPLETE` 25개, `2026-08-14`~`2026-09-18`, 중복 일별 키 0, KRX 관측 40(중복 2) |
 
-## 다음 작업: M2-07
+## 다음 작업: M3
 
-1. 최근 과거 구간을 역순으로 탐색하여 `TRADING_COMPLETE` 25개를 확보하는 `scripts/backfill.ts`를 구현한다.
-2. 각 날짜가 `PARTIAL`·`PUBLISH_PENDING`·`NON_TRADING`이면 정규 일별 행 없이 관측만 남기고 다음 날짜로 진행한다.
-3. 25개 달력 행·중복 없는 `(bas_dd, isu_cd)`·재실행 멱등성을 실제 DB에서 확인한다.
+1. 최근 완전 거래일의 KRX `FLUC_RT` 기준 일간 상승·하락 `raw`/`liquid` 신호를 계산한다.
+2. `seq` 연속성과 두 끝점 종가를 써 5거래일 가격수익률을 계산하고, 분배금·기업행동 조정 총수익률이 아님을 출력 계약에 고정한다.
+3. `signal_run`·`signal_daily` 멱등 저장과 단위·통합 테스트를 추가한다.
 
 ## 보안 원칙
 

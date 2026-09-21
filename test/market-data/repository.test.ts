@@ -72,6 +72,10 @@ class FakeRepository implements MarketDataRepository {
     return null;
   }
 
+  async getCompleteTradingDayCount(): Promise<number> {
+    return 0;
+  }
+
   async getNextTradingSequence(): Promise<number> {
     return 7;
   }

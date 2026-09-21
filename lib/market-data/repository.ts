@@ -52,6 +52,7 @@ export interface MarketDataRepository {
   insertSnapshot(input: SnapshotInsertInput): Promise<SourceSnapshotRecord>;
   uploadRawSnapshot(path: string, payload: string): Promise<void>;
   getLatestCompleteRowCount(): Promise<number | null>;
+  getCompleteTradingDayCount(): Promise<number>;
   getTradingSequence(basDd: string): Promise<number | null>;
   getNextTradingSequence(): Promise<number>;
   upsertTradingCalendar(input: {
@@ -433,6 +434,15 @@ export class SupabaseMarketDataRepository implements MarketDataRepository {
       .maybeSingle();
     throwIfError(error, "read previous KRX row count");
     return data?.row_count ?? null;
+  }
+
+  async getCompleteTradingDayCount(): Promise<number> {
+    const { count, error } = await this.client
+      .from("trading_calendar_kr")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "TRADING_COMPLETE");
+    throwIfError(error, "count complete KRX trading days");
+    return count ?? 0;
   }
 
   async getNextTradingSequence(): Promise<number> {

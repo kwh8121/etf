@@ -2,7 +2,7 @@
 
 > 상위 마일스톤: `ETF-signal-MVP-v2.2-ROADMAP.md`의 M2
 > 선행 상태: M0–M1 로컬 구현 및 원격 Supabase 스키마·RLS 적용 완료.
-> 상태: M2-01~06 완료. KRX·Kiwoom 수집 계약, 비공개 원본 객체·출처 스냅샷, 정규화 UPSERT와 실제 DB 재실행 멱등성까지 검증했다. 다음은 M2-07 25개 완전 거래일 backfill이다.
+> 상태: M2-01~07 완료. KRX·Kiwoom 수집 계약, 비공개 원본 객체·출처 스냅샷, 정규화 UPSERT, 25개 완전 거래일과 실제 DB 재실행 멱등성까지 검증했다. 다음 마일스톤은 M3 국내 P0 신호 생성이다.
 
 ## 목표
 
@@ -18,7 +18,7 @@ KRX `etf_bydd_trd`를 국내 EOD의 권위 스냅샷으로 수집·검증하고,
 | M2-04 | Kiwoom OAuth·`ka10099` 어댑터 | `lib/market-data/kiwoom.ts`, fixture·테스트 | Kiwoom 키 | 토큰 비로그·`regDay`·초기 스냅샷 계약 |
 | M2-05 | `ka40004` 페이지·429 재개 | `lib/market-data/kiwoom-pagination.ts`, 테스트 | M2-04 | 같은 커서 재시도와 `cont-yn=N` 종료 |
 | M2-06 | 스냅샷 저장·멱등성 | `lib/market-data/repository.ts`, `lib/supabase/service-role.ts`, `scripts/ingest-kr.ts` | Supabase URL·서비스 역할 키 | 실제 DB 적용·재실행 검증 |
-| M2-07 | 25개 완전 거래일 backfill | `scripts/backfill.ts` | M2-06 | `TRADING_COMPLETE` 25일 또는 문서화된 예외 |
+| M2-07 | 25개 완전 거래일 backfill | `scripts/backfill.ts` | M2-06 | `TRADING_COMPLETE` 25일 확인 |
 
 ## 완료 기록: M2-04~05
 
@@ -39,6 +39,15 @@ KRX `etf_bydd_trd`를 국내 EOD의 권위 스냅샷으로 수집·검증하고,
 - `TRADING_COMPLETE` KRX만 `etf_daily_kr`와 순번 있는 `trading_calendar_kr`로 UPSERT한다. `NON_TRADING`·`PUBLISH_PENDING`·`PARTIAL`은 일별 ETF 행을 쓰지 않는다.
 - Kiwoom 첫 마스터 적재는 `etf_master_kr`만 초기화하고, 그 뒤 처음 보인 코드만 `listing_event_kr`에 기록한다.
 - 실제 `npm run ingest:kr -- 20260916`를 두 번 실행했다. 첫 실행은 KRX·Kiwoom 모두 정상 저장, 두 번째 실행은 양쪽 모두 중복 관측으로 처리됐다. DB 확인 결과 KRX 관측 2개(중복 1개), KRX 일별 행 1,171개, `TRADING_COMPLETE` 달력 행, Kiwoom 관측 2개(중복 1개), 마스터 1,171개, 초기 상장 이벤트 0개다.
+
+## 완료 기록: M2-07
+
+2026-09-21 KST에 `scripts/backfill.ts`를 추가했다. 이 실행기는 Kiwoom 마스터를 반복 호출하지 않고 KRX만 과거 날짜 순으로 수집한다.
+
+- 시작 시 DB의 실제 `TRADING_COMPLETE` 수를 읽고, 성공 날짜마다 다시 조회하므로 기존 완전 날짜를 재관측해도 목표 수를 중복 계산하지 않는다.
+- `NON_TRADING`·`PUBLISH_PENDING`·`PARTIAL`은 날짜를 한 칸 진행하되 완전 거래일 수에는 넣지 않는다. 기본 한도는 90일이며, 목표 25일을 얻지 못하면 실패 상태로 끝난다.
+- 원격 DB 확인: `TRADING_COMPLETE` 25개, 범위 `2026-08-14`~`2026-09-18`, 중복 `(bas_dd, isu_cd)` 0개, KRX 관측 40개(중복 관측 2개)다.
+- 목표 달성 뒤 재실행은 DB를 다시 읽어 요청 없이 종료한다. 이는 이미 채워진 초기 backfill을 안전하게 반복 실행하는 경로다.
 
 ## KRX 상태 계약
 
