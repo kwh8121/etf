@@ -116,4 +116,34 @@ describe("US ETF mover adapter", () => {
 
     expect(result.dailyGainers).toEqual([]);
   });
+
+  it("keeps only the best-ranked row when Kiwoom repeats a code in one ranking", () => {
+    const daily = (rank: number, returnPercent: number) => ({
+      code: "ETF1",
+      name: "ETF one",
+      rank,
+      returnPercent,
+      endPrice: "+10",
+    });
+    const fiveDay = (rank: number, endPrice: string) => ({
+      code: "ETF1",
+      name: "ETF one",
+      rank,
+      startPrice: "10",
+      endPrice,
+    });
+
+    const result = buildUsEtfMoverSignals({
+      universe: [{ code: "ETF1", etn: false }],
+      dailyGainers: [daily(575, 3), daily(576, 3), daily(700, 1)],
+      dailyLosers: [],
+      fiveDayGainers: [fiveDay(480, "12"), fiveDay(723, "11")],
+      fiveDayLosers: [],
+    });
+
+    expect(
+      result.dailyGainers.map(({ rank, value }) => ({ rank, value })),
+    ).toEqual([{ rank: 575, value: 3 }]);
+    expect(result.fiveDayGainers.map(({ rank }) => rank)).toEqual([480]);
+  });
 });

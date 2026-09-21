@@ -158,7 +158,7 @@ export class KiwoomUsEtfMoverClient {
     apiId: string,
     endpoint: string,
     body: Record<string, string>,
-    parser: (value: RawRecord, apiId: string) => T,
+    parser: (value: RawRecord, apiId: string, position: number) => T,
   ): Promise<{ records: T[]; rawPages: RawRecord[][]; pageCount: number }> {
     const result = await this.fetchPages(
       accessToken,
@@ -168,7 +168,9 @@ export class KiwoomUsEtfMoverClient {
       "result_list",
     );
     return {
-      records: result.records.map((record) => parser(record, apiId)),
+      records: result.records.map((record, index) =>
+        parser(record, apiId, index + 1),
+      ),
       rawPages: result.pages,
       pageCount: result.pages.length,
     };
@@ -342,19 +344,28 @@ function parseFiveDayGainRow(value: RawRecord, apiId: string): FiveDayRow {
     endPrice: required(value.endt_base_pric, apiId, "endt_base_pric"),
   };
 }
-function parseFiveDayLossRow(value: RawRecord, apiId: string): FiveDayRow {
+function parseFiveDayLossRow(
+  value: RawRecord,
+  apiId: string,
+  position: number,
+): FiveDayRow {
+  // usa20931 응답에는 rank가 없고 5일 하락률 순으로 정렬되어 오므로 응답 순서를 순위로 쓴다.
   return {
-    ...parseCommonMover(value, apiId),
+    ...parseCommonMover(value, apiId, String(position)),
     startPrice: required(value.base_pric, apiId, "base_pric"),
     endPrice: required(value.cur_prc, apiId, "cur_prc"),
   };
 }
-function parseCommonMover(value: RawRecord, apiId: string) {
+function parseCommonMover(
+  value: RawRecord,
+  apiId: string,
+  rank: unknown = value.rank,
+) {
   try {
     return {
       code: required(value.stk_cd, apiId, "stk_cd"),
       name: required(value.stk_nm, apiId, "stk_nm"),
-      rank: integerField(value.rank, apiId, "rank"),
+      rank: integerField(rank, apiId, "rank"),
     };
   } catch {
     throw new KiwoomClientError(

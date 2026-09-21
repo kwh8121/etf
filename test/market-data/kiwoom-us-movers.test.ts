@@ -37,7 +37,7 @@ describe("Kiwoom US ETF mover client", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           return_code: 0,
-          result_list: [fiveDayRow("+12", "-10")],
+          result_list: [fiveDayLossRow("ETF1", "+12", "-10")],
         }),
       );
     const sleepFn = vi.fn().mockResolvedValue(undefined);
@@ -119,6 +119,48 @@ describe("Kiwoom US ETF mover client", () => {
       "usa20931 result_list contains a malformed record",
     );
   });
+
+  it("ranks usa20931 rows by response order across pages because the API returns no rank", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ return_code: 0, list: [] }))
+      .mockResolvedValueOnce(jsonResponse({ return_code: 0, result_list: [] }))
+      .mockResolvedValueOnce(jsonResponse({ return_code: 0, result_list: [] }))
+      .mockResolvedValueOnce(jsonResponse({ return_code: 0, result_list: [] }))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            return_code: 0,
+            result_list: [
+              fiveDayLossRow("LOSS1", "20", "10"),
+              fiveDayLossRow("LOSS2", "20", "12"),
+            ],
+          },
+          { "cont-yn": "Y", "next-key": "next-loss" },
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          return_code: 0,
+          result_list: [fiveDayLossRow("LOSS3", "20", "15")],
+        }),
+      );
+    const client = new KiwoomUsEtfMoverClient({
+      fetchFn,
+      sleepFn: vi.fn().mockResolvedValue(undefined),
+      minIntervalMs: 0,
+    });
+
+    const result = await client.fetchAll("issued-token");
+
+    expect(
+      result.fiveDayLosers.map(({ code, rank }) => ({ code, rank })),
+    ).toEqual([
+      { code: "LOSS1", rank: 1 },
+      { code: "LOSS2", rank: 2 },
+      { code: "LOSS3", rank: 3 },
+    ]);
+  });
 });
 
 function dailyRow(fluRt: string) {
@@ -140,5 +182,15 @@ function fiveDayRow(startPrice: string, endPrice: string) {
     endt_base_pric: endPrice,
     base_pric: startPrice,
     cur_prc: endPrice,
+  };
+}
+
+// usa20931 실제 응답에는 rank 필드가 없다 (docs/references/kiwoom-rest-api-spec.json).
+function fiveDayLossRow(code: string, basePrice: string, currentPrice: string) {
+  return {
+    stk_cd: code,
+    stk_nm: `${code} name`,
+    base_pric: basePrice,
+    cur_prc: currentPrice,
   };
 }

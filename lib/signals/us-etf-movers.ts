@@ -59,11 +59,31 @@ export function buildUsEtfMoverSignals(
   );
 
   return {
-    dailyGainers: buildDailySignals(input.dailyGainers, eligibleCodes),
-    dailyLosers: buildDailySignals(input.dailyLosers, eligibleCodes),
-    fiveDayGainers: buildFiveDaySignals(input.fiveDayGainers, eligibleCodes),
-    fiveDayLosers: buildFiveDaySignals(input.fiveDayLosers, eligibleCodes),
+    dailyGainers: keepBestRankPerCode(
+      buildDailySignals(input.dailyGainers, eligibleCodes),
+    ),
+    dailyLosers: keepBestRankPerCode(
+      buildDailySignals(input.dailyLosers, eligibleCodes),
+    ),
+    fiveDayGainers: keepBestRankPerCode(
+      buildFiveDaySignals(input.fiveDayGainers, eligibleCodes),
+    ),
+    fiveDayLosers: keepBestRankPerCode(
+      buildFiveDaySignals(input.fiveDayLosers, eligibleCodes),
+    ),
   };
+}
+
+// Kiwoom 순위 목록은 같은 종목을 반복할 수 있다(페이지 경계 등). 신호 유형마다 종목당 최고 순위 하나만 남긴다.
+function keepBestRankPerCode(signals: UsEtfSignal[]): UsEtfSignal[] {
+  const seen = new Set<string>();
+  return [...signals]
+    .sort((a, b) => a.rank - b.rank)
+    .filter((signal) => {
+      if (seen.has(signal.code)) return false;
+      seen.add(signal.code);
+      return true;
+    });
 }
 
 function buildDailySignals(
