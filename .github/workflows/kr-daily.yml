@@ -19,10 +19,13 @@ concurrency:
 
 jobs:
   ingest-and-report:
-    runs-on: ubuntu-latest
+    # Kiwoom은 등록된 IP에서만 토큰을 발급하므로 등록 IP의 self-hosted runner에서 실행한다.
+    runs-on: [self-hosted, linux, x64, kiwoom]
     timeout-minutes: 15
     environment: production
     env:
+      # 한국→Telegram 왕복이 node 기본 연결 시도 제한(250ms)을 넘어 ETIMEDOUT이 난다.
+      NODE_OPTIONS: --network-family-autoselection-attempt-timeout=2000
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -36,6 +39,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: npm
       - run: npm ci
       - run: npm run daily:kr -- "${{ inputs.market_date }}"
