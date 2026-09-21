@@ -18,8 +18,9 @@
 ## staging E2E 재개 조건
 
 - 현재 GitHub `staging` Environment는 삭제되었고 US ETF movers workflow는 비활성화되어 있다. 따라서 staging E2E는 의도적으로 보류한다.
-- 재개 시 staging Environment와 workflow를 다시 활성화한 뒤, 변수·Secret과 수동 실행 결과를 확인한다.
-- staging에는 별도 Supabase 프로젝트와 Telegram 테스트 chat을 사용한다. `production` Environment의 값으로는 P1 실측을 실행하지 않는다.
+- 재개 전 별도 staging Supabase 프로젝트와 Telegram 테스트 chat을 준비한다. 현재 로컬 `.env`는 production 값이므로 P1 E2E에 사용하지 않는다.
+- staging Environment에 해당 Supabase·Telegram·Kiwoom 자격증명과 `ENABLE_US_ETF_P1`을 등록한 뒤 workflow를 다시 활성화한다.
+- GitHub Actions 수동 실행 또는 로컬에서 `ENABLE_US_ETF_P1=true`로 실행하면 외부 Kiwoom·Supabase·Telegram 부작용이 생긴다. 실행 환경의 sandbox 외부 권한과 명시적 실행 승인을 확보한 뒤에만 수행한다.
 - `ENABLE_US_ETF_P1=true`로 수동 실행을 2회 수행해 새 관측 1회·중복 관측 1회·US `signal_run` 1회를 확인한 뒤, 플래그를 `false`로 되돌린다.
 
 ## 복합 관측 결정
