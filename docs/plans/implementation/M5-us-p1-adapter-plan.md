@@ -1,7 +1,7 @@
 # M5-B — 격리된 미국 ETF 등락 어댑터 구현 계획
 
 > 시작일: 2026-09-21 KST
-> 상태: 구현 완료 · 운영 E2E 대기
+> 상태: 구현 완료 · staging E2E 준비 완료 · GitHub 인증 복구 대기
 
 ## 정본 결정
 
@@ -13,7 +13,13 @@
 2. Kiwoom `usa10104`, `usa20911`, `usa20511(tm=5)`, `usa20931(flu_tp=2, tm_tp=3, tm=2)`의 인증·연속조회·응답 계약을 구현한다. 완료.
 3. 미국 전용 복합 source snapshot·중복 관측·US `signal_run`/`signal_daily` 저장 경로를 구현한다. 미국 응답에 공식 시장일이 없으면 `market_date=null`을 유지한다. 완료.
 4. 별도 수동/예약 workflow와 실험 전용 Telegram·대시보드 섹션을 추가한다. 국내 P0 실행 경로를 import하거나 변경하지 않는다. 완료.
-5. 고정 응답 기반으로 중복 관측, ETN 제외, P1 실패 비간섭, RLS 보호 대시보드 경로, 기능 플래그 `off`를 검증한다. 완료. 실제 Kiwoom·Supabase·Telegram 운영 E2E는 `ENABLE_US_ETF_P1=true`인 staging에서 한 번 실행해 별도 증거를 남긴다.
+5. 고정 응답 기반으로 중복 관측, ETN 제외, P1 실패 비간섭, RLS 보호 대시보드 경로, 기능 플래그 `off`를 검증한다. 완료. 실제 Kiwoom·Supabase·Telegram E2E는 `ENABLE_US_ETF_P1=true`인 staging에서 한 번 실행해 별도 증거를 남긴다. 미국 workflow는 `staging` Environment로 고정했다.
+
+## staging E2E 재개 조건
+
+- GitHub CLI/API 인증을 복구해 `staging` Environment의 변수·Secret과 수동 실행 결과를 확인할 수 있어야 한다.
+- staging에는 별도 Supabase 프로젝트와 Telegram 테스트 chat을 사용한다. `production` Environment의 값으로는 P1 실측을 실행하지 않는다.
+- `ENABLE_US_ETF_P1=true`로 수동 실행을 2회 수행해 새 관측 1회·중복 관측 1회·US `signal_run` 1회를 확인한 뒤, 플래그를 `false`로 되돌린다.
 
 ## 복합 관측 결정
 

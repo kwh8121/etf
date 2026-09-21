@@ -16,7 +16,7 @@ jobs:
   ingest-and-report:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production
+    environment: staging
     env:
       ENABLE_US_ETF_P1: ${{ vars.ENABLE_US_ETF_P1 }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}

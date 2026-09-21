@@ -174,7 +174,7 @@ staging과 production은 KRX·Kiwoom 키도 가능하면 분리한다. 공급자
 
 미국 어댑터는 국내 P0와 별도 workflow다. 실제 실행 전 staging 환경에서만 `ENABLE_US_ETF_P1=true`로 설정하고, production은 관측 목적과 수신처가 승인된 뒤에만 같은 값을 설정한다. 이 플래그는 비밀이 아니지만 `true` 전환은 실제 Kiwoom·Supabase 쓰기·Telegram 전송을 발생시킨다.
 
-1. GitHub Environment의 `ENABLE_US_ETF_P1` Variable을 staging에서만 `true`로 설정한다. `us-etf-movers.yml`의 수동 실행을 먼저 사용한다.
+1. `us-etf-movers.yml`은 GitHub `staging` Environment로 고정되어 있다. 해당 Environment의 `ENABLE_US_ETF_P1` Variable을 staging에서만 `true`로 설정하고 수동 실행을 먼저 사용한다.
 2. `usa10104`, `usa20911` 상승·하락, `usa20511`, `usa20931` 호출의 성공 여부·페이지 수·총 행 수만 확인한다. 원문 응답, access token, 종목별 상세값은 기록하지 않는다.
 3. 같은 실행을 한 번 더 수행한다. `source_snapshot`은 기준 관측 1개와 `duplicate_observation` 1개, 원본 객체 1개, US `signal_run` 1개인지 확인한다. `market_date`는 `null`이어야 한다.
 4. Telegram 수신처가 staging인지 확인한 뒤 P1 전용 메시지 1건을 확인한다. 메시지에는 “실험”과 국내 P0 독립 문구가 있어야 한다.
