@@ -135,10 +135,10 @@ Linear 또는 OpenViking 연결이 실패하면 작업 기록에 실패 시각·
 
 ## 9. 현재 기준점
 
-2026-09-18 기준 M0–M1은 구현과 Supabase 검증을 완료했다. 재개 시에는 다음 문서를 우선 읽는다.
+2026-09-22 기준 M0–M4·R1은 완료됐고, M5-B 미국 P1은 self-hosted runner E2E까지 완료했다. 재개 시에는 다음 문서를 우선 읽는다.
 
-- `docs/jobs/2026-09-18-etf-signal-mvp-m0-m1-작업기록.md`
-- `docs/plans/implementation/M2-kr-market-data-plan.md`
+- `docs/jobs/2026-09-22-etf-signal-mvp-codex-핸드오프-작업기록.md`
+- `docs/plans/implementation/M5-us-p1-adapter-plan.md`
 - `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`
 
-다음 구현은 M2의 KRX·Kiwoom 수집 결과를 `source_snapshot`과 정규화 테이블에 멱등 저장하는 작업이다. `npm run build`는 실행 환경 제약이 해소된 환경에서 재검증한다.
+다음 확인은 KR systemd timer의 첫 자동 운영 실행과 US timer의 disabled 결과다. 이후 M6 국내 P0 관측을 시작하되, 미국 휴장 시간 중복 관측 실측과 저장 원자성·보고 분량 결정은 M5의 별도 미결 과제로 유지한다.
