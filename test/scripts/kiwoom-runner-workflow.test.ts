@@ -23,6 +23,9 @@ describe("Kiwoom workflows", () => {
       // self-hosted에서 cache: npm은 사용자 계정 전체의 ~/.npm을 GitHub 캐시로 다룬다.
       // npm 캐시는 runner 디스크에 이미 유지되므로 쓰지 않는다.
       expect(workflow).not.toContain("cache: npm");
+      // GitHub 예약 실행은 지연·누락이 잦아 runner PC의 systemd timer가 workflow_dispatch로 실행한다.
+      expect(workflow).not.toContain("schedule:");
+      expect(workflow).toContain("workflow_dispatch:");
     },
   );
 });

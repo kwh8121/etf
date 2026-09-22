@@ -1,8 +1,8 @@
 name: KR daily ETF signals
 
 on:
-  schedule:
-    - cron: "15 10 * * 1-5"
+  # 평일 19:15 KST에 runner PC의 systemd timer가 기준일을 지정해 실행한다.
+  # GitHub schedule은 지연·누락이 잦아 쓰지 않는다 (scripts/dispatch-scheduled-workflow.ts).
   workflow_dispatch:
     inputs:
       market_date:

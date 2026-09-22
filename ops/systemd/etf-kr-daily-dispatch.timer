@@ -1,0 +1,10 @@
+[Unit]
+Description=평일 19:15 KST KR daily ETF signals dispatch
+
+[Timer]
+OnCalendar=Mon..Fri 19:15 Asia/Seoul
+# PC·WSL이 꺼져 있어 놓친 실행은 다음 기동 때 한 번 따라잡는다. 기준일은 원래 슬롯 날짜로 계산된다.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=Dispatch US ETF movers P1 workflow (kwh8121/etf)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# 작업 사본과 분리된 설치본을 실행한다 (docs/guides/etf-signal-mvp-e2e-configuration-guide.md 4.4).
+ExecStart=%h/.nvm/versions/node/v22.23.2/bin/node --experimental-default-type=module --experimental-strip-types %h/.local/lib/etf-ops/dispatch-scheduled-workflow.ts us

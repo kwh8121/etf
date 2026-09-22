@@ -1,8 +1,8 @@
 name: US ETF movers (P1 experimental)
 
 on:
-  schedule:
-    - cron: "30 22 * * 1-5"
+  # 화~토 07:30 KST(미국 월~금 장 마감 후)에 runner PC의 systemd timer가 실행한다.
+  # GitHub schedule은 지연·누락이 잦아 쓰지 않는다 (scripts/dispatch-scheduled-workflow.ts).
   workflow_dispatch:
 
 permissions:
