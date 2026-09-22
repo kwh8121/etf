@@ -1,8 +1,11 @@
 # Codex 연속 실행 운영 가이드 — "다음 작업은?" 반복 없애기
 
 > 작성일: 2026-09-22 KST
-> 대상: 이 저장소에서 Codex(메인 개발 모델 `gpt-5.6-terra`)로 ETF 신호 MVP를 개발·운영하는 흐름
+> 대상: 이 저장소에서 Codex로 ETF 신호 MVP를 개발·운영하는 흐름
 > 근거: Codex 세션 기록(`~/.codex/sessions`), `~/.codex/config.toml`, `AGENTS.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/plans/`
+> 실행 규칙 정본: `AGENTS.md`의 「턴 종료 규칙과 상시 승인」, 현재 작업 큐: `docs/plans/NEXT.md`
+
+이 문서의 세션 수치와 설정값은 2026-09-22 당시 진단 자료다. 현재 실행 여부는 `NEXT.md`, Git, 최신 작업 기록으로 확인하며, 이 문서의 예시를 운영 상태로 간주하지 않는다.
 
 ## 1. 문제 요약
 
@@ -39,7 +42,7 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 
 ### 2.2 "다음 작업"의 단일 정본이 없다
 
-- 다음 작업은 `AGENTS.md` 연속성 절, ROADMAP 마일스톤의 "진행 상태" 문단, `docs/plans/implementation/*`, `docs/jobs/*`(9/22 하루에만 7개), Linear 이슈에 **서술형으로 분산**되어 있다.
+- 조사 당시 다음 작업은 `AGENTS.md` 연속성 절, ROADMAP 마일스톤의 "진행 상태" 문단, `docs/plans/implementation/*`, `docs/jobs/*`(9/22 하루에만 7개), Linear 이슈에 **서술형으로 분산**되어 있었다. 현재 큐는 `NEXT.md`다.
 - 순서와 "지금 실행 가능한가"를 나타내는 표시가 없다. Codex는 매번 여러 문서에서 다음 작업을 다시 도출하고, 도출 결과를 보고하는 것으로 턴을 끝낸다.
 - 다음 작업이 "M5 … 또는 M6 …"처럼 **선택지**로 적히면 하네스의 "요구사항 분기" 중단 조건에 걸려 정당하게 멈춘다.
 - ROADMAP 10장 "첫 실행 백로그"는 착수 시점의 목록이라 현재 큐 역할을 하지 못한다.
@@ -60,7 +63,7 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 
 ### 2.5 실행 환경이 자주 막힌다
 
-- Codex는 `on-request` 승인 정책과 `workspace-write` sandbox로 실행된다. sandbox 안에서는 네트워크와 gh keyring을 쓸 수 없다.
+- 조사 당시 Codex는 `on-request` 승인 정책과 `workspace-write` sandbox로 실행됐다. 네트워크·keyring 접근은 세션 환경과 승인 결과에 따라 달라지므로, 실패 메시지만으로 토큰 무효를 단정하지 않는다.
 - 주 세션에 escalation 관련 기록이 160건 있다. `gh` 실패를 "토큰 무효"로 오진해 재인증만 요청하며 멈춘 사례도 있다(2026-09-21, 해결 기록은 `docs/jobs/2026-09-22-etf-signal-mvp-codex-핸드오프-작업기록.md`).
 
 ### 2.6 한 스레드를 너무 오래 쓴다
@@ -72,7 +75,7 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 ### 2.7 모델·설정이 의도와 다르게 적용된다
 
 - 주 세션 턴의 모델 분포: `gpt-5.6-terra`/`medium` 77턴, `gpt-5.6-sol`/`low` 27턴, `gpt-5.6-luna` 1턴.
-- 전역 기본값(`~/.codex/config.toml`)이 `model = "gpt-5.6-sol"`, `model_reasoning_effort = "low"`라서, 새 세션이나 모델 전환 뒤에는 메인 모델이 아닌 설정으로 실행될 수 있다. `gpt-5.6-terra` 고유의 멈춤 특성은 공개 자료로 확인하지 못했다. 이 가이드의 개선책은 모델과 무관하게 적용된다.
+- 조사 당시 전역 기본값(`~/.codex/config.toml`)이 `model = "gpt-5.6-sol"`, `model_reasoning_effort = "low"`였다. 새 세션의 실제 모델·노력 수준은 실행 표면과 적용된 설정을 확인해야 한다. 특정 모델 고유의 멈춤 특성은 확인하지 못했다.
 - Codex에는 여러 턴에 걸쳐 목표를 유지하는 `/goal` 기능이 있다(Codex CLI 0.128.0 이상, 설치본 0.155.1). 설정에 `features.goals = true`까지 켜져 있지만, 주 세션에서 한 번도 쓰이지 않았다.
 
 ### 2.8 사용자 지시의 범위가 닫혀 있다
@@ -85,7 +88,7 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 
 ### 3.1 단일 작업 큐 `docs/plans/NEXT.md`를 만든다
 
-"다음 작업"의 정본을 한 파일로 둔다(One Fact, One Home). `AGENTS.md`, ROADMAP, 작업 기록에는 다음 작업을 서술하지 말고 이 파일을 링크한다.
+"다음 작업"의 실행 상태는 한 파일에 둔다(One Fact, One Home). `AGENTS.md`는 운영 규칙, ROADMAP은 마일스톤·계약, 작업 기록은 실행 사건을 담는다. 다른 문서의 상태 요약에는 기준 시각과 `NEXT.md` 링크를 붙이고 큐의 라벨·순서를 중복 관리하지 않는다.
 
 각 항목에는 반드시 상태 라벨을 붙인다.
 
@@ -93,7 +96,7 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 | --------- | ---------------------------------------------------- | ------------------------------------------- |
 | `AUTO`    | 지금 바로, 승인 없이 할 수 있음                      | 위에서부터 **멈추지 않고** 실행             |
 | `APPROVE` | 외부 부작용이 있어 승인 필요(무엇을 승인받을지 명시) | 실행하지 않고 턴 종료 보고에 묶어서 요청    |
-| `WAIT`    | 시간·이벤트 대기(해제 조건과 시각 명시)              | 건너뛰고 해제 조건이 충족되면 `AUTO`로 전환 |
+| `WAIT`    | 시간·이벤트 대기(해제 조건과 알 수 있는 시각 명시)    | 건너뛰고 조건 충족 시 필요한 승인 상태를 재판정 |
 | `DECIDE`  | 사용자 결정 필요(선택지와 권장안 명시)               | 건너뛰고 보고에 묶어서 질문                 |
 | `DONE`    | 완료(검증 증거·커밋)                                 | 완료 후 목록에서 이동                       |
 
@@ -107,7 +110,7 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 - [ ] `APPROVE` Q-12 KR timer 설치본을 09:30 방식으로 갱신 — 승인 대상: runner PC의 timer·설치본 변경
   - 완료 조건: `systemctl --user list-timers 'etf-*'`에 KR 09:30 표시, 설치본 해시가 저장소와 동일
   - 근거: `docs/guides/etf-signal-mvp-e2e-configuration-guide.md` 4.4
-- [ ] `WAIT` Q-13 첫 KR 자동 실행 결과 확인 — 해제: 다음 평일 09:30 KST 이후
+- [ ] `WAIT` Q-13 첫 KR 자동 실행 결과 확인 — 해제: 설치 승인·갱신 후 실제 timer 발화 확인
 - [ ] `APPROVE` Q-14 US 새 보고 형식 staging 실발송 1회 — 승인 대상: staging 그룹 발송, 플래그 true→false
 - [ ] `DECIDE` Q-15 M5-A 순설정 임계값 — 선택지: (A) … (B) … / 권장: …
 ```
@@ -115,8 +118,10 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 규칙:
 
 - 선택지를 `AUTO` 항목에 넣지 않는다. 선택지가 있으면 `DECIDE`로 분리하고 권장안을 적는다.
+- `WAIT`는 시각만 지났다고 자동 해제하지 않는다. 실제 이벤트와 선행 조건을 확인하고, 외부 부작용이 필요하면 `APPROVE`를 유지한다.
 - 작업 중 새로 발견한 후속 작업은 즉시 큐에 라벨과 함께 추가한다. 보고 문장("다음으로 …하겠습니다")으로 남기지 않는다.
-- 항목 완료는 체크와 커밋 해시로 표시한다. 작업 기록은 하루 한 파일에 덧붙인다(9/22처럼 단위마다 새 파일을 만들지 않는다).
+- 항목 완료는 검증 증거·커밋 해시와 함께 `DONE`으로 옮긴다. 완료 체크와 코드·문서 변경은 같은 원자적 커밋에 넣는다. 작업 기록은 하루 한 파일에 덧붙인다.
+- 이 큐는 작업을 무한히 생성하라는 지시가 아니다. 현재 목표와 무관한 새 요구는 라벨을 붙여 기록하되, 해당 턴의 허가 범위를 임의로 넓히지 않는다.
 
 ### 3.2 턴 종료 규칙을 명시한다 (`AGENTS.md`에 추가)
 
@@ -129,7 +134,7 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 
 - `docs/plans/NEXT.md`에 `AUTO` 항목이 남아 있으면 턴을 끝내지 않는다. 한 항목의 기록·커밋·푸시는 체크포인트이며 세션 종료가 아니다. 곧바로 다음 `AUTO` 항목을 시작한다.
 - "다음으로 X를 하겠습니다", "다음 실행 단위는 X입니다"라고 쓰지 않는다. X가 `AUTO`면 실행하고, 아니면 큐에 라벨을 붙여 기록한다.
-- 커밋·푸시는 실행 루프의 일부다. 확인을 구하지 않는다.
+- 상시 승인 범위의 `main` 원자적 커밋·푸시는 실행 루프의 일부다.
 - 턴을 끝낼 수 있는 경우는 다음뿐이다: (1) `AUTO` 항목 소진, (2) 남은 항목이 모두 `APPROVE`·`DECIDE`·`WAIT`, (3) 같은 원인으로 2회 이상 실패해 안전한 원인 규명이 불가능, (4) 사용자가 중지.
 - 턴을 끝낼 때는 아래 형식으로만 보고한다.
   1. 이번 턴 완료 항목과 검증 증거(명령·결과·커밋)
@@ -154,41 +159,39 @@ Codex는 다음 할 일을 **스스로 말한 뒤 실행하지 않고 턴을 끝
 - 상시 승인 항목은 큐에서 `AUTO`로 분류하고, 매번 승인 항목은 `APPROVE`로 분류한다.
 - 확정한 목록은 하네스 5장 "중단 기준"에 예외 조항으로 넣는다. 목록을 바꿀 때는 이 표와 하네스를 함께 고친다.
 
-### 3.4 `/goal`로 큐 전체를 하나의 목표로 맡긴다
+### 3.4 장기 작업에만 `/goal`을 선택적으로 쓴다
 
-`/goal`은 목표가 달성되거나 일시정지될 때까지 **턴을 넘겨 자동으로 이어서** 작업한다. 스레드가 유휴 상태이고 대기 중인 사용자 입력이 없으며 예산이 남아 있으면 계속 진행한다. 완료 판정은 모델의 판단이 아니라 증거(테스트·로그·변경 파일)로 한다. 명령은 `/goal <목표>`, `/goal pause`, `/goal resume`, `/goal clear`다.
+`/goal`은 여러 턴에 걸친 **하나의 검증 가능한 목표**에 쓴다. 공식 문서는 관련 없는 열린 백로그 전체를 목표로 삼지 말라고 안내한다. 목표에 포함할 큐 ID, 검증 방법, 중단 조건을 명시한다. 명령은 `/goal <목표>`, `/goal`(상태 확인), `/goal pause`, `/goal resume`, `/goal clear`다. 이 기능을 쓰지 않는 일반 턴에도 `AGENTS.md`의 실행 규칙은 적용된다.
 
-킥오프 예시(공식 템플릿 "<목표 상태> verified by <증거> while preserving <제약> … If blocked, <보고할 것>"을 따름):
+킥오프 예시(작업 대상과 종료 조건을 실제 큐 항목에 맞게 채운다):
 
 ```text
-/goal docs/plans/NEXT.md의 AUTO 항목을 위에서부터 모두 DONE으로 만든다.
-각 항목은 대상/전체 테스트, npx tsc --noEmit, npm run lint, 필요 시 npm run build 통과와
-커밋 해시로 검증한다. AGENTS.md의 실행 루프·중단 기준·턴 종료 규칙과 상시 승인 목록을 지킨다.
-항목 사이에서는 NEXT.md의 다음 AUTO 항목을 고르고, 새 후속 작업은 라벨을 붙여 큐에 추가한다.
-AUTO가 소진되거나 막히면 멈추고, APPROVE·DECIDE 항목을 선택지·권장안과 함께 한 번에 보고한다.
+/goal docs/plans/NEXT.md의 Q-<시작>~Q-<끝> 중 승인 없이 실행 가능한
+<하나의 목표>를 완료한다. AGENTS.md와 관련 정본 문서를 먼저 확인한다.
+변경은 대상 테스트, npm run lint, npm run build 및 관련 운영 증거로 검증한다.
+승인·결정·외부 이벤트가 필요하거나 범위 밖 작업만 남으면 멈추고 큐 상태를 보고한다.
 ```
 
-- 사용자는 턴마다 재촉하지 않는다. 중간에 끼어들 필요가 있을 때만 `/goal pause`를 쓴다.
-- 승인·결정에 답한 뒤에는 `/goal resume`으로 재개한다. 해당 항목의 라벨은 `AUTO`로 바꾼다.
+- 승인·결정에 답한 뒤 재개할 때도 승인 범위와 조건을 확인한다. 승인받은 1회성 외부 작업을 일반적인 `AUTO`로 바꾸지 않는다.
 
 ### 3.5 스레드 수명을 관리한다
 
 - 큐 묶음(또는 마일스톤) 하나에 스레드 하나를 쓴다. 한 스레드를 며칠씩 재개하지 않는다.
 - compaction이 2회 이상 발생했거나 스레드가 하루를 넘기면, 작업 기록과 `NEXT.md`를 갱신하고 새 스레드를 시작한다.
-- 새 스레드의 시작 절차는 세 단계로 줄인다: `AGENTS.md` → `npm run continuity:check` → `docs/plans/NEXT.md`. 나머지 문서는 큐 항목이 가리킬 때만 읽는다.
+- 새 스레드에서는 `AGENTS.md` → OpenViking 최신 메모리 recall → `npm run continuity:check` → Git·최신 작업 기록·`NEXT.md` → 관련 정본 문서 → Linear 대조 순으로 확인한다. 세부 갱신·read-back 기준은 연속성 하네스 3장을 따른다.
 
 ### 3.6 기록 부담을 체크포인트와 세션 종료로 나눈다
 
 | 시점                       | 해야 할 일                                                                         |
 | -------------------------- | ---------------------------------------------------------------------------------- |
-| 항목 완료(체크포인트)      | 원자적 커밋·푸시, `NEXT.md` 체크, 필요 시 계획 문서 상태 한 줄                     |
+| 항목 완료(체크포인트)      | `NEXT.md` 완료 체크·검증 증거를 변경과 함께 원자적 커밋·푸시, 필요 시 계획 문서 상태 갱신 |
 | 큐 소진·턴 종료(세션 종료) | 당일 작업 기록 덧붙이기, Linear 동기화, OpenViking 메모리 저장, `continuity:check` |
 
 단위마다 Linear·OpenViking·작업 기록 전체를 갱신하면 그 자체가 "마무리 의식"이 되어 턴 종료를 유도한다. 하네스 4장의 "사소한 편집마다 외부 도구를 갱신하지 않는다"를 적용한다.
 
 ### 3.7 Codex 실행 설정을 프로젝트용으로 고정한다
 
-- 이 프로젝트 전용 profile을 두고 항상 그 profile로 실행한다. 전역 기본값(`gpt-5.6-sol`/`low`)의 영향을 받지 않게 하기 위해서다. Codex CLI 0.155.1의 `--profile <이름>`은 `$CODEX_HOME/<이름>.config.toml`을 기본 설정 위에 덮어쓴다(`codex --help` 기준).
+- CLI에서 모델을 고정해야 하는 경우 프로젝트 전용 profile을 선택할 수 있다. `--profile <이름>`은 사용자 기본 설정 위에 `$CODEX_HOME/<이름>.config.toml`을 덮어쓴다. 프로젝트 설정과 CLI 인자가 다시 우선할 수 있으며, Codex App 등 다른 실행 표면에서는 실제 적용값을 별도 확인한다.
 
   ```toml
   # ~/.codex/etf.config.toml
@@ -205,12 +208,12 @@ AUTO가 소진되거나 막히면 멈추고, APPROVE·DECIDE 항목을 선택지
 ## 4. 도입 순서
 
 1. **사용자**: 3.3 상시 승인 목록을 확정한다. — 2026-09-22 완료
-2. **Codex**: 현재 상태로 `docs/plans/NEXT.md`를 만든다. 아래 초기 항목을 저장소 문서·Linear와 대조해 확정하고, `AGENTS.md`·ROADMAP의 "다음 작업" 서술을 NEXT.md 링크로 바꾼다.
+2. **Codex**: `docs/plans/NEXT.md`에 저장소 문서 기준의 큐를 만들고, 완료·승인·대기·결정을 분리한다. — 2026-09-22 작성; Linear 대조는 세션 종료 절차에서 확인
 3. 3.2 턴 종료 규칙과 확정된 상시 승인 목록을 `AGENTS.md`와 하네스 5장에 반영한다. — 2026-09-22 완료
-4. **사용자**: 3.7 profile을 추가하고 새 스레드를 `codex --profile etf`로 시작한다.
-5. **사용자**: 3.4 킥오프 `/goal`을 한 번 입력한다. 이후에는 승인·결정 요청에만 답한다.
+4. **선택**: CLI에서 고정 모델이 필요한 경우 3.7 profile을 설정한다. 현재 실행 표면에 적용되는지 확인한다.
+5. **선택**: 범위가 명확한 장기 작업에만 3.4의 `/goal`을 사용한다. 일반 턴은 `AGENTS.md`와 `NEXT.md`로 이어간다.
 
-### 초기 큐 후보 (2026-09-22 `AGENTS.md` 기준, Codex가 확정할 것)
+### 초기 큐 후보 (도입 당시 기록; 현재 상태는 `NEXT.md` 참조)
 
 | 후보                                                    | 라벨                     | 근거                                                 |
 | ------------------------------------------------------- | ------------------------ | ---------------------------------------------------- |
@@ -231,6 +234,7 @@ AUTO가 소진되거나 막히면 멈추고, APPROVE·DECIDE 항목을 선택지
 ## 6. 참고
 
 - OpenAI, Codex Prompting Guide: "Persist until the task is fully handled end-to-end within the current turn whenever feasible…", "Bias to action … do not end your turn with clarifications unless truly blocked." — https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide
-- OpenAI, Using Goals in Codex: `/goal` 수명주기, 자동 이어가기, 증거 기반 완료 판정, 목표 템플릿 — https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex
+- OpenAI, Follow a goal: `/goal` 수명주기, 단일 목표·검증 가능한 종료 조건, 열린 백로그 지양 — https://learn.chatgpt.com/use-cases/follow-goals
+- OpenAI, Advanced Configuration: CLI profile 파일·설정 우선순위 — https://learn.chatgpt.com/docs/config-file/config-advanced
 - Codex 소스 `codex-rs/core/src/compact.rs`: compaction 후 경고 문구 — https://github.com/openai/codex
 - 저장소: `AGENTS.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`(3~6장), `docs/guides/one-fact-one-home.md`
