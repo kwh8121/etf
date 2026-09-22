@@ -1,11 +1,42 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  formatExperimentalTelegramReport,
   formatTelegramReport,
   sendTelegramMessages,
 } from "../../lib/notifications/telegram";
 
 describe("Telegram reports", () => {
+  it("fits a typical four-category US top-ten report in one message and still splits long names", () => {
+    const sections = ["일간 상승", "일간 하락", "5일 상승", "5일 하락"].map(
+      (title) => ({
+        title: `${title} (상위 10건 / 전체 600건)`,
+        lines: Array.from(
+          { length: 10 },
+          (_, index) => `${index + 1}. ETF ${index + 1} · 1.23%`,
+        ),
+      }),
+    );
+    const report = {
+      title: "미국 ETF 등락 (P1 실험)",
+      observedAt: "2026-09-22T00:00:00.000Z",
+      runId: "us-run",
+      sections,
+      disclosure: "실험 항목",
+    };
+    expect(formatExperimentalTelegramReport(report)).toHaveLength(1);
+
+    const longReport = formatExperimentalTelegramReport({
+      ...report,
+      sections: sections.map((section) => ({
+        ...section,
+        lines: section.lines.map((line) => `${line} ${"긴종목명".repeat(40)}`),
+      })),
+    });
+    expect(longReport.length).toBeGreaterThan(1);
+    expect(longReport.every((message) => message.length <= 4096)).toBe(true);
+  });
+
   it("preserves market, date, source, run, and status metadata in every split message", () => {
     const messages = formatTelegramReport(
       {

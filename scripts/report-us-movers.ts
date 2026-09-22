@@ -13,6 +13,14 @@ import {
 } from "../lib/signals/us-etf-movers.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
+const US_REPORT_LIMIT_PER_TYPE = 10;
+const US_REPORT_SECTIONS = [
+  ["daily_price_gain", "일간 상승"],
+  ["daily_price_loss", "일간 하락"],
+  ["five_day_price_gain", "5일 상승"],
+  ["five_day_price_loss", "5일 하락"],
+] as const;
+
 export async function reportLatestUsEtfMovers(send = true, runId?: string) {
   const client = createServiceRoleClient();
   let query = client
@@ -34,22 +42,52 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
     );
   if (!run) return { runId: null, messageCount: 0 };
 
-  const { data: rows, error: rowsError } = await client
-    .from("signal_daily")
-    .select("signal_type,name,value,rank")
-    .eq("run_id", run.id)
-    .eq("market", "US")
-    .order("signal_type")
-    .order("rank");
-  if (rowsError)
-    throw new Error(
-      `Supabase read US signal rows failed: ${rowsError.message}`,
-    );
+  const sections = await Promise.all(
+    US_REPORT_SECTIONS.map(
+      async ([signalType, title]): Promise<TelegramReportSection | null> => {
+        const {
+          data: rows,
+          count,
+          error,
+        } = await client
+          .from("signal_daily")
+          .select("name,value,rank", { count: "exact" })
+          .eq("run_id", run.id)
+          .eq("market", "US")
+          .eq("signal_type", signalType)
+          .order("rank")
+          .order("code")
+          .limit(US_REPORT_LIMIT_PER_TYPE);
+        if (error)
+          throw new Error(
+            `Supabase read US ${signalType} signals failed: ${error.message}`,
+          );
+        if (
+          count === null ||
+          !rows ||
+          rows.length !== Math.min(count, US_REPORT_LIMIT_PER_TYPE)
+        )
+          throw new Error(
+            `Supabase read US ${signalType} signals returned an incomplete count`,
+          );
+        if (count === 0) return null;
+        return {
+          title: `${title} (상위 ${rows.length}건 / 전체 ${count}건)`,
+          lines: rows.map(
+            (row) =>
+              `${row.rank ?? "-"}. ${row.name} · ${Number(row.value).toFixed(2)}%`,
+          ),
+        };
+      },
+    ),
+  );
   const messages = formatExperimentalTelegramReport({
     title: "미국 ETF 등락 (P1 실험)",
     observedAt: run.observed_at,
     runId: run.id,
-    sections: toSections(rows ?? []),
+    sections: sections.filter(
+      (section): section is TelegramReportSection => section !== null,
+    ),
     disclosure: US_ETF_P1_DISCLOSURE,
   });
   if (send)
@@ -61,33 +99,6 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
   return { runId: run.id, messageCount: messages.length };
 }
 
-function toSections(
-  rows: Array<{
-    signal_type: string;
-    name: string;
-    value: number | string | null;
-    rank: number | null;
-  }>,
-): TelegramReportSection[] {
-  const labels: Record<string, string> = {
-    daily_price_gain: "일간 상승",
-    daily_price_loss: "일간 하락",
-    five_day_price_gain: "5일 상승",
-    five_day_price_loss: "5일 하락",
-  };
-  return Object.entries(labels)
-    .map(([signalType, title]) => ({
-      title,
-      lines: rows
-        .filter((row) => row.signal_type === signalType)
-        .map(
-          (row) =>
-            `${row.rank ?? "-"}. ${row.name} · ${Number(row.value).toFixed(2)}%`,
-        ),
-    }))
-    .filter((section) => section.lines.length > 0);
-}
-
 async function main() {
   if (!isUsEtfP1Enabled()) {
     console.log(JSON.stringify({ status: "DISABLED" }));
@@ -96,11 +107,7 @@ async function main() {
   const runId = process.argv
     .find((argument) => argument.startsWith("--run-id="))
     ?.slice("--run-id=".length);
-  console.log(
-    JSON.stringify(
-      await reportLatestUsEtfMovers(true, runId),
-    ),
-  );
+  console.log(JSON.stringify(await reportLatestUsEtfMovers(true, runId)));
 }
 if (
   process.argv[1] &&
