@@ -33,7 +33,7 @@
 - [x] `DONE` Q-06 US timer 설치본을 평일 09:40 KST 방식으로 갱신
   - 결정: A안. 평일 09:40 KST에 직전 미국 거래일 장 마감 결과를 처리.
   - 설치·검증(2026-09-22 17:54 KST): timer·service·dispatch script 설치본 SHA-256이 저장소 원본 `8afa5f88…`, `e67d0a69…`, `c23f2abb…`와 일치. 다음 US 발화는 2026-09-23 09:40 KST.
-  - 최초 timer 경로: `Persistent=true`가 17:54 KST에 한 번 발화했고 `us-etf-movers.yml` GitHub run `35707361859`를 dispatch했다. run의 최종 결과는 실행 기록에서 확인한다.
+  - 최초 timer 경로: `Persistent=true`가 17:54 KST에 한 번 발화했고 `us-etf-movers.yml` GitHub run `35707361859`를 dispatch했다. run은 17:58 KST에 성공으로 완료됐다.
 - [x] `DONE` Q-01 Codex 연속 실행 운영 가이드를 현재 운영 상태·공식 기능 설명에 맞춰 개선
   - 검증: `npm test` 29개 파일·90개 테스트, `npm run lint`, `npm run build`, `npm run continuity:check`, `git diff --check` 통과
   - 커밋: 이 완료 기록과 가이드 변경을 함께 담은 Git 커밋 (`git log -1 --format=%h -- docs/plans/NEXT.md`로 확인)
