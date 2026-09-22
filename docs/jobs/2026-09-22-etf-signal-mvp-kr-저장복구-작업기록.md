@@ -28,3 +28,10 @@
 3. KOR-56·57: US 휴장 중복·복구 실측과 보고 분량 정책을 계속 추적한다.
 
 정본: `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`, 이전 기록 `docs/jobs/2026-09-22-etf-signal-mvp-m5-b-저장복구-작업기록.md`.
+
+## 10:00 KST 운영 준비 재확인
+
+- 사용자 systemd의 `actions-runner-etf.service`는 실행 중이고 GitHub 연결 상태다.
+- `etf-kr-daily-dispatch.timer`는 실행 대기 중이며 다음 트리거는 2026-09-22 19:15 KST다. 따라서 첫 자동 실행 성공은 아직 검증되지 않았다.
+- 최근 KR run `35669324094`는 성공했지만 트리거가 수동 `workflow_dispatch`였다. US run `35670349188`도 성공했지만 자동 KR 검증 증거로 사용하지 않는다.
+- M6 일별 기록 절차와 완전 거래일 판정 기준을 `docs/guides/etf-signal-mvp-m6-observation-runbook.md`에 준비했다. 현재 누적은 0/20이다.
