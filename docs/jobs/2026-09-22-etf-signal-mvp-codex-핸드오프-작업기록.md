@@ -21,7 +21,7 @@
 | 예약 실행                    | systemd 사용자 timer `etf-kr-daily-dispatch.timer`(월~금 19:15 KST), `etf-us-movers-dispatch.timer`(화~토 07:30 KST). 다음 실행: KR 9/22 19:15, US 9/23 07:30 |
 | GitHub `staging` Environment | `ENABLE_US_ETF_P1=false`, 공개 변수 2개, Secret 5개                                                                                                           |
 | 운영 DB(Supabase)            | KR `signal_run` 4건(최신 `fff45e52…`, `market_date=2026-09-21`, COMPLETED), US `signal_run` 3건·신호 7,358행·`source_snapshot` 3건                            |
-| Linear / OpenViking          | 이번 세션에서 **갱신하지 못함** (Linear MCP 미인증, OpenViking MCP 연결 실패). 아래 "다음 작업" 2번                                                           |
+| Linear / OpenViking          | 핸드오프 세션에서는 갱신하지 못했으나, Codex가 9/22에 KOR-53·KOR-55 상태 요약과 OpenViking 재개 메모리를 동기화함                                             |
 
 ## 이번 세션 결과
 
@@ -96,7 +96,7 @@
 ## 다음 작업
 
 1. 세션 시작: `git status --short --branch`, `npm run continuity:check`(최신 작업 기록이 이 문서인지 확인).
-2. **Linear·OpenViking 동기화**: 이 문서의 결과·결정·위험을 Linear(M5 이슈 `KOR-55` 등)와 OpenViking 메모리에 반영한다. 이번 세션에서 두 연결 모두 실패했으므로 기존 항목을 먼저 검색해 중복 생성하지 않는다.
+2. **Linear·OpenViking 동기화 완료**: Codex가 기존 `KOR-53`, `KOR-55`에 안전한 상태 요약을 추가하고 OpenViking에 재개 메모리를 저장했다. 이후 상태 전이·운영 검증 결과가 생길 때만 같은 항목을 갱신한다.
 3. **9/22 19:15 이후 KR timer 결과 확인**: `journalctl --user -u etf-kr-daily-dispatch.service -n 20`, `gh run list -R kwh8121/etf --workflow kr-daily.yml -L 3`. 기대값은 `market_date=20260922`, `krxStatus: TRADING_COMPLETE`, `kiwoomStatus: COMPLETE`, `telegramSent: true`. 실패하면 job 로그(`gh run view <id> --log-failed`)로 원인을 기록한다.
 4. **9/23 07:30 US timer 확인**: 플래그 `false`이므로 `DISABLED`로 끝나야 한다.
 5. `AGENTS.md`의 최신 작업 기록 포인터와 연속성 하네스 9장 기준점을 이 문서 기준으로 갱신한다.
