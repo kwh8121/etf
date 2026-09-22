@@ -171,11 +171,35 @@ Kiwoom을 호출하는 `kr-daily.yml`·`us-etf-movers.yml`은 Kiwoom 허용 IP�
 - 상태·로그: `systemctl --user status actions-runner-etf`, `journalctl --user -u actions-runner-etf -n 50`
 - 재시작: `systemctl --user restart actions-runner-etf`
 - GitHub 쪽 상태: `gh api repos/kwh8121/etf/actions/runners --jq '.runners[] | "\(.name) \(.status)"'`
-- 예약 시각(평일 07:30 KST US, 19:15 KST KR)에 PC와 WSL이 켜져 있어야 한다. runner가 꺼져 있으면 job은 대기열에서 기다렸다가 runner가 켜지면 실행된다.
+- 예약 실행은 4.4의 systemd timer가 담당하므로 PC와 WSL이 켜져 있어야 한다. Windows 작업 스케줄러의 `WSL Autostart (Ubuntu-24.04)`(로그온 시 `wsl.exe -d Ubuntu-24.04 --exec sleep infinity`를 창 없이 실행)가 WSL을 켜 둔다.
 - 공인 IP가 바뀌면 Kiwoom 토큰 발급이 다시 실패한다. 이때는 Kiwoom 허용 IP를 갱신한다.
 - self-hosted에서는 `setup-node`의 `cache: npm`을 쓰지 않는다. 사용자 계정 전체의 `~/.npm`(약 24GB)을 대상으로 해 후처리 단계가 멈췄다. npm 캐시는 runner 디스크에 유지된다.
 - runner는 현재 사용자 계정 권한으로 실행되어 운영 `.env`, gh keyring, 다른 프로젝트에 접근할 수 있다. 비밀번호 없는 sudo가 없어 전용 Linux 사용자는 만들지 않았다. 분리가 필요하면 전용 사용자로 재설치한다.
 - 이 저장소에 `pull_request` 계열 트리거로 self-hosted runner를 쓰는 workflow를 추가하지 않는다.
+
+### 4.4 예약 실행 (runner PC systemd timer)
+
+GitHub `schedule`은 2026-09-21 KR 19:15 예약이 6시간 늦게 실행되고 US 07:30 예약은 실행되지 않았다. 그래서 Kiwoom workflow는 `schedule` 트리거를 두지 않고, runner PC의 systemd 사용자 timer가 `gh workflow run`으로 실행한다.
+
+| timer                          | 시각                                    | 실행                                                         |
+| ------------------------------ | --------------------------------------- | ------------------------------------------------------------ |
+| `etf-kr-daily-dispatch.timer`  | 월~금 19:15 KST                         | `kr-daily.yml`, `market_date`=가장 최근 평일 19:15 슬롯 날짜 |
+| `etf-us-movers-dispatch.timer` | 화~토 07:30 KST (미국 월~금 장 마감 후) | `us-etf-movers.yml`                                          |
+
+- `Persistent=true`: PC·WSL이 꺼져 있어 놓친 실행은 다음 기동 때 한 번 따라잡는다. KR 기준일은 실행 시각이 아니라 놓친 슬롯의 날짜로 계산되므로 자정을 넘겨도 밀리지 않는다. 두 슬롯 이상을 놓치면 가장 최근 슬롯만 실행되므로, 이전 날짜는 `gh workflow run kr-daily.yml -R kwh8121/etf -f market_date=YYYYMMDD`로 보충한다.
+- 설치본: `scripts/dispatch-scheduled-workflow.ts`를 `~/.local/lib/etf-ops/`에 복사해 실행한다(작업 사본의 브랜치·수정 상태와 분리). unit 원본은 `ops/systemd/`에 있다. Node 경로는 `~/.nvm/versions/node/v22.23.2`로 고정되어 있어 `.nvmrc`를 바꾸면 unit도 고친다.
+- 설치·갱신:
+
+  ```bash
+  install -D -m 644 scripts/dispatch-scheduled-workflow.ts ~/.local/lib/etf-ops/dispatch-scheduled-workflow.ts
+  install -m 644 ops/systemd/etf-*.service ops/systemd/etf-*.timer ~/.config/systemd/user/
+  systemctl --user daemon-reload
+  systemctl --user enable --now etf-kr-daily-dispatch.timer etf-us-movers-dispatch.timer
+  ```
+
+- 상태: `systemctl --user list-timers 'etf-*'`, 로그: `journalctl --user -u etf-kr-daily-dispatch.service -n 20`
+- 수동 디스패치: `systemctl --user start etf-us-movers-dispatch.service` (KR 서비스는 운영 chat 발송이 따르므로 필요할 때만 실행)
+- `gh`는 systemd 사용자 서비스에서도 keyring 토큰을 사용한다(`systemd-run --user --wait --pipe gh auth status`로 확인).
 
 ## 5. E2E 실행 체크리스트
 

@@ -72,3 +72,18 @@
 ### 확인된 위험
 
 - **예약 실행 이력 0건**: 저장소 전체에 `schedule` 이벤트 실행이 한 번도 없다. KR workflow는 2026-09-21 13:18 KST에 추가되어 오늘 19:15가 첫 예약이었으나 1시간 넘게 시작되지 않았다. GitHub는 부하가 높을 때 예약 실행을 지연하거나 누락할 수 있다. 다음 예약 실행(평일 07:30 US, 19:15 KR)이 실제로 시작되는지 확인해야 한다.
+
+## 예약 실행 전환과 9/21 보충 (2026-09-22 08:45–09:10 KST, Claude Code)
+
+### 관찰
+
+- KR 9/21 19:15 GitHub 예약 실행은 9/22 01:27 KST에 runner에서 실행됐다(6시간 지연, `35625705875`). `kiwoomStatus: COMPLETE`로 runner 전환 후 첫 운영 Kiwoom 수집이 성공했다. 그러나 기준일이 실행 시점 KST 날짜(9/22)로 잡혀 `krxStatus: PUBLISH_PENDING`, 9/21 신호가 생성되지 않았고 운영 chat에 발행 대기 알림이 발송됐다.
+- US 9/22 07:30 GitHub 예약 실행은 08:47까지 실행되지 않았다.
+
+### 조치 (사용자 승인)
+
+- 9/21 보충: `market_date=20260921` 수동 실행(`35669324094`)에서 `krxStatus: TRADING_COMPLETE`, `kiwoomStatus: COMPLETE`, `signalRunId: fff45e52…`, 운영 chat 보고 발송. 디스크 I/O 포화(PSI full 약 65%)로 checkout·`npm ci`가 느렸다.
+- 예약 실행을 runner PC systemd timer로 대체(`481fdf0`): KR 월~금 19:15, US 화~토 07:30, `Persistent=true`, KR은 가장 최근 평일 19:15 슬롯 날짜를 `market_date`로 전달. 두 workflow에서 `schedule` 트리거를 제거했다.
+- timer 경로 검증: `etf-us-movers-dispatch.service` 수동 실행 → US workflow(`35670349188`)가 runner에서 `DISABLED`로 성공. KR 디스패치의 첫 실행은 9/22 19:15 timer다.
+- Windows 작업 스케줄러 `WSL Autostart (Ubuntu-24.04)`는 사용자가 등록했다(로그온 시 WSL 유지). runner도 `Ubuntu-24.04`에 있다.
+- 테스트: 28 파일·86 테스트, tsc, lint 통과. 디스크 부하가 높을 때 `run-kr-daily.test.ts` 1건이 10초 시간 초과로 실패했다가 부하 감소 후 통과했다.
