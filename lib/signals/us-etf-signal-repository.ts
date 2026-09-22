@@ -14,7 +14,10 @@ const TRANSFORM_VERSION = "m5-2026-09-21";
 export interface UsEtfMoverRepository {
   findSnapshotByContent(input: {
     sha256: string;
-  }): Promise<{ id: string; objectPath: string | null } | null>;
+  }): Promise<{ id: string; objectPath: string | null; asofAt: string } | null>;
+  findSignalRunBySnapshot(
+    snapshotId: string,
+  ): Promise<{ id: string; status: string } | null>;
   uploadRawSnapshot(path: string, payload: string): Promise<void>;
   insertSnapshot(
     input: Record<string, unknown>,
@@ -36,49 +39,64 @@ export async function persistUsEtfMoverSnapshot(
   const rawPayload = JSON.stringify(input.rawPayload);
   const sha256 = createHash("sha256").update(rawPayload).digest("hex");
   const existing = await repository.findSnapshotByContent({ sha256 });
-  const duplicate = existing !== null;
+  const existingRun = existing
+    ? await repository.findSignalRunBySnapshot(existing.id)
+    : null;
+  const duplicate = existingRun?.status === "COMPLETED";
   const objectPath =
     existing?.objectPath ?? `kiwoom/us_etf_movers/${input.observationKey}.json`;
-  if (!duplicate) await repository.uploadRawSnapshot(objectPath, rawPayload);
-  const inserted = await repository.insertSnapshot({
-    observationKey: input.observationKey,
-    market: "US",
-    source: "kiwoom",
-    apiId: "us_etf_movers",
-    requestedAsof: null,
-    marketDate: null,
-    asofAt: input.observedAt,
-    status: duplicate ? "duplicate_observation" : "COMPLETE",
-    rowCount: countRawRows(input.rawPayload),
-    uniqueKeyCount: uniqueSignalCodeCount(input.signals),
-    pageCount: input.pageCount,
-    sha256,
-    duplicateOfSnapshotId: existing?.id ?? null,
-    objectPath,
-  });
+  if (!existing) await repository.uploadRawSnapshot(objectPath, rawPayload);
+  const inserted =
+    existing && !duplicate
+      ? existing
+      : await repository.insertSnapshot({
+          observationKey: input.observationKey,
+          market: "US",
+          source: "kiwoom",
+          apiId: "us_etf_movers",
+          requestedAsof: null,
+          marketDate: null,
+          asofAt: input.observedAt,
+          status: duplicate ? "duplicate_observation" : "COMPLETE",
+          rowCount: countRawRows(input.rawPayload),
+          uniqueKeyCount: uniqueSignalCodeCount(input.signals),
+          pageCount: input.pageCount,
+          sha256,
+          duplicateOfSnapshotId: existing?.id ?? null,
+          objectPath,
+        });
   if (duplicate)
     return { snapshotId: inserted.id, runId: null, duplicate: true };
 
-  const runId = deterministicRunId(inserted.id, input.observedAt);
-  await repository.upsertSignalRun({
+  const observedAt = existing?.asofAt ?? input.observedAt;
+  const runId = existingRun?.id ?? deterministicRunId(inserted.id, observedAt);
+  const run = {
     id: runId,
     market: "US",
     basDd: null,
     marketDate: null,
-    asofAt: input.observedAt,
+    asofAt: observedAt,
     strategyVersion: STRATEGY_VERSION,
     transformVersion: TRANSFORM_VERSION,
-    status: "COMPLETED",
     inputSnapshotIds: [inserted.id],
-    completedAt: new Date().toISOString(),
     notes: {
       disclosure: US_ETF_P1_DISCLOSURE,
       source_api_ids: ["usa10104", "usa20911", "usa20511", "usa20931"],
     },
+  };
+  await repository.upsertSignalRun({
+    ...run,
+    status: "PENDING",
+    completedAt: null,
   });
   await repository.upsertSignalRows(
-    toSignalRows(runId, inserted.id, input.observedAt, input.signals),
+    toSignalRows(runId, inserted.id, observedAt, input.signals),
   );
+  await repository.upsertSignalRun({
+    ...run,
+    status: "COMPLETED",
+    completedAt: new Date().toISOString(),
+  });
   return { snapshotId: inserted.id, runId, duplicate: false };
 }
 
@@ -92,7 +110,7 @@ export class SupabaseUsEtfMoverRepository implements UsEtfMoverRepository {
   async findSnapshotByContent(input: { sha256: string }) {
     const { data, error } = await this.client
       .from("source_snapshot")
-      .select("id,object_path")
+      .select("id,object_path,asof_at")
       .eq("market", "US")
       .eq("source", "kiwoom")
       .eq("api_id", "us_etf_movers")
@@ -102,7 +120,22 @@ export class SupabaseUsEtfMoverRepository implements UsEtfMoverRepository {
       .limit(1)
       .maybeSingle();
     throwIfError(error, "find US source snapshot");
-    return data ? { id: data.id, objectPath: data.object_path } : null;
+    if (!data) return null;
+    if (!data.asof_at) throw new Error("US source snapshot has no asof_at");
+    return { id: data.id, objectPath: data.object_path, asofAt: data.asof_at };
+  }
+
+  async findSignalRunBySnapshot(snapshotId: string) {
+    const { data, error } = await this.client
+      .from("signal_run")
+      .select("id,status")
+      .eq("market", "US")
+      .eq("strategy_version", STRATEGY_VERSION)
+      .contains("input_snapshot_ids", [snapshotId])
+      .limit(1)
+      .maybeSingle();
+    throwIfError(error, "find US signal run");
+    return data ?? null;
   }
 
   async uploadRawSnapshot(path: string, payload: string) {

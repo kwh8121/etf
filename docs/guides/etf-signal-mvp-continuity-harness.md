@@ -137,6 +137,7 @@ Linear 또는 OpenViking 연결이 실패하면 작업 기록에 실패 시각·
 
 2026-09-22 기준 M0–M4·R1은 완료됐고, M5-B 미국 P1은 self-hosted runner E2E까지 완료했다. 재개 시에는 다음 문서를 우선 읽는다.
 
+- `docs/jobs/2026-09-22-etf-signal-mvp-m5-b-저장복구-작업기록.md`
 - `docs/jobs/2026-09-22-etf-signal-mvp-codex-핸드오프-작업기록.md`
 - `docs/plans/implementation/M5-us-p1-adapter-plan.md`
 - `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`

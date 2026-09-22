@@ -6,13 +6,19 @@ import {
 } from "@/lib/signals/us-etf-signal-repository";
 
 class FakeRepository implements UsEtfMoverRepository {
-  existing: { id: string; objectPath: string | null } | null = null;
+  existing: { id: string; objectPath: string | null; asofAt: string } | null =
+    null;
   snapshots: Record<string, unknown>[] = [];
   uploads: string[] = [];
   runs: Record<string, unknown>[] = [];
   rows: Record<string, unknown>[] = [];
+  existingRun: { id: string; status: string } | null = null;
+  failRows = false;
   async findSnapshotByContent() {
     return this.existing;
+  }
+  async findSignalRunBySnapshot() {
+    return this.existingRun;
   }
   async uploadRawSnapshot(path: string) {
     this.uploads.push(path);
@@ -28,6 +34,7 @@ class FakeRepository implements UsEtfMoverRepository {
     this.runs.push(input);
   }
   async upsertSignalRows(rows: readonly Record<string, unknown>[]) {
+    if (this.failRows) throw new Error("signal rows unavailable");
     this.rows.push(...rows);
   }
 }
@@ -75,6 +82,10 @@ describe("US ETF P1 persistence", () => {
       market: "US",
       marketDate: null,
       asofAt: "2026-09-21T14:00:00.000Z",
+      status: "PENDING",
+      completedAt: null,
+    });
+    expect(repository.runs[1]).toMatchObject({
       status: "COMPLETED",
     });
     expect(repository.rows).toEqual([
@@ -92,7 +103,9 @@ describe("US ETF P1 persistence", () => {
     repository.existing = {
       id: "original",
       objectPath: "kiwoom/us_etf_movers/original.json",
+      asofAt: input.observedAt,
     };
+    repository.existingRun = { id: "completed-run", status: "COMPLETED" };
 
     const result = await persistUsEtfMoverSnapshot(repository, {
       ...input,
@@ -110,5 +123,44 @@ describe("US ETF P1 persistence", () => {
     });
     expect(repository.runs).toEqual([]);
     expect(repository.rows).toEqual([]);
+  });
+
+  it("leaves a failed run pending and resumes it from the same source content", async () => {
+    const repository = new FakeRepository();
+    repository.failRows = true;
+    await expect(persistUsEtfMoverSnapshot(repository, input)).rejects.toThrow(
+      "signal rows unavailable",
+    );
+    expect(repository.runs.map((run) => run.status)).toEqual(["PENDING"]);
+
+    repository.existing = {
+      id: "snapshot-1",
+      objectPath: repository.uploads[0],
+      asofAt: "2026-09-21T14:00:00+00:00",
+    };
+    repository.existingRun = {
+      id: repository.runs[0].id as string,
+      status: "PENDING",
+    };
+    repository.failRows = false;
+    const resumed = await persistUsEtfMoverSnapshot(repository, {
+      ...input,
+      observationKey: "us-retry",
+      observedAt: "2026-09-21T14:05:00.000Z",
+    });
+
+    expect(resumed).toMatchObject({
+      snapshotId: "snapshot-1",
+      duplicate: false,
+    });
+    expect(resumed.runId).toBe(repository.runs[0].id);
+    expect(repository.uploads).toHaveLength(1);
+    expect(repository.snapshots).toHaveLength(1);
+    expect(repository.runs.map((run) => run.status)).toEqual([
+      "PENDING",
+      "PENDING",
+      "COMPLETED",
+    ]);
+    expect(repository.rows).toHaveLength(1);
   });
 });
