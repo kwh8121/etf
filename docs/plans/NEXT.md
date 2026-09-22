@@ -9,6 +9,7 @@
   - 승인 대상: 운영 PC의 설치 파일·systemd timer 변경 및 `Persistent=true`에 따른 즉시 실행 가능성
   - 완료 조건: 설치본 해시·timer 목록·journal을 대조하고 발화 시각을 기록
   - 근거: `docs/guides/etf-signal-mvp-e2e-configuration-guide.md` 4.4
+  - 사전 확인(2026-09-22 17:40 KST): 설치본은 평일 19:15 KST, 다음 발화 19:15 KST, KR dispatch journal은 비어 있음. 저장소 원본은 평일 09:30 KST이며 timer·service·dispatch script SHA-256은 각각 `ba391713…`, `25bb03aa…`, `c23f2abb…`.
 - [ ] `WAIT` Q-03 KR timer 첫 자동 경로 E2E 및 M6 관측 시작 판정
   - 해제: Q-02 승인·설치 후 실제 timer 발화 발생. 정시 발화와 다음 기동 따라잡기를 구분
   - 완료 조건: journal → GitHub run → KRX·신호 저장 결과 연결. 수동 실행과 과거 보충일은 완전 관측일로 자동 산입하지 않음
