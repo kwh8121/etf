@@ -6,6 +6,8 @@
 > 목적: 승인된 MVP v2.2를 요구사항 추적성, 테스트 우선 구현, 독립 검토, 최신 검증 증거가 끊기지 않는 흐름으로 개발한다.
 > 적용 범위: 구현 착수 준비부터 국내 P0, 예약 실행·대시보드, 격리된 P1 관측, 완전 거래일 20일 후 판정까지.
 
+> **2026-09-22 개정 — 실행 원장 공식화(사용자 결정):** Spec Kit 작업 공간(`.specify/`, `specs/`, `tasks.md`)은 생성되지 않았고, M0–M5는 ROADMAP과 `docs/plans/implementation/` 계획서로 진행했다. 따라서 **다음 작업·순서·완료 상태의 정본(실행 원장)은 `docs/plans/NEXT.md`**로 하고, Superpowers는 품질 게이트로 유지한다. 현재 규정은 2.1~2.2절이다. 이 문서의 Spec Kit 전제(1장의 Spec Kit 목표·종료 조건 1·2·5, 4장 Gate R0·R1의 Spec Kit 항목, 5~6장, 7.2의 `/speckit-implement`, 9장 Gate V3)는 새 기능 개발을 재개할 때 도입 여부를 다시 판단할 때까지 **보류**한다.
+
 ## 1. 목표 결과와 종료 조건
 
 이 계획의 목표는 두 도구 체계를 중복 없이 결합해 다음 결과를 만드는 것이다.
@@ -27,30 +29,32 @@
 
 ## 2. 핵심 운영 결정
 
-### 2.1 정본은 Spec Kit, 품질 게이트는 Superpowers
+### 2.1 실행 원장은 `NEXT.md`, 품질 게이트는 Superpowers (2026-09-22 개정)
 
 | 사실 또는 활동 | 유일한 정본/도구 | 다른 문서에 허용하는 내용 |
 | --- | --- | --- |
 | 승인된 MVP 범위·정책값·수용 기준 | `docs/plans/ETF-signal-MVP-plan-v2.2.md` | 경로와 요구사항 ID |
-| 기능 요구사항 WHAT/WHY | `specs/<NNN>-<short-name>/spec.md` | 요구사항 ID와 링크 |
-| 기술 설계·데이터 모델·계약 | 같은 피처의 `plan.md`, `data-model.md`, `contracts/` | 결정 ID와 링크 |
-| 구현 순서·의존성·완료 상태 | 같은 피처의 `tasks.md` | 태스크 ID와 검증 요약 |
-| 프로젝트 불변 원칙 | `.specify/memory/constitution.md` | 관련 원칙 링크 |
+| 마일스톤·종료 기준 | `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md` | 마일스톤 ID와 링크 |
+| 마일스톤별 기술 설계·데이터 계약 | `docs/plans/implementation/<마일스톤>-*.md` | 결정과 링크 |
+| **다음 작업·순서·완료 상태(실행 원장)** | **`docs/plans/NEXT.md`** | Q-ID, 라벨, 검증 요약 |
+| 실행 규칙(턴 종료·상시 승인·중단 기준) | `AGENTS.md`, `docs/guides/etf-signal-mvp-continuity-harness.md` | 해당 절 링크 |
 | 코드와 변경 이력 | Git | commit SHA와 PR 링크 |
-| 실행 중 임시 보고·리뷰 패키지 | Superpowers 작업 공간 또는 에이전트 보고 | 정본 태스크 ID와 결과만 |
+| 큰 구현 항목의 작업 계획·리뷰 패키지 | Superpowers 산출물(해당 Q 항목의 작업용) | `NEXT.md` Q-ID와 결과만 |
 | 외부 API 조사 근거 | `docs/references/` | 경로와 결론 요약 |
 
-`docs/superpowers/plans/`에 제품 실행 계획을 다시 만들지 않는다. Superpowers의 `writing-plans` 형식은 이 활용계획서처럼 절차를 설계할 때 참고하되, 제품 개발 중에는 Spec Kit의 `plan.md`와 `tasks.md`를 대체하거나 복제하지 않는다.
+`NEXT.md` 외의 문서는 큐의 라벨·순서를 복제하지 않고 기준 시각과 `NEXT.md` 링크만 둔다. Linear는 실행 상태 추적 표면이며 완료 원장이 아니다.
 
-### 2.2 실행 오케스트레이터는 하나만 사용
+### 2.2 실행 원장은 하나만 사용 (2026-09-22 개정)
 
-제품 구현 상태는 `/speckit-implement`와 `tasks.md`가 관리한다. Superpowers의 `subagent-driven-development`, `executing-plans`, OMX `$team`을 같은 피처의 두 번째 완료 원장으로 동시에 사용하지 않는다.
+다음 작업과 완료 상태는 `NEXT.md` 하나가 관리한다. Superpowers `subagent-driven-development`·`executing-plans`의 작업 원장, OMX `$team`, Linear를 두 번째 완료 원장으로 쓰지 않는다.
 
-- 기본 실행: `/speckit-implement`.
-- 병렬화 근거: `tasks.md`의 `[P]` 표기와 실제 파일·인터페이스 비경합.
-- 병렬 보조: 읽기 전용 조사, 독립 리뷰, 서로 다른 테스트 실패 분석에만 native subagent 또는 `dispatching-parallel-agents`를 사용한다.
-- 구현 태스크를 병렬 실행해야 할 때도 한 리더가 `tasks.md`의 상태 갱신과 통합 검증을 소유한다.
+- **기본 실행:** `AGENTS.md`의 "턴 종료 규칙과 상시 승인"에 따라 `NEXT.md`의 `AUTO` 항목을 위에서부터 실행한다. 여러 턴에 걸친 지속은 Codex `/goal`을 쓴다.
+- **작은 `AUTO` 항목:** 기본 개발 루프(TDD → 구현 → 포맷 → 테스트 → lint/build → 리뷰 → 기록 → 원자적 커밋·푸시)로 처리하고 `NEXT.md`에서 `DONE`으로 옮긴다.
+- **큰 `AUTO` 구현 항목**(여러 파일·여러 단계): Superpowers `writing-plans`로 해당 항목의 작업 계획을 `docs/plans/implementation/`에 쓰고 `NEXT.md` 항목에서 링크한다. 이어서 `subagent-driven-development`로 태스크 사이에 멈추지 않고 실행한 뒤 `requesting-code-review`·`verification-before-completion`으로 마감한다. 작업 계획의 체크박스는 작업 메모이며, 완료 판정과 상태는 `NEXT.md`에만 기록한다.
+- **`finishing-a-development-branch`:** 브랜치·PR 흐름을 쓸 때만 적용한다. 상시 승인된 `main` 원자적 커밋·푸시 흐름에서는 병합 선택지를 제시하고 기다리지 않는다.
+- **병렬 보조:** 읽기 전용 조사, 독립 리뷰, 서로 다른 테스트 실패 분석에만 native subagent 또는 `dispatching-parallel-agents`를 사용한다. 구현을 병렬로 나눌 때도 한 리더가 `NEXT.md` 상태 갱신과 통합 검증을 소유한다.
 - tmux 기반 OMX `$team`은 Codex App 외부의 attached-tmux OMX CLI에서 별도로 선택한 경우에만 사용한다. 현재 App 환경의 기본 경로로 가정하지 않는다.
+- **Spec Kit 재판단 조건:** M5-A 같은 새 기능 개발을 재개하면서 요구사항 추적성(spec → plan → tasks)이 필요해질 때 도입 여부를 다시 결정한다. 도입하더라도 실행 원장은 하나만 둔다.
 
 ### 2.3 이미 승인된 기획을 다시 설계하지 않음
 

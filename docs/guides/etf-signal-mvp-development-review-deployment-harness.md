@@ -5,6 +5,8 @@
 > 개발 흐름 기준: `docs/plans/ETF-signal-MVP-v2.2-Spec-Kit-Superpowers-개발흐름-활용계획.md`
 > 작성일: 2026-09-17 KST
 > 상태: 구현 전 운영 계약. 외부 서비스 연결과 Production 배포 상태는 아직 검증되지 않았다.
+>
+> **2026-09-22 개정 — 실행 원장 공식화(사용자 결정):** Spec Kit 작업 공간(`.specify/`, `specs/`, `tasks.md`)은 생성되지 않았다. 다음 작업·순서·완료 상태의 정본은 `docs/plans/NEXT.md`다. 이 문서의 Spec Kit 전제(Stage 1·2의 Spec Kit 항목, `speckit-*` 명령, `tasks.md` 체크, 헌장)는 새 기능 개발 재개 시 도입 여부를 다시 판단할 때까지 보류한다. 규정은 `docs/plans/ETF-signal-MVP-v2.2-Spec-Kit-Superpowers-개발흐름-활용계획.md` 2.1~2.2절을 따른다.
 
 ## 1. 목적과 적용 원칙
 
@@ -35,7 +37,7 @@
 | 인증 경계 | 확인됨 | `lib/supabase/server.ts`, `lib/supabase/proxy.ts`, `app/protected/page.tsx`가 publishable key와 사용자 claims를 사용 |
 | Production build 기준선 | 확인됨 | Node `22.23.2`에서 Webpack 경로로 고정한 `npm run build`가 성공했다. |
 | 테스트 러너 | 확인됨 | Vitest와 `npm test`를 구성했고 24개 테스트가 통과했다. |
-| Spec Kit 작업 공간 | 미구성 | `.specify/`, `specs/`가 없다. 개발 진입 Gate에서 생성해야 한다. |
+| Spec Kit 작업 공간 | 미도입(보류) | `.specify/`, `specs/`가 없다. 2026-09-22부터 실행 원장은 `docs/plans/NEXT.md`이며 새 기능 개발 재개 시 도입을 재판단한다. |
 | 시장 데이터 코드 | M2 일부 구현 | KRX 날짜·파싱·완전성 검증·read-only 클라이언트가 있으며, 영속화·Kiwoom 페이지 처리·backfill은 남아 있다. |
 | 데이터베이스 migration | 확인됨 | 핵심 스키마·RLS·외래 키 인덱스 migration 3건을 원격 Supabase `ETF` 프로젝트에 적용하고 재검증했다. |
 | 예약 수집 workflow | 미구현 | `.github/workflows/ingest.yml`이 없다. |
@@ -51,10 +53,10 @@
 | --- | --- | --- |
 | MVP 범위, 비범위, 정책값, 수용 기준 | `docs/plans/ETF-signal-MVP-plan-v2.2.md` | 경로, 적용 섹션, 요구사항 ID |
 | 개발 방법과 피처 분해 | `docs/plans/ETF-signal-MVP-v2.2-Spec-Kit-Superpowers-개발흐름-활용계획.md` | 실행 단계와 Gate 이름 |
-| 프로젝트 불변 원칙 | `.specify/memory/constitution.md` | 관련 원칙 번호. 파일 생성 전에는 계획서가 기준이다. |
-| 피처 WHAT/WHY | `specs/<NNN>-<short-name>/spec.md` | 요구사항 ID와 링크 |
-| 기술 설계·연구·데이터 모델·계약 | 같은 피처의 `plan.md`, `research.md`, `data-model.md`, `contracts/` | 결정 ID와 링크 |
-| 구현 순서·의존성·완료 상태 | 같은 피처의 `tasks.md` | 태스크 ID와 검증 결과 요약 |
+| 프로젝트 불변 원칙 | MVP v2.2 계획서와 `AGENTS.md` (Spec Kit 헌장 보류) | 관련 절 링크 |
+| 마일스톤·종료 기준 | `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md` | 마일스톤 ID와 링크 |
+| 마일스톤별 기술 설계·데이터 계약 | `docs/plans/implementation/<마일스톤>-*.md` | 결정과 링크 |
+| 다음 작업·순서·완료 상태(실행 원장) | `docs/plans/NEXT.md` | Q-ID, 라벨, 검증 결과 요약 |
 | 코드, 브랜치, commit, tag | Git | SHA와 저장소 링크 |
 | PR 검토와 CI 실행 | GitHub PR·Checks | 정본 문서 링크, SHA, 짧은 판정 |
 | KRX·Kiwoom 조사 근거 | `docs/references/` | 문서 경로와 필요한 결론만 |
@@ -69,13 +71,13 @@
 | 20거래일 유지·폐기 결정 | `docs/plans/ETF-signal-MVP-20-trading-day-review.md` | 경로와 최종 판정만 |
 | 이 하네스의 운영 규칙 | 이 문서 | 해당 섹션 링크 |
 
-20거래일 판정 문서는 아직 생성되지 않았다. 판정 전에는 F4 `tasks.md`가 관측 작업과 완료 상태를 추적하고, 20개 완전 거래일을 채운 시점에 해당 판정 문서를 생성해 근거와 결정을 고정한다.
+20거래일 판정 문서는 아직 생성되지 않았다. 판정 전에는 `docs/plans/NEXT.md`의 M6 관측 항목과 `docs/guides/etf-signal-mvp-m6-observation-runbook.md`가 관측 작업과 완료 상태를 추적하고, 20개 완전 거래일을 채운 시점에 해당 판정 문서를 생성해 근거와 결정을 고정한다.
 
 ### 정본 충돌 해결 순서
 
 1. 제품 의미가 충돌하면 MVP v2.2 계획서를 따른다.
 2. 프로젝트 MUST 원칙과 구현이 충돌하면 헌장을 따른다. 헌장이 MVP 기준선을 바꾸려면 별도 계획 개정이 필요하다.
-3. 구현 상세가 충돌하면 활성 피처의 `spec.md → plan.md → tasks.md` 순서로 확인한다.
+3. 구현 상세가 충돌하면 ROADMAP → 해당 마일스톤의 `docs/plans/implementation/` 계획서 → `docs/plans/NEXT.md` 순서로 확인한다.
 4. 문서와 실행 결과가 다르면 Git, Supabase, GitHub Actions, 배포 플랫폼의 실제 기록을 사실로 보고 문서를 개정한다.
 5. 에이전트 보고, 세션 요약, 채팅 메시지는 독립 정본이 아니다.
 
@@ -118,7 +120,7 @@ PLANNED
 | `OBSERVING` | 국내 P0가 완전 거래일을 기록 | `source_snapshot`, `signal_run` | 20개 완전 거래일 충족 |
 | `ACCEPTED/ADJUST/RETIRED` | 20거래일 판정 문서 승인 | 판정 문서 | 새 버전 계획 또는 종료 |
 
-상태는 별도 라벨 시스템을 전제하지 않는다. 실제 진행 상태는 `tasks.md`, GitHub PR, 외부 실행 기록에 남기고 이 표의 이름은 인계 언어로만 사용한다.
+상태는 별도 라벨 시스템을 전제하지 않는다. 실제 진행 상태는 `docs/plans/NEXT.md`, Git, 외부 실행 기록에 남기고 이 표의 이름은 인계 언어로만 사용한다. 표의 Spec Kit 단계(`SPECIFIED`·`READY`의 speckit 조건)는 보류 중이다.
 
 ## 6. 계획·개발 하네스
 
@@ -142,6 +144,8 @@ R1 Gate에서 `.specify/memory/constitution.md`를 만들고 다음을 MUST로 �
 - 출처 추적, TDD, 최신 검증 증거, P1 실험 표기.
 
 ### Stage 2 — 피처 명세
+
+> 2026-09-22 보류: Spec Kit을 도입하지 않았으므로 이 단계는 새 기능 개발 재개 시 재판단한다. 현재 큰 구현 항목은 활용계획 2.2절에 따라 Superpowers `writing-plans` → `subagent-driven-development`로 실행하고 상태는 `NEXT.md`에 기록한다.
 
 피처마다 다음 순서를 한 번씩 실행한다.
 
