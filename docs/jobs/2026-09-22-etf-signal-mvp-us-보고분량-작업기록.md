@@ -19,3 +19,10 @@
 
 - 별도 staging 그룹에서 새 형식의 실제 전송 결과(통상 1건)를 확인한다. 기존 실행 재발송은 중복 알림이므로 이 작업에서는 하지 않았다.
 - 미국 휴장 시간 중복 관측 실측, 저장 완료 경계 실측, KR timer 첫 자동 실행은 별도 과제로 추적한다.
+
+## 14:29 KST 후속 읽기 전용 점검
+
+- 운영 Supabase의 최신 US 완료 실행(`090b454e…`)을 `reportLatestUsEtfMovers(false)`로 조회·포맷했다. 결과는 `messageCount=1`이다. Telegram 발송과 DB 쓰기는 없었다.
+- self-hosted runner 서비스와 KR·US systemd timer는 모두 `active`다. runner 최근 로그에는 GitHub 연결과 작업 대기·성공 이력이 있다. 다음 발화는 KR 9/22 19:15 KST, US 9/23 07:30 KST다.
+- GitHub의 KR·US workflow는 모두 `active`다. staging의 `ENABLE_US_ETF_P1`은 `false`다. 9/22 14:29 현재 KR 첫 자동 timer 실행은 아직 발생하지 않았다.
+- 새 형식의 staging Telegram 실발송은 여전히 미검증이다. dry-run 1건은 실제 발송 성공을 의미하지 않는다.

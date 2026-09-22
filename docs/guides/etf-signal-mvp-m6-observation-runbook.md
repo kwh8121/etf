@@ -2,7 +2,7 @@
 
 > 기준: `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`의 M6
 >
-> 시작 전 상태(2026-09-22 10:00 KST): KR 첫 자동 timer 실행 전, 누적 완전 거래일 0/20
+> 시작 전 상태(2026-09-22 14:29 KST): runner·KR timer 활성, 다음 KR 발화 19:15 KST. 첫 자동 timer 실행 전이며 누적 완전 거래일 0/20
 
 ## 시작 게이트
 
