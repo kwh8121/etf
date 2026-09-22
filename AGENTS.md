@@ -42,6 +42,19 @@ Git 이력과 기존 `feat:`, `fix:`, `docs:`, `test:`, `chore:` 형식의 짧�
 - 2026-09-22 Linear 상태: KOR-55 Done, KOR-56 Todo, KOR-57 In Progress(실발송 대기), KOR-58 Todo(관측 0/20), KOR-59 In Progress(실패 복구 E2E 대기). 첫 KR timer 경로 실행은 아직 미검증이다.
 - 기본 개발 실행 루프는 **TDD → 구현 → 포맷 → 대상/전체 테스트 → lint/build → 리뷰 → 문서·Linear·OpenViking 메모리 → 원자적 커밋·푸시**다. 안전하고 되돌릴 수 있는 작업은 이 순서로 중단 없이 계속한다. 운영 데이터·보안·권한·비가역 외부 부작용·요구사항 분기·반복 실패처럼 중요한 이슈에서만 멈추고, 증거·영향·대안을 보고해 승인받는다. 상세 기준은 `docs/guides/etf-signal-mvp-continuity-harness.md`의 “기본 개발 실행 루프와 중단 기준”을 따른다.
 
+### 턴 종료 규칙과 상시 승인
+
+배경과 근거는 `docs/guides/etf-signal-mvp-codex-autonomous-execution-guide.md`에 있다.
+
+- 다음 작업의 정본은 `docs/plans/NEXT.md`다. 항목마다 `AUTO`(승인 없이 즉시 가능)·`APPROVE`(승인 필요, 승인 대상 명시)·`WAIT`(시간·이벤트 대기, 해제 조건 명시)·`DECIDE`(사용자 결정, 선택지·권장안 명시)·`DONE` 라벨을 붙인다. 파일이 없으면 가이드 3.1 형식으로 만드는 것을 첫 `AUTO` 작업으로 한다.
+- `AUTO` 항목이 남아 있으면 턴을 끝내지 않는다. 한 항목의 기록·커밋·푸시는 체크포인트이며 세션 종료가 아니다. 곧바로 다음 `AUTO` 항목을 시작한다.
+- "다음으로 X를 하겠습니다", "다음 실행 단위는 X입니다"라고 쓰고 턴을 끝내지 않는다. X가 `AUTO`면 실행하고, 아니면 `NEXT.md`에 라벨을 붙여 기록한다. 선택지가 있는 작업은 `DECIDE`로 분리한다.
+- 턴을 끝낼 수 있는 경우는 다음뿐이다: (1) `AUTO` 항목 소진, (2) 남은 항목이 모두 `APPROVE`·`DECIDE`·`WAIT`, (3) 같은 원인으로 2회 이상 실패해 안전한 원인 규명이 불가능, (4) 사용자 중지.
+- 턴 종료 보고는 다음 형식을 따른다. ① 완료 항목과 검증 증거(명령·결과·커밋) ② 큐 상태 `AUTO 0개 / APPROVE n / DECIDE n / WAIT n(가장 이른 해제 시각)` ③ 모든 `APPROVE`·`DECIDE` 요청을 선택지·권장안과 함께 한 번에.
+- **상시 승인**(2026-09-22 사용자 확정, 묻지 않고 진행): 로컬 테스트·lint·build·format 실행과 `main` 원자적 커밋·푸시, `gh` 조회와 운영 DB 읽기 전용 조회(값·비밀 미출력). 그 밖의 외부 부작용(staging 플래그 전환·발송, runner PC timer·설치본 갱신, 운영 KR 수동 실행, 운영 데이터 쓰기·삭제, migration, Secret·권한·비용)은 `APPROVE`로 매번 승인받는다.
+- 기록은 체크포인트(항목 완료: 커밋·푸시, `NEXT.md` 체크)와 세션 종료(당일 작업 기록에 덧붙이기, Linear, OpenViking, `continuity:check`)로 나눈다. 작업 기록은 하루 한 파일에 덧붙인다.
+- 전역 지침의 "finish the current safe branch before asking for confirmation"은 이 저장소에서 "`NEXT.md`의 `AUTO` 항목을 모두 끝낸 뒤"로 해석한다.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
