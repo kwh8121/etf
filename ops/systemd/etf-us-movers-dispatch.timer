@@ -1,8 +1,8 @@
 [Unit]
-Description=화~토 07:30 KST US ETF movers P1 dispatch (미국 월~금 장 마감 후)
+Description=평일 09:40 KST US ETF movers P1 dispatch (직전 미국 거래일 장 마감 후)
 
 [Timer]
-OnCalendar=Tue..Sat 07:30 Asia/Seoul
+OnCalendar=Mon..Fri 09:40 Asia/Seoul
 Persistent=true
 
 [Install]
