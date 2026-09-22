@@ -43,10 +43,10 @@
 
 ### 남은 과제
 
-- **Kiwoom 실행 위치(결정·전환 완료)**: GitHub 호스팅 러너는 Kiwoom 허용 IP에 등록할 수 없어, 등록 IP PC의 self-hosted runner로 전환했다. 운영 절차는 `docs/guides/etf-signal-mvp-e2e-configuration-guide.md` 4.3에 있다. PC와 WSL이 예약 시각에 켜져 있어야 하고, 공인 IP가 바뀌면 Kiwoom 허용 IP를 갱신해야 한다. 상시 가동이 필요해지면 고정 IP 서버로 runner를 옮긴다. GitHub `schedule`이 지연·누락되어 예약 실행은 runner PC의 systemd timer가 `workflow_dispatch`로 한다(가이드 4.4).
+- **Kiwoom 실행 위치(결정·전환 완료)**: GitHub 호스팅 러너는 Kiwoom 허용 IP에 등록할 수 없어, 등록 IP의 회사 PC에서 self-hosted runner를 사용한다. 이 PC는 근무시간에만 운영 가능하며 상시 가동·고정 IP 서버 이전은 현 운영안에 포함하지 않는다. 현 KR 19:15·US 07:30 timer는 PC가 꺼져 있으면 정시 실행되지 않고 다음 기동 때 최대 한 번 따라잡는다. 근무시간대 재편 전에는 일일 정시 실행을 보장하지 않는다. 공인 IP가 바뀌면 Kiwoom 허용 IP를 갱신해야 한다. 세부 절차는 `docs/guides/etf-signal-mvp-e2e-configuration-guide.md` 4.3~4.4를 따른다.
 - **중복 관측 실측**: 미국 장이 완전히 닫힌 시간(주말 등)에 2회 실행해 `duplicate_observation`과 보고 생략을 확인한다. 단위 테스트는 통과했다.
 - **저장 완료 경계(US 코드 보완 완료, 실측 대기)**: US는 신호 행 저장 전 `PENDING`, 저장 후 `COMPLETED`로 기록한다. 같은 콘텐츠의 미완료 실행은 기존 스냅샷·실행을 재사용해 재시도한다. 2026-09-22 단위 테스트와 전체 품질 검증은 통과했으며 실제 실패 복구 실측은 남아 있다. 여러 HTTP 요청을 하나의 DB 트랜잭션으로 묶지는 않으므로 중간 `PENDING` 행은 남을 수 있다.
-- **저장 완료 경계(KR 미보완)**: KR은 여전히 `signal_run`을 `COMPLETED`로 먼저 쓰고 신호 행을 나중에 쓴다. 신호 저장 실패 시 완료된 빈 실행이 남을 수 있다. 첫 systemd timer 자동 운영 실행 검증 뒤 별도 테스트·수정으로 다룬다.
+- **저장 완료 경계(KR 코드 보완 완료, 실측 대기)**: KR도 `signal_run`을 `PENDING`으로 먼저 저장하고 신호 행 4종 저장 후 `COMPLETED`로 전환한다. 같은 입력은 결정적 `runId`와 신호 행 PK로 멱등 재시도한다. 2026-09-22 로컬 테스트·빌드는 통과했지만 운영 실패·복구 E2E는 아직 검증하지 않았다. 여러 요청을 하나의 DB 트랜잭션으로 묶지 않아 중간 `PENDING`과 부분 신호 행은 남을 수 있다.
 - **보고 분량(2026-09-22 결정·구현)**: 일간 상승·하락과 5일 상승·하락 각각 순위 상위 10건, 최대 40행만 보고한다. 각 섹션에 `상위 10건 / 전체 N건`을 표시하고 전체 신호는 DB에 유지한다. 통상 한 메시지에 담기지만 Telegram 길이 제한을 넘으면 기존 분할 전송을 유지한다. 단위 테스트와 최신 US 실행의 읽기 전용 조회를 완료했으며, 새 형식의 staging Telegram 실발송은 아직 검증하지 않았다.
 - 로컬에서 Telegram으로 보낼 때 node 기본 연결 시도 제한(250ms)을 넘어 `ETIMEDOUT`이 난다. 로컬 실행에는 `NODE_OPTIONS=--network-family-autoselection-attempt-timeout=2000`이 필요하다.
 

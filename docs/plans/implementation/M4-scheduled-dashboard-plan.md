@@ -2,7 +2,7 @@
 
 > 상위 마일스톤: `ETF-signal-MVP-v2.2-ROADMAP.md`의 M4
 > 작업일: 2026-09-21 ~ 2026-09-22 KST
-> 상태: self-hosted runner·systemd timer 전환 완료 · 첫 KR 자동 운영 실행 검증 대기
+> 상태: self-hosted runner·systemd timer 전환 완료 · 근무시간 제약으로 첫 KR timer 경로 검증 대기
 
 ## 구현 결과
 
@@ -26,6 +26,6 @@
 2. 인증되지 않은 `/protected` 요청은 `/auth/login`으로 `307` 이동했다.
 3. 인증된 Supabase 사용자로 `signal_run` RLS 조회는 200과 1행, `source_snapshot`은 200과 0행을 반환했다. 인증 사용자는 신호 데이터만 읽고 원본 스냅샷은 읽지 못한다.
 4. R1 보완에서는 GitHub Actions 동시 실행을 단일 대기열로 제한하고, 대시보드가 `m3-price-movers-v1` 실행만 선택하도록 고정했다. 5거래일 가격수익률 고지는 UI와 Telegram 모두에 표시한다.
-5. Kiwoom 허용 IP 제한으로 GitHub 호스팅 runner의 일일 수집이 실패한 것을 확인해, 등록 IP PC의 self-hosted runner로 전환했다. 2026-09-21 기준 보충 실행은 KRX·Kiwoom 수집과 Telegram 보고를 통과했다. 2026-09-22 19:15 KST 첫 timer 자동 실행 결과를 별도 확인한다.
+5. Kiwoom 허용 IP 제한으로 GitHub 호스팅 runner의 일일 수집이 실패한 것을 확인해, 등록 IP 회사 PC의 self-hosted runner로 전환했다. 2026-09-21 기준 보충 실행은 KRX·Kiwoom 수집과 Telegram 보고를 통과했다. 회사 PC는 근무시간에만 켤 수 있어 현 19:15 timer의 정시 발화를 전제할 수 없다. 첫 timer 경로의 정시 실행 또는 다음 기동 시 따라잡기 결과를 별도 확인한다.
 
 토큰, chat ID, API 원문, 서비스 역할 키는 Git·Linear·작업 기록에 남기지 않는다.

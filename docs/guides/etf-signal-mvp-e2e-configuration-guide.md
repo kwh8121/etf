@@ -187,6 +187,7 @@ GitHub `schedule`은 2026-09-21 KR 19:15 예약이 6시간 늦게 실행되고 U
 | `etf-us-movers-dispatch.timer` | 화~토 07:30 KST (미국 월~금 장 마감 후) | `us-etf-movers.yml`                                          |
 
 - `Persistent=true`: PC·WSL이 꺼져 있어 놓친 실행은 다음 기동 때 한 번 따라잡는다. KR 기준일은 실행 시각이 아니라 놓친 슬롯의 날짜로 계산되므로 자정을 넘겨도 밀리지 않는다. 두 슬롯 이상을 놓치면 가장 최근 슬롯만 실행되므로, 이전 날짜는 `gh workflow run kr-daily.yml -R kwh8121/etf -f market_date=YYYYMMDD`로 보충한다.
+- **회사 PC 근무시간 제약(2026-09-22 확정)**: PC·WSL은 근무시간에만 운영 가능하다. 따라서 현재 KR 19:15·US 07:30 시각은 PC가 꺼져 있으면 정시 발화하지 않으며, `Persistent=true`는 다음 기동의 한 번짜리 따라잡기일 뿐 상시 운영이나 일별 완료를 보장하지 않는다. PC 기동 전에 여러 슬롯을 놓치면 일부 기준일은 자동 복구되지 않는다. 정확한 근무시간과 KR·US의 목표 기준일을 확정하기 전에는 설치된 timer의 시각을 임의 변경하지 않는다. 첫 검증에서는 정시 실행과 따라잡기를 구분해 기록한다.
 - 설치본: `scripts/dispatch-scheduled-workflow.ts`를 `~/.local/lib/etf-ops/`에 복사해 실행한다(작업 사본의 브랜치·수정 상태와 분리). unit 원본은 `ops/systemd/`에 있다. Node 경로는 `~/.nvm/versions/node/v22.23.2`로 고정되어 있어 `.nvmrc`를 바꾸면 unit도 고친다.
 - 설치·갱신:
 

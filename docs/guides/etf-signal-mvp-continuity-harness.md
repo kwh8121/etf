@@ -142,4 +142,4 @@ Linear 또는 OpenViking 연결이 실패하면 작업 기록에 실패 시각·
 - `docs/plans/implementation/M5-us-p1-adapter-plan.md`
 - `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`
 
-다음 확인은 KR systemd timer의 첫 자동 운영 실행과 US timer의 disabled 결과다. 이후 M6 국내 P0 관측을 시작하되, 미국 휴장 시간 중복 관측 실측과 저장 완료 경계 실측, 변경된 보고 형식의 staging 실발송은 M5의 별도 미결 과제로 유지한다. US 보고 분량은 2026-09-22에 유형별 상위 10건으로 결정·구현했다.
+다음 확인은 근무시간에만 가동 가능한 회사 PC에서 KR timer의 첫 자동 실행(정시 또는 다음 기동 따라잡기)과 US timer의 disabled 결과다. 현 KR 19:15·US 07:30 timer는 정시 실행이 보장되지 않으므로 실제 발화·GitHub run을 확인하기 전에는 M6 관측 0/20을 유지한다. 이후 M6 국내 P0 관측을 시작하되, 미국 휴장 시간 중복 관측 실측과 KR·US 저장 완료 경계 실측, 변경된 보고 형식의 staging 실발송은 별도 미결 과제로 유지한다. US 보고 분량은 2026-09-22에 유형별 상위 10건으로 결정·구현했다.
