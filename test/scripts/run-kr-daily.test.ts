@@ -81,6 +81,8 @@ describe("KR daily workflow", () => {
 
     await runKoreanDailyWorkflow("20260918");
 
+    expect(mocks.generateKrxPriceSignals).toHaveBeenCalledWith("20260918");
+
     expect(mocks.reportLatestKrxSignals).toHaveBeenCalledWith(
       true,
       "generated-run",

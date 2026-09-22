@@ -127,6 +127,12 @@ export async function persistKrxSignalRows(
   client: SupabaseClient,
   input: PersistKrxSignalRowsInput,
 ): Promise<void> {
+  const { error: deleteError } = await client
+    .from("signal_daily")
+    .delete()
+    .eq("run_id", input.runId)
+    .eq("signal_type", input.signalType);
+  throwIfError(deleteError, `clear stale ${input.signalType} signals`);
   if (input.signals.length === 0) return;
   const { error } = await client
     .from("signal_daily")

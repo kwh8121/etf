@@ -42,7 +42,7 @@ export async function runKoreanDailyWorkflow(requestedDate = getKstDate()) {
     return { ingestion, signalRunId: null, telegramSent: true };
   }
 
-  const signals = await generateKrxPriceSignals();
+  const signals = await generateKrxPriceSignals(requestedDate);
   await reportLatestKrxSignals(true, signals.runId);
   await markNewListingAlerts(signals.runId);
   if (statusAlertRequired)

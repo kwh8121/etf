@@ -2,13 +2,13 @@
 
 > 기준: `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`의 M6
 >
-> 시작 전 상태(2026-09-22 14:39 KST): runner·KR timer 활성, 설치된 KR timer 다음 예정 시각 19:15 KST. 회사 PC는 근무시간에만 운영 가능하므로 정시 실행은 보장되지 않는다. 첫 timer 경로 실행 전이며 누적 완전 거래일 0/20
+> 시작 전 상태(2026-09-22): KR 09:30 누락일 보충 timer 원본 변경. 설치본 갱신과 실제 timer 경로 E2E는 아직 확인하지 않았다. 누적 완전 거래일 0/20.
 
 ## 시작 게이트
 
-1. KR `etf-kr-daily-dispatch.timer`가 `etf-kr-daily-dispatch.service`를 실행했는지 사용자 systemd journal에서 확인한다. 예정 시각 19:15 KST 정시 실행인지 다음 근무일 PC 기동 시 `Persistent=true` 따라잡기인지 구분한다. PC가 꺼져 있어 아직 발화하지 않았다면 게이트는 미통과다.
+1. KR `etf-kr-daily-dispatch.timer` 설치본이 09:30 KST인지 확인하고, 서비스 실행을 사용자 systemd journal에서 확인한다. 정시 실행인지 다음 기동의 `Persistent=true` 따라잡기인지 구분한다. PC가 꺼져 있어 아직 발화하지 않았다면 게이트는 미통과다.
 2. 해당 발화와 GitHub Actions `kr-daily.yml`의 `workflow_dispatch` 실행 ID·성공 여부를 연결한다. 성공한 수동 실행은 timer 경로 검증을 대신하지 않는다.
-3. 실행 로그의 `krxStatus`, `kiwoomStatus`, `signalRunId`, `telegramSent`를 확인하고 해당 날짜의 저장 행을 읽기 전용으로 대조한다.
+3. 보충 실행 로그의 `completed`, `nonTrading`, `blocked` 날짜를 확인하고 해당 날짜의 KRX·신호 저장 행을 읽기 전용으로 대조한다. 보충 경로는 Kiwoom·Telegram을 실행하지 않으므로 그날의 완전 관측일로 자동 집계하지 않는다.
 4. 위 항목을 실제로 확인한 뒤에만 KOR-58의 관측 시작을 기록한다. 검증 전에는 0/20으로 둔다.
 
 ## 일별 기록 계약

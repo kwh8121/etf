@@ -5,6 +5,7 @@ import { KRX_FIVE_DAY_RETURN_DISCLOSURE } from "@/lib/signals/kr-price-movers";
 import {
   createDeterministicSignalRunId,
   persistKrxPriceSignals,
+  persistKrxSignalRows,
   type PersistKrxPriceSignalsInput,
 } from "@/lib/signals/kr-signal-repository";
 
@@ -60,6 +61,12 @@ describe("KR signal persistence recovery", () => {
     const client = {
       from(table: string) {
         return {
+          delete() {
+            return {
+              eq() { return this; },
+              then(resolve: (value: { error: null }) => void) { resolve({ error: null }); },
+            };
+          },
           async upsert(value: unknown) {
             if (table === "signal_run") {
               runWrites.push(value as (typeof runWrites)[number]);
@@ -89,5 +96,34 @@ describe("KR signal persistence recovery", () => {
     ]);
     expect(runWrites.every((write) => write.id === runId)).toBe(true);
     expect(runWrites[2].completed_at).not.toBeNull();
+  });
+});
+
+describe("KR signal recalculation", () => {
+  it("removes stale rows for the same run and signal type even when the new result is empty", async () => {
+    const deleted: string[] = [];
+    const client = {
+      from(table: string) {
+        expect(table).toBe("signal_daily");
+        return {
+          delete() {
+            return {
+              eq(key: string, value: string) {
+                deleted.push(`${key}=${value}`);
+                return this;
+              },
+              then(resolve: (value: { error: null }) => void) {
+                resolve({ error: null });
+              },
+            };
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+    await persistKrxSignalRows(client, {
+      runId: "run-id", basDd: "2026-09-18", sourceSnapshotId: "snapshot-id",
+      signalType: "turnover_surge", signals: [], valueUnit: "ratio",
+    });
+    expect(deleted).toEqual(["run_id=run-id", "signal_type=turnover_surge"]);
   });
 });

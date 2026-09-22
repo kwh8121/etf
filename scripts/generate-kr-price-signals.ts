@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertValidKrxRequestDate } from "../lib/market-data/krx-date.ts";
 import { MARKET_DATA_TRANSFORM_VERSION } from "../lib/market-data/repository.ts";
 import {
   createKrxPriceMoverSignals,
@@ -42,20 +43,26 @@ interface ListingEventDatabaseRow {
   source_snapshot_id: string | null;
 }
 
-export async function generateKrxPriceSignals(): Promise<{
+export async function generateKrxPriceSignals(requestedDate?: string): Promise<{
   basDd: string;
   runId: string;
   signalCount: number;
 }> {
   const client = createServiceRoleClient();
-  const { data: currentCalendar, error: calendarError } = await client
+  if (requestedDate) assertValidKrxRequestDate(requestedDate);
+  let calendarQuery = client
     .from("trading_calendar_kr")
     .select("bas_dd,seq,source_snapshot_id")
     .eq("status", "TRADING_COMPLETE")
-    .not("seq", "is", null)
-    .order("seq", { ascending: false })
-    .limit(1)
-    .single();
+    .not("seq", "is", null);
+  calendarQuery = requestedDate
+    ? calendarQuery.eq(
+        "bas_dd",
+        `${requestedDate.slice(0, 4)}-${requestedDate.slice(4, 6)}-${requestedDate.slice(6, 8)}`,
+      )
+    : calendarQuery.order("seq", { ascending: false }).limit(1);
+  const { data: currentCalendar, error: calendarError } =
+    await calendarQuery.single();
   throwIfError(calendarError, "read latest complete trading day");
   if (!currentCalendar?.source_snapshot_id) {
     throw new Error("Latest complete trading day has no source snapshot");
@@ -86,7 +93,7 @@ export async function generateKrxPriceSignals(): Promise<{
     startSeq: fiveDayStartSeq,
     availableSeqs: (window ?? []).map((row) => row.seq),
   });
-  const newListings = await readNewListingSignals(client);
+  const newListings = await readNewListingSignals(client, current.bas_dd);
   const runId = await persistKrxPriceSignals(client, {
     basDd: current.bas_dd,
     sourceSnapshotId,
@@ -125,6 +132,10 @@ export async function generateKrxPriceSignals(): Promise<{
     valueUnit: "event",
     metaByCode: newListings.metaByCode,
   });
+  const { error: finishError } = await client.from("signal_run")
+    .update({ notes: { five_day_disclosure: signals.disclosure, kr_full_signal_complete: true } })
+    .eq("id", runId);
+  throwIfError(finishError, "mark complete KR signal rows");
 
   return {
     basDd: current.bas_dd,
@@ -178,6 +189,7 @@ function groupTurnoverRowsByCode(
 
 async function readNewListingSignals(
   client: ReturnType<typeof createServiceRoleClient>,
+  basDd: string,
 ) {
   const { data: events, error: eventError } = await client
     .from("listing_event_kr")
@@ -185,6 +197,7 @@ async function readNewListingSignals(
       "event_key,code,reg_day,first_seen,new_in_snapshot,first_alerted_at,source_snapshot_id",
     )
     .eq("new_in_snapshot", true)
+    .lte("first_seen", basDd)
     .is("first_alerted_at", null);
   throwIfError(eventError, "read unalerted new listing events");
   if (!events?.length) return createKrxNewListingSignals([]);

@@ -33,9 +33,10 @@ Git 이력과 기존 `feat:`, `fix:`, `docs:`, `test:`, `chore:` 형식의 짧�
 ## ETF 신호 MVP 작업 연속성
 
 - 정본 문서: `docs/plans/ETF-signal-MVP-plan-v2.2.md`, `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`, `docs/plans/ETF-signal-MVP-v2.2-상세-개발-실행방안.md`
-- 현재 현황·재개 기준: `docs/plans/implementation/`, `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`, `docs/guides/etf-signal-mvp-m6-observation-runbook.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/jobs/2026-09-22-etf-signal-mvp-운영시간-정합-작업기록.md`
+- 현재 현황·재개 기준: `docs/plans/implementation/`, `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`, `docs/guides/etf-signal-mvp-m6-observation-runbook.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/jobs/2026-09-22-etf-signal-mvp-kr-누락일-보충-작업기록.md`
 - 2026-09-22 기준 M0–M4·R1과 M5-B 미국 P1 기본 E2E를 완료했다. KR·US 저장 완료 경계는 코드·테스트로 보완했고, US 보고는 유형별 상위 10건이며 실제 데이터 발송 없는 dry-run 결과 1건이다. 첫 KR timer 경로 실행, KR·US 실패 복구·US 휴장 중복 실측, 새 US 형식의 staging 실발송은 미검증이다. 회사 PC는 근무시간에만 운영 가능하지만 설치된 timer는 KR 19:15·US 07:30으로, 정시 실행이 보장되지 않는다. 다음 기동 따라잡기와 정시 실행을 구분해 기록한다.
-- Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용한다. 최신 전체 검증은 `npm test`(28 파일·91 테스트), `npx tsc --noEmit`, `npm run lint`, `npm run build` 통과다.
+- 같은 날 KR 누락일 보충 코드와 KR 09:30 timer 원본을 구현했다. US 무손실 필수 요구는 철회했다. 운영 KR timer·독립 dispatch 스크립트 설치본은 아직 19:15 방식이며 첫 자동 E2E 전이다. 보충은 과거 KRX 일별 데이터·신호만 대상으로 하며 과거 Kiwoom·Telegram은 복원하지 않는다.
+- Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용한다. 2026-09-22 KR 보충 변경의 전체 검증은 `npm test`(29 파일·90 테스트), `npx tsc --noEmit`, `npm run lint`, `npm run build` 통과다.
 - Linear 프로젝트·이슈는 실행 상태 추적용이며, 설계·코드의 정본은 위 저장소 문서와 Git이다. 비밀값·토큰·DB 비밀번호를 어떤 기록에도 남기지 않는다.
 - 세션 시작·종료 시에는 `npm run continuity:check`와 연속성 하네스의 작업 기록→정본 문서→Linear→OpenViking 순서를 따른다.
 - 2026-09-22 Linear 상태: KOR-55 Done, KOR-56 Todo, KOR-57 In Progress(실발송 대기), KOR-58 Todo(관측 0/20), KOR-59 In Progress(실패 복구 E2E 대기). 첫 KR timer 경로 실행은 아직 미검증이다.

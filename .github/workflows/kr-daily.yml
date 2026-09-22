@@ -1,7 +1,7 @@
 name: KR daily ETF signals
 
 on:
-  # 평일 19:15 KST에 runner PC의 systemd timer가 기준일을 지정해 실행한다.
+  # 평일 09:30 KST에 runner PC의 systemd timer가 누락일 보충을 요청한다.
   # GitHub schedule은 지연·누락이 잦아 쓰지 않는다 (scripts/dispatch-scheduled-workflow.ts).
   workflow_dispatch:
     inputs:
@@ -21,7 +21,7 @@ jobs:
   ingest-and-report:
     # Kiwoom은 등록된 IP에서만 토큰을 발급하므로 등록 IP의 self-hosted runner에서 실행한다.
     runs-on: [self-hosted, linux, x64, kiwoom]
-    timeout-minutes: 15
+    timeout-minutes: 60
     environment: production
     env:
       # 한국→Telegram 왕복이 node 기본 연결 시도 제한(250ms)을 넘어 ETIMEDOUT이 난다.
@@ -40,4 +40,12 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm ci
-      - run: npm run daily:kr -- "${{ inputs.market_date }}"
+      - name: KR 누락일 보충 또는 지정일 수동 실행
+        env:
+          MARKET_DATE: ${{ inputs.market_date }}
+        run: |
+          if [ -n "$MARKET_DATE" ]; then
+            npm run daily:kr -- "$MARKET_DATE"
+          else
+            npm run catchup:kr
+          fi

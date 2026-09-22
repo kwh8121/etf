@@ -1,9 +1,9 @@
 [Unit]
-Description=평일 19:15 KST KR daily ETF signals dispatch
+Description=평일 09:30 KST KR 누락일 보충 dispatch
 
 [Timer]
-OnCalendar=Mon..Fri 19:15 Asia/Seoul
-# PC·WSL이 꺼져 있어 놓친 실행은 다음 기동 때 한 번 따라잡는다. 기준일은 원래 슬롯 날짜로 계산된다.
+OnCalendar=Mon..Fri 09:30 Asia/Seoul
+# 놓친 timer는 한 번만 발화하지만 workflow가 기준일부터 전일의 모든 평일을 순차 점검한다.
 Persistent=true
 
 [Install]
