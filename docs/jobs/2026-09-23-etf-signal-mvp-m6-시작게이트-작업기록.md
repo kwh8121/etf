@@ -27,3 +27,10 @@ KR·US 신호 저장소에 기본 off 제어 변수 `ETF_SIGNAL_TEST_FAIL_AFTER_
 - 승인 후 2026-09-22 KR 신호 생성기에 `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=KR`을 한 번 주입했다. Node 24의 지원하지 않는 옵션으로 시작 전 실패한 첫 시도는 DB 변경이 없었고, runner와 같은 Node 22.23.2 재시도에서 의도한 `PENDING` 직후 실패를 확인했다.
 - 운영 Supabase 읽기 전용 확인: 실패 직후 `PENDING`, 신호 80행. 실패 주입을 제거하고 같은 생성기를 재실행한 결과 같은 `run_id`가 `COMPLETED`, `completed_at` 존재, 신호 80행으로 복구됐다.
 - US staging workflow `35805628815`는 실패 주입을 설정한 뒤 실행했으나 GitHub API rate limit으로 종료 결과와 변수 원복 상태를 즉시 읽을 수 없었다. 원복 명령(실패 주입 변수 삭제, P1 플래그 false)은 성공 종료했지만, API 읽기 확인이 가능해질 때까지 US Q-05 및 Q-04를 완료 처리하지 않는다.
+
+## Q-05 US 결과 재확인 (12:40 KST)
+
+- GitHub API 한도가 풀린 뒤 읽기 전용으로 확인했다. 실패 주입 run `35805628815`는 `Injected US signal persistence failure after PENDING`으로 의도대로 실패했고, 운영 DB에는 US run `80e23559-…`가 `PENDING`·신호 0행으로 남았다.
+- 11:24 KST에 실패 주입을 비운 재시도 run `35810255322`가 성공했다. 공급자 응답이 달라져 새 snapshot·새 run `43eb933d-…`가 `COMPLETED`·11,978행으로 저장됐다. US 동일 콘텐츠 재사용 경로는 운영에서 재현되지 않았다.
+- 같은 재시도의 보고 단계가 staging Telegram으로 1건을 실발송했다(`messageCount=1`). Q-04 발송 증거다.
+- `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 삭제 상태다. 반면 staging `ENABLE_US_ETF_P1`은 앞선 기록의 "false 복귀"와 달리 11:24 KST 이후 `true`로 남아 있다. 다음 US timer(2026-09-24 09:40 KST) 전에 승인 후 복귀해야 한다.

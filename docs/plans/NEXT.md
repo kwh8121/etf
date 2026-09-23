@@ -1,17 +1,15 @@
 # ETF 신호 MVP 다음 작업 큐
 
-> 기준: 2026-09-22 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
+> 기준: 2026-09-23 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
 > 완료 항목은 검증 증거와 커밋을 기록한다. 새 사실을 확인하면 라벨·해제 조건을 갱신한다.
 
 ## 큐 (위에서부터 실행)
 
 - [ ] `APPROVE` Q-04 US 새 상위 10건 보고 형식의 staging 실발송 1회 (KOR-57)
-  - 승인 대상: staging 플래그 전환·수동 실행·그룹 발송·플래그 복귀
+  - 승인 대상(남은 것): staging 환경 변수 `ENABLE_US_ETF_P1`을 `false`로 복귀
   - 완료 조건: 발송 결과와 플래그 복귀 확인
-- [ ] `APPROVE` Q-05 KR·US 저장 실패·재시도 운영 E2E (KOR-59)
-  - 승인 대상: 운영 경로의 실패 주입·재실행과 수반되는 데이터 쓰기·외부 호출
-  - 완료 조건: 실패 상태·재시도·완료 경계의 실제 증거 기록
-  - 준비 완료(2026-09-23): 기본 빈 값의 `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=KR|US`가 `PENDING` 직후에만 실패하도록 회귀 테스트로 고정했다. staging에는 이 변수가 원래 없으므로 승인된 US 실측 뒤에는 반드시 삭제해 원래 상태로 복귀한다.
+  - 발송 확인(2026-09-23 12:40 KST 재확인): Q-05 US 재시도 run `35810255322`(staging, 11:25~11:38 KST 성공)의 `report:us-movers`가 `send=true`로 `{"runId":"43eb933d-…","messageCount":1}`을 출력했다. 새 형식의 staging 실발송 1회 증거로 본다.
+  - 미완료: staging `ENABLE_US_ETF_P1`가 11:24 KST 갱신 이후 여전히 `true`다. 이대로면 2026-09-24 09:40 KST US timer가 P1 수집·staging 발송을 다시 실행하므로, 그 전에 승인 후 `false`로 복귀하고 변수 목록으로 확인한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 미국 휴장 구간과 승인된 US 실행 경로가 마련된 때. 실행이 외부 쓰기·발송을 수반하면 별도 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
@@ -24,6 +22,13 @@
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-05 KR·US 저장 실패·재시도 운영 E2E (KOR-59)
+  - KR(2026-09-23): 2026-09-22 KR 생성기에 `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=KR`을 주입해 `PENDING`·신호 80행 상태에서 실패시켰고, 주입 제거 후 재실행에서 같은 `run_id` `21771080-…`가 `COMPLETED`·80행으로 복구됐다.
+  - US 실패(2026-09-23): staging run `35805628815`가 `ingest-us-movers failed: Injected US signal persistence failure after PENDING`으로 실패했다. 운영 DB 읽기 전용 확인 결과 run `80e23559-…`는 `PENDING`, `completed_at` 없음, 신호 0행이다.
+  - US 재시도: 주입을 비운 run `35810255322`가 성공했다. 공급자 응답이 바뀌어(snapshot 17,821→17,833행, 544→545페이지, `sha256` 상이) 동일 콘텐츠 재사용 대신 새 snapshot `ccf4b5ed-…`와 새 run `43eb933d-…`가 `COMPLETED`·11,978행으로 저장됐다. 보고는 `COMPLETED`만 읽으므로 남은 `PENDING` run은 노출되지 않는다.
+  - 한계: US의 동일 콘텐츠 `PENDING` 재사용 경로는 운영에서 재현되지 않았고 단위 테스트로만 보장된다. 고아 `PENDING` run `80e23559-…`은 운영 데이터로 남겨 두었다(삭제는 별도 승인 대상).
+  - 원복: `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`는 repo·staging·production 변수 목록에 없음을 확인했다. `ENABLE_US_ETF_P1` 복귀는 Q-04로 추적한다.
 
 - [x] `DONE` Q-03 KR timer 첫 자동 경로 E2E 및 M6 관측 시작 판정
   - 정시 발화·실행(2026-09-23): 09:30:23 KST timer dispatch가 `kr-daily.yml` GitHub run `35802355828`을 생성했고, 09:32:35 KST 성공으로 완료됐다. workflow 로그의 `catchup:kr` 결과는 `completed=["20260922"]`, `nonTrading=[]`, `blocked=null`이다.
