@@ -35,3 +35,9 @@ KR·US 신호 저장소에 기본 off 제어 변수 `ETF_SIGNAL_TEST_FAIL_AFTER_
 - 같은 재시도의 보고 단계가 staging Telegram으로 1건을 실발송했다(`messageCount=1`). Q-04 발송 증거다.
 - `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 삭제 상태다. 반면 staging `ENABLE_US_ETF_P1`은 앞선 기록의 "false 복귀"와 달리 11:24 KST 이후 `true`로 남아 있다. 다음 US timer(2026-09-24 09:40 KST) 전에 승인 후 복귀해야 한다.
 - 13:01 KST 사용자 승인에 따라 staging `ENABLE_US_ETF_P1`을 `false`로 되돌렸고 변수 목록으로 확인했다. Q-04·Q-05 완료, KOR-57·KOR-59 Done.
+
+## Q-10 A안 구현과 정리 (13:00~14:00 KST)
+
+- KR timer 경로가 Kiwoom·Telegram을 실행하지 않아 M6 누적이 불가능함을 확인하고, 사용자 결정(A안)에 따라 보충 뒤 마지막 거래일 1건의 완전 보고를 구현했다(`8151ab3`). 다음 KR timer 실행에서 기준일 2026-09-23 운영 Telegram 발송이 시작된다(Q-11).
+- 추석 연휴(2026-09-24·25)는 과거일 KRX 빈 응답으로 `NON_TRADING` 처리되며 별도 조치가 필요 없다.
+- 사용자 승인 후 US 고아 `PENDING` run `80e23559-…`(신호 0행)을 조건부 삭제하고 삭제 후 부재를 확인했다.

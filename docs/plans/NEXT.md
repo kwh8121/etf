@@ -36,7 +36,7 @@
   - KR(2026-09-23): 2026-09-22 KR 생성기에 `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=KR`을 주입해 `PENDING`·신호 80행 상태에서 실패시켰고, 주입 제거 후 재실행에서 같은 `run_id` `21771080-…`가 `COMPLETED`·80행으로 복구됐다.
   - US 실패(2026-09-23): staging run `35805628815`가 `ingest-us-movers failed: Injected US signal persistence failure after PENDING`으로 실패했다. 운영 DB 읽기 전용 확인 결과 run `80e23559-…`는 `PENDING`, `completed_at` 없음, 신호 0행이다.
   - US 재시도: 주입을 비운 run `35810255322`가 성공했다. 공급자 응답이 바뀌어(snapshot 17,821→17,833행, 544→545페이지, `sha256` 상이) 동일 콘텐츠 재사용 대신 새 snapshot `ccf4b5ed-…`와 새 run `43eb933d-…`가 `COMPLETED`·11,978행으로 저장됐다. 보고는 `COMPLETED`만 읽으므로 남은 `PENDING` run은 노출되지 않는다.
-  - 한계: US의 동일 콘텐츠 `PENDING` 재사용 경로는 운영에서 재현되지 않았고 단위 테스트로만 보장된다. 고아 `PENDING` run `80e23559-…`은 운영 데이터로 남겨 두었다(삭제는 별도 승인 대상).
+  - 한계: US의 동일 콘텐츠 `PENDING` 재사용 경로는 운영에서 재현되지 않았고 단위 테스트로만 보장된다. 고아 `PENDING` run `80e23559-…`(신호 0행)은 2026-09-23 사용자 승인 후 상태·행 수를 재확인하고 삭제했다. 원천 snapshot `1d65db7f-…`은 원본 보존을 위해 남겼다.
   - 원복: `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`는 repo·staging·production 변수 목록에 없음을 확인했다. `ENABLE_US_ETF_P1` 복귀는 Q-04로 추적한다.
 
 - [x] `DONE` Q-03 KR timer 첫 자동 경로 E2E 및 M6 관측 시작 판정
