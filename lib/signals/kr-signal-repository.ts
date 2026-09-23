@@ -62,8 +62,10 @@ export async function persistKrxPriceSignals(
     .upsert(
       { ...run, status: "PENDING", completed_at: null },
       { onConflict: "id" },
-    );
+  );
   throwIfError(runError, "upsert signal run");
+
+  throwIfSignalPersistenceFailureInjected("KR");
 
   await Promise.all([
     persistKrxSignalRows(client, {
@@ -168,4 +170,9 @@ function throwIfError(
   operation: string,
 ): void {
   if (error) throw new Error(`Supabase ${operation} failed: ${error.message}`);
+}
+
+function throwIfSignalPersistenceFailureInjected(market: "KR"): void {
+  if (process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING === market)
+    throw new Error(`Injected ${market} signal persistence failure after PENDING`);
 }

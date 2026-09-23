@@ -18,6 +18,7 @@ describe("US P1 command isolation", () => {
       "--env-file-if-exists=.env",
     );
     expect(workflow).toContain("ENABLE_US_ETF_P1");
+    expect(workflow).toContain("ETF_SIGNAL_TEST_FAIL_AFTER_PENDING");
     expect(workflow).toContain("environment: staging");
     expect(workflow).not.toContain("environment: production");
     expect(workflow).toContain("steps.ingest.outputs.duplicate != 'true'");

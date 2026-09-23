@@ -17,3 +17,7 @@
 ## 다음 관측 기준
 
 다음 국내 실제 운영일에는 `docs/guides/etf-signal-mvp-m6-observation-runbook.md`의 KRX·Kiwoom·P0 신호·Telegram 증거를 모두 기록한 뒤에만 누적을 1일 증가시킨다.
+
+## Q-05 실행 준비
+
+KR·US 신호 저장소에 기본 off 제어 변수 `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`을 추가했다. 정확히 각 시장 코드일 때만 `PENDING`을 기록한 뒤 실패하여, 같은 입력 재실행의 실제 복구 경계를 확인할 수 있다. 단위·전체 테스트, lint, build가 통과했으며 운영 변수 전환·수동 실행은 아직 승인 대기다.

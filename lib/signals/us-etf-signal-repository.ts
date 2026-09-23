@@ -89,6 +89,7 @@ export async function persistUsEtfMoverSnapshot(
     status: "PENDING",
     completedAt: null,
   });
+  throwIfSignalPersistenceFailureInjected("US");
   await repository.upsertSignalRows(
     toSignalRows(runId, inserted.id, observedAt, input.signals),
   );
@@ -290,6 +291,11 @@ function uniqueSignalCodeCount(signals: UsEtfMoverSignals): number {
 }
 function throwIfError(error: { message: string } | null, operation: string) {
   if (error) throw new Error(`Supabase ${operation} failed: ${error.message}`);
+}
+
+function throwIfSignalPersistenceFailureInjected(market: "US"): void {
+  if (process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING === market)
+    throw new Error(`Injected ${market} signal persistence failure after PENDING`);
 }
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

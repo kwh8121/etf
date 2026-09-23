@@ -97,6 +97,36 @@ describe("KR signal persistence recovery", () => {
     expect(runWrites.every((write) => write.id === runId)).toBe(true);
     expect(runWrites[2].completed_at).not.toBeNull();
   });
+
+  it("only injects an operational failure after recording PENDING when explicitly enabled", async () => {
+    const runWrites: Array<{ status: string; completed_at: string | null }> = [];
+    const client = {
+      from(table: string) {
+        return {
+          async upsert(value: unknown) {
+            if (table === "signal_run") runWrites.push(value as (typeof runWrites)[number]);
+            return { error: null };
+          },
+          delete() {
+            return { eq() { return this; }, then(resolve: (value: { error: null }) => void) { resolve({ error: null }); } };
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+    const previous = process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING;
+    process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING = "KR";
+    try {
+      await expect(persistKrxPriceSignals(client, input)).rejects.toThrow(
+        "Injected KR signal persistence failure after PENDING",
+      );
+    } finally {
+      if (previous === undefined) delete process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING;
+      else process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING = previous;
+    }
+    expect(runWrites).toEqual([
+      expect.objectContaining({ status: "PENDING", completed_at: null }),
+    ]);
+  });
 });
 
 describe("KR signal recalculation", () => {

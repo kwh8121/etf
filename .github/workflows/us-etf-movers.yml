@@ -22,6 +22,8 @@ jobs:
       # 한국→Telegram 왕복이 node 기본 연결 시도 제한(250ms)을 넘어 ETIMEDOUT이 난다.
       NODE_OPTIONS: --network-family-autoselection-attempt-timeout=2000
       ENABLE_US_ETF_P1: ${{ vars.ENABLE_US_ETF_P1 }}
+      # Q-05 검증에서만 US를 설정한다. 기본값은 빈 값이며 PENDING 직후 실패한다.
+      ETF_SIGNAL_TEST_FAIL_AFTER_PENDING: ${{ vars.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

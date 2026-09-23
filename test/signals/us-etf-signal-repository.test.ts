@@ -163,4 +163,21 @@ describe("US ETF P1 persistence", () => {
     ]);
     expect(repository.rows).toHaveLength(1);
   });
+
+  it("only injects an operational failure after recording PENDING when explicitly enabled", async () => {
+    const repository = new FakeRepository();
+    const previous = process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING;
+    process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING = "US";
+    try {
+      await expect(persistUsEtfMoverSnapshot(repository, input)).rejects.toThrow(
+        "Injected US signal persistence failure after PENDING",
+      );
+    } finally {
+      if (previous === undefined) delete process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING;
+      else process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING = previous;
+    }
+    expect(repository.runs).toHaveLength(1);
+    expect(repository.runs[0]).toMatchObject({ status: "PENDING", completedAt: null });
+    expect(repository.rows).toEqual([]);
+  });
 });
