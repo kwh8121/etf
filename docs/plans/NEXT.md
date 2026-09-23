@@ -5,11 +5,6 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `APPROVE` Q-04 US 새 상위 10건 보고 형식의 staging 실발송 1회 (KOR-57)
-  - 승인 대상(남은 것): staging 환경 변수 `ENABLE_US_ETF_P1`을 `false`로 복귀
-  - 완료 조건: 발송 결과와 플래그 복귀 확인
-  - 발송 확인(2026-09-23 12:40 KST 재확인): Q-05 US 재시도 run `35810255322`(staging, 11:25~11:38 KST 성공)의 `report:us-movers`가 `send=true`로 `{"runId":"43eb933d-…","messageCount":1}`을 출력했다. 새 형식의 staging 실발송 1회 증거로 본다.
-  - 미완료: staging `ENABLE_US_ETF_P1`가 11:24 KST 갱신 이후 여전히 `true`다. 이대로면 2026-09-24 09:40 KST US timer가 P1 수집·staging 발송을 다시 실행하므로, 그 전에 승인 후 `false`로 복귀하고 변수 목록으로 확인한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 미국 휴장 구간과 승인된 US 실행 경로가 마련된 때. 실행이 외부 쓰기·발송을 수반하면 별도 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
@@ -22,6 +17,10 @@
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-04 US 새 상위 10건 보고 형식의 staging 실발송 1회 (KOR-57)
+  - 발송: Q-05 US 재시도 run `35810255322`(staging, 2026-09-23 11:25~11:38 KST 성공)의 `report:us-movers`가 `send=true`로 `{"runId":"43eb933d-…","messageCount":1}`을 출력했다.
+  - 플래그 복귀: 사용자 승인 후 2026-09-23 13:01 KST staging `ENABLE_US_ETF_P1=false`로 되돌렸고 변수 목록으로 확인했다. 실패 주입 변수는 없다.
 
 - [x] `DONE` Q-05 KR·US 저장 실패·재시도 운영 E2E (KOR-59)
   - KR(2026-09-23): 2026-09-22 KR 생성기에 `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=KR`을 주입해 `PENDING`·신호 80행 상태에서 실패시켰고, 주입 제거 후 재실행에서 같은 `run_id` `21771080-…`가 `COMPLETED`·80행으로 복구됐다.

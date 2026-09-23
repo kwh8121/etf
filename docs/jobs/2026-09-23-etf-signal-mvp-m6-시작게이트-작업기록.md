@@ -34,3 +34,4 @@ KR·US 신호 저장소에 기본 off 제어 변수 `ETF_SIGNAL_TEST_FAIL_AFTER_
 - 11:24 KST에 실패 주입을 비운 재시도 run `35810255322`가 성공했다. 공급자 응답이 달라져 새 snapshot·새 run `43eb933d-…`가 `COMPLETED`·11,978행으로 저장됐다. US 동일 콘텐츠 재사용 경로는 운영에서 재현되지 않았다.
 - 같은 재시도의 보고 단계가 staging Telegram으로 1건을 실발송했다(`messageCount=1`). Q-04 발송 증거다.
 - `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 삭제 상태다. 반면 staging `ENABLE_US_ETF_P1`은 앞선 기록의 "false 복귀"와 달리 11:24 KST 이후 `true`로 남아 있다. 다음 US timer(2026-09-24 09:40 KST) 전에 승인 후 복귀해야 한다.
+- 13:01 KST 사용자 승인에 따라 staging `ENABLE_US_ETF_P1`을 `false`로 되돌렸고 변수 목록으로 확인했다. Q-04·Q-05 완료, KOR-57·KOR-59 Done.
