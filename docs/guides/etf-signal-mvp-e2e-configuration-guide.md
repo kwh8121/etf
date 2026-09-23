@@ -232,10 +232,10 @@ staging 경계(2026-09-21 결정): Supabase는 운영 프로젝트를 쓰고, Te
 
 ### 5.2 Q-05 저장 실패·재시도 실측
 
-`ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 Q-05의 승인된 실측에만 쓰는 기본 빈 값의 제어 변수다. 정확히 `KR` 또는 `US`일 때 해당 시장의 `signal_run`을 `PENDING`으로 기록한 직후 의도적으로 실패한다. 다른 값과 기본값은 효과가 없다. 이 변수는 Secret이 아니지만 운영 DB 상태를 바꾸므로 매번 승인을 받아야 하며, 실측 직후 빈 값으로 복귀한다.
+`ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 Q-05의 승인된 실측에만 쓰는 기본 빈 값의 제어 변수다. 정확히 `KR` 또는 `US`일 때 해당 시장의 `signal_run`을 `PENDING`으로 기록한 직후 의도적으로 실패한다. 다른 값과 기본값은 효과가 없다. 이 변수는 Secret이 아니지만 운영 DB 상태를 바꾸므로 매번 승인을 받아야 한다. staging Environment에 원래 없던 변수이므로 실측 직후 빈 값으로 남기지 않고 **삭제**해 원래 상태로 복귀한다.
 
 - KR: 운영 작업 사본에서 `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=KR npm run signals:kr-price`를 한 번 실행해 실패와 `PENDING`을 확인하고, 변수를 비운 뒤 같은 명령을 재실행하여 같은 `run_id`의 `COMPLETED`·신호 행을 확인한다. 이 경로는 Telegram을 발송하지 않는다.
-- US: staging Environment에서 `ENABLE_US_ETF_P1=true`, `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=US`로 수동 workflow를 한 번 실행한다. 변수만 빈 값으로 되돌린 뒤 같은 workflow를 재실행해 동일 콘텐츠의 `PENDING` 실행을 복구하고, 새 상위 10건 보고를 staging Telegram으로 한 번 발송한다. 마지막으로 `ENABLE_US_ETF_P1=false`를 확인한다.
+- US: staging Environment에서 `ENABLE_US_ETF_P1=true`, `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING=US`로 수동 workflow를 한 번 실행한다. 실패 주입 변수를 삭제한 뒤 같은 workflow를 재실행해 동일 콘텐츠의 `PENDING` 실행을 복구하고, 새 상위 10건 보고를 staging Telegram으로 한 번 발송한다. 마지막으로 `ENABLE_US_ETF_P1=false`를 확인한다.
 
 기록에는 변수의 설정·해제 여부, 실패한 workflow/명령의 종료 상태, `PENDING`·`COMPLETED` 수와 신호 행 수만 남긴다. 비밀값, 원천 응답, Telegram 내용은 기록하지 않는다.
 
