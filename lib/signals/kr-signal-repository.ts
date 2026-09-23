@@ -42,6 +42,7 @@ export async function persistKrxPriceSignals(
   input: PersistKrxPriceSignalsInput,
 ): Promise<string> {
   const runId = createDeterministicSignalRunId(input);
+  const reportedAt = await readTelegramReportedAt(client, runId);
   const run = {
     id: runId,
     market: "KR",
@@ -55,7 +56,10 @@ export async function persistKrxPriceSignals(
         ...(input.additionalSnapshotIds ?? []),
       ]),
     ],
-    notes: { five_day_disclosure: input.signals.disclosure },
+    notes: {
+      five_day_disclosure: input.signals.disclosure,
+      ...(reportedAt ? { telegram_reported_at: reportedAt } : {}),
+    },
   };
   const { error: runError } = await client
     .from("signal_run")
@@ -175,4 +179,49 @@ function throwIfError(
 function throwIfSignalPersistenceFailureInjected(market: "KR"): void {
   if (process.env.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING === market)
     throw new Error(`Injected ${market} signal persistence failure after PENDING`);
+}
+
+// 같은 기준일·입력의 재생성이 notes를 덮어써도 Telegram 중복 발송 방지 표식은 유지한다.
+export async function readTelegramReportedAt(
+  client: SupabaseClient,
+  runId: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("signal_run")
+    .select("notes")
+    .eq("id", runId)
+    .maybeSingle();
+  throwIfError(error, "read signal run report marker");
+  const notes: unknown = data?.notes;
+  if (
+    typeof notes === "object" &&
+    notes !== null &&
+    "telegram_reported_at" in notes &&
+    typeof notes.telegram_reported_at === "string"
+  )
+    return notes.telegram_reported_at;
+  return null;
+}
+
+export async function markTelegramReported(
+  client: SupabaseClient,
+  runId: string,
+): Promise<void> {
+  const { data, error } = await client
+    .from("signal_run")
+    .select("notes")
+    .eq("id", runId)
+    .single();
+  throwIfError(error, "read signal run notes");
+  const notes: unknown = data?.notes;
+  const { error: updateError } = await client
+    .from("signal_run")
+    .update({
+      notes: {
+        ...(typeof notes === "object" && notes !== null ? notes : {}),
+        telegram_reported_at: new Date().toISOString(),
+      },
+    })
+    .eq("id", runId);
+  throwIfError(updateError, "write Telegram report marker");
 }

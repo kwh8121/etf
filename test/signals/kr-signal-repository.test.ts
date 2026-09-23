@@ -61,6 +61,9 @@ describe("KR signal persistence recovery", () => {
     const client = {
       from(table: string) {
         return {
+          select() {
+            return { eq() { return this; }, async maybeSingle() { return { data: null, error: null }; } };
+          },
           delete() {
             return {
               eq() { return this; },
@@ -103,6 +106,9 @@ describe("KR signal persistence recovery", () => {
     const client = {
       from(table: string) {
         return {
+          select() {
+            return { eq() { return this; }, async maybeSingle() { return { data: null, error: null }; } };
+          },
           async upsert(value: unknown) {
             if (table === "signal_run") runWrites.push(value as (typeof runWrites)[number]);
             return { error: null };
@@ -126,6 +132,34 @@ describe("KR signal persistence recovery", () => {
     expect(runWrites).toEqual([
       expect.objectContaining({ status: "PENDING", completed_at: null }),
     ]);
+  });
+
+  it("keeps an existing Telegram report marker when the same run is regenerated", async () => {
+    const runWrites: Array<{ notes: Record<string, unknown> }> = [];
+    const client = {
+      from(table: string) {
+        return {
+          select() {
+            return {
+              eq() { return this; },
+              async maybeSingle() {
+                return { data: { notes: { telegram_reported_at: "2026-09-24T00:35:00.000Z" } }, error: null };
+              },
+            };
+          },
+          async upsert(value: unknown) {
+            if (table === "signal_run") runWrites.push(value as (typeof runWrites)[number]);
+            return { error: null };
+          },
+          delete() {
+            return { eq() { return this; }, then(resolve: (value: { error: null }) => void) { resolve({ error: null }); } };
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+    await persistKrxPriceSignals(client, input);
+    expect(runWrites.length).toBeGreaterThan(0);
+    expect(runWrites.every((write) => write.notes.telegram_reported_at === "2026-09-24T00:35:00.000Z")).toBe(true);
   });
 });
 

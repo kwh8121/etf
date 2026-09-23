@@ -14,6 +14,7 @@ import {
 import {
   persistKrxPriceSignals,
   persistKrxSignalRows,
+  readTelegramReportedAt,
 } from "../lib/signals/kr-signal-repository.ts";
 import { createKrxTurnoverSurges } from "../lib/signals/kr-turnover-surge.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
@@ -132,8 +133,15 @@ export async function generateKrxPriceSignals(requestedDate?: string): Promise<{
     valueUnit: "event",
     metaByCode: newListings.metaByCode,
   });
+  const reportedAt = await readTelegramReportedAt(client, runId);
   const { error: finishError } = await client.from("signal_run")
-    .update({ notes: { five_day_disclosure: signals.disclosure, kr_full_signal_complete: true } })
+    .update({
+      notes: {
+        five_day_disclosure: signals.disclosure,
+        kr_full_signal_complete: true,
+        ...(reportedAt ? { telegram_reported_at: reportedAt } : {}),
+      },
+    })
     .eq("id", runId);
   throwIfError(finishError, "mark complete KR signal rows");
 

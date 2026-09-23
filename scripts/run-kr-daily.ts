@@ -14,6 +14,7 @@ import {
   formatTelegramReport,
   sendTelegramMessages,
 } from "../lib/notifications/telegram.ts";
+import { markTelegramReported } from "../lib/signals/kr-signal-repository.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 import { generateKrxPriceSignals } from "./generate-kr-price-signals.ts";
 import { runKoreanMarketIngestion } from "./ingest-kr.ts";
@@ -44,13 +45,15 @@ export async function runKoreanDailyWorkflow(requestedDate = getKstDate()) {
 
   const signals = await generateKrxPriceSignals(requestedDate);
   await reportLatestKrxSignals(true, signals.runId);
+  // 수동 실행으로 보낸 기준일을 timer 경로가 다시 보내지 않도록 표식을 남긴다.
+  await markTelegramReported(createServiceRoleClient(), signals.runId);
   await markNewListingAlerts(signals.runId);
   if (statusAlertRequired)
     await sendKoreanDailyStatus(requestedDate, ingestion);
   return { ingestion, signalRunId: signals.runId, telegramSent: true };
 }
 
-async function markNewListingAlerts(runId: string): Promise<void> {
+export async function markNewListingAlerts(runId: string): Promise<void> {
   const client = createServiceRoleClient();
   const { data, error } = await client
     .from("signal_daily")
@@ -89,7 +92,7 @@ function eventKeyFromMeta(meta: unknown): string[] {
   return [meta.event_key];
 }
 
-async function sendKoreanDailyStatus(
+export async function sendKoreanDailyStatus(
   requestedDate: string,
   ingestion: Awaited<ReturnType<typeof runKoreanMarketIngestion>>,
 ): Promise<void> {

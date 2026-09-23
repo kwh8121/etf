@@ -5,10 +5,9 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `DECIDE` Q-10 M6 완전 거래일을 만들 자동 경로 결정 (KOR-58 선행)
-  - 사실(2026-09-23 확인): 입력 없는 `kr-daily.yml`은 `catchup:kr`만 실행해 Kiwoom·Telegram을 수행하지 않는다. Kiwoom·Telegram은 `market_date` 입력의 `daily:kr` 수동 실행에서만 돈다. 따라서 현재 timer 경로만으로는 M6 완전 거래일이 0/20에서 늘지 않는다.
-  - 선택지: A) 보충 후 직전 거래일 1건에 대해 Kiwoom 동기화·Telegram 보고까지 실행하도록 KR 자동 경로를 확장(코드는 `AUTO`, runner 설치본 갱신은 `APPROVE`) B) 거래일마다 `daily:kr` 수동 실행을 승인 C) M6 완전 거래일 기준을 KRX·신호 저장 중심으로 완화
-  - 권장: A. 근무시간 제약 안에서 매 거래일 증거를 자동으로 남길 수 있다.
+- [ ] `WAIT` Q-11 KR timer 완전 보고 경로의 첫 운영 실행 확인 (KOR-58)
+  - 해제: 다음 근무시간 KR timer 실행(runner PC가 켜져 있으면 2026-09-24 09:30 KST, 아니면 연휴 뒤 첫 기동)
+  - 완료 조건: workflow 로그 `report.reported=true`·기준일 2026-09-23, Kiwoom 스냅샷·신호 실행 `COMPLETED`·`telegram_reported_at` 읽기 전용 확인, 운영 Telegram 1회 수신. 충족 시 M6 1/20 기록. 같은 기준일 재실행은 `already_reported`여야 한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 미국 휴장 구간과 승인된 US 실행 경로가 마련된 때. 실행이 외부 쓰기·발송을 수반하면 별도 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
@@ -22,6 +21,12 @@
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-10 M6 완전 거래일 자동 경로 결정·구현 (A안)
+  - 결정(2026-09-23 사용자): A. KR timer 보충 뒤 마지막 거래일 1건에 Kiwoom 동기화·신호 재생성·운영 Telegram 보고를 수행한다.
+  - 구현: `reportLatestCatchupDay()`(`scripts/run-kr-catchup.ts`), `telegram_reported_at` 표식으로 1회 발송, 재생성·수동 `daily:kr` 경로도 표식 보존·기록. 계획: `docs/plans/implementation/M6-kr-timer-full-report-plan.md`
+  - 검증: `npm test` 29개 파일·99개 테스트, `npx tsc --noEmit`, `npm run lint`, `npm run build` 통과. 독립 코드 리뷰의 중복 발송 위험 2건 반영, 19:15 timer 지적은 설치본이 09:30임을 확인해 해당 없음.
+  - 운영 영향: runner 설치본 변경 없이 다음 timer 실행부터 운영 Telegram 발송이 시작된다(workflow가 `main`을 checkout).
 
 - [x] `DONE` Q-04 US 새 상위 10건 보고 형식의 staging 실발송 1회 (KOR-57)
   - 발송: Q-05 US 재시도 run `35810255322`(staging, 2026-09-23 11:25~11:38 KST 성공)의 `report:us-movers`가 `send=true`로 `{"runId":"43eb933d-…","messageCount":1}`을 출력했다.

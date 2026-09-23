@@ -8,7 +8,7 @@
 
 1. KR `etf-kr-daily-dispatch.timer` 설치본이 09:30 KST인지 확인하고, 서비스 실행을 사용자 systemd journal에서 확인한다. 정시 실행인지 다음 기동의 `Persistent=true` 따라잡기인지 구분한다. PC가 꺼져 있어 아직 발화하지 않았다면 게이트는 미통과다.
 2. 해당 발화와 GitHub Actions `kr-daily.yml`의 `workflow_dispatch` 실행 ID·성공 여부를 연결한다. 성공한 수동 실행은 timer 경로 검증을 대신하지 않는다.
-3. 보충 실행 로그의 `completed`, `nonTrading`, `blocked` 날짜를 확인하고 해당 날짜의 KRX·신호 저장 행을 읽기 전용으로 대조한다. 보충 경로는 Kiwoom·Telegram을 실행하지 않으므로 그날의 완전 관측일로 자동 집계하지 않는다.
+3. 보충 실행 로그의 `completed`, `nonTrading`, `blocked` 날짜를 확인하고 해당 날짜의 KRX·신호 저장 행을 읽기 전용으로 대조한다. 과거 보충일은 Kiwoom·Telegram을 실행하지 않으므로 완전 관측일로 집계하지 않는다. 2026-09-23 Q-10 A안 이후 보충의 마지막 거래일 1건은 Kiwoom 동기화·Telegram 보고까지 수행하므로(로그의 `report` 항목), 아래 일별 기록 계약을 충족하면 그 기준일을 완전 거래일로 판정할 수 있다. `report.reason="already_reported"`는 중복 실행이므로 추가 집계하지 않는다.
 4. 위 항목을 실제로 확인한 뒤에만 KOR-58의 관측 시작을 기록한다. 검증 전에는 0/20으로 둔다.
 
 ## 일별 기록 계약

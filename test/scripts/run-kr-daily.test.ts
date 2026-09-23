@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
   listingQuery.in.mockReturnValue(listingQuery);
   listingQuery.is.mockResolvedValue({ error: null });
   return {
+    markTelegramReported: vi.fn().mockResolvedValue(undefined),
     reportLatestKrxSignals: vi.fn().mockResolvedValue(undefined),
     generateKrxPriceSignals: vi.fn().mockResolvedValue({
       basDd: "2026-09-18",
@@ -41,6 +42,9 @@ vi.mock("../../lib/notifications/kr-daily-status.ts", () => ({
 vi.mock("../../lib/notifications/telegram.ts", () => ({
   formatTelegramReport: vi.fn(),
   sendTelegramMessages: vi.fn(),
+}));
+vi.mock("../../lib/signals/kr-signal-repository.ts", () => ({
+  markTelegramReported: mocks.markTelegramReported,
 }));
 vi.mock("../../lib/supabase/service-role-core.ts", () => ({
   createServiceRoleClient: () => ({
@@ -100,6 +104,13 @@ describe("KR daily workflow", () => {
     expect(
       mocks.reportLatestKrxSignals.mock.invocationCallOrder[0],
     ).toBeLessThan(mocks.update.mock.invocationCallOrder[0]);
+    expect(mocks.markTelegramReported).toHaveBeenCalledWith(
+      expect.anything(),
+      "generated-run",
+    );
+    expect(
+      mocks.reportLatestKrxSignals.mock.invocationCallOrder[0],
+    ).toBeLessThan(mocks.markTelegramReported.mock.invocationCallOrder[0]);
   });
 
   it("does not mark new listings when Telegram reporting fails", async () => {
