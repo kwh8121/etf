@@ -7,13 +7,13 @@
 
 이 문서는 "어느 단계에서 어떤 OMC 워크플로·에이전트를 쓰는가"만 정한다. 아래 사실은 각 정본을 따르며 여기서 다시 정의하지 않는다.
 
-| 사실 | 정본 |
-| --- | --- |
-| 다음 작업·순서·완료 상태, `AUTO`/`APPROVE`/`WAIT`/`DECIDE` 라벨 | `docs/plans/NEXT.md` |
-| 턴 종료 규칙, 상시 승인 범위, 기본 실행 루프 | `AGENTS.md` "턴 종료 규칙과 상시 승인" |
-| 착수·명세·구현·리뷰·배포 단계와 리뷰 판정 | `docs/guides/etf-signal-mvp-development-review-deployment-harness.md` |
-| 세션 시작·종료 기록 순서, 중단 기준 | `docs/guides/etf-signal-mvp-continuity-harness.md` |
-| 정보 배치 원칙 | `docs/guides/one-fact-one-home.md` |
+| 사실                                                            | 정본                                                                  |
+| --------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 다음 작업·순서·완료 상태, `AUTO`/`APPROVE`/`WAIT`/`DECIDE` 라벨 | `docs/plans/NEXT.md`                                                  |
+| 턴 종료 규칙, 상시 승인 범위, 기본 실행 루프                    | `AGENTS.md` "턴 종료 규칙과 상시 승인"                                |
+| 착수·명세·구현·리뷰·배포 단계와 리뷰 판정                       | `docs/guides/etf-signal-mvp-development-review-deployment-harness.md` |
+| 세션 시작·종료 기록 순서, 중단 기준                             | `docs/guides/etf-signal-mvp-continuity-harness.md`                    |
+| 정보 배치 원칙                                                  | `docs/guides/one-fact-one-home.md`                                    |
 
 OMC의 `.omc/` 상태, notepad, 세션 요약은 재개용 캐시다. 작업 완료·승인 상태의 근거로 인용하지 않는다.
 
@@ -88,34 +88,34 @@ OMC의 `.omc/` 상태, notepad, 세션 요약은 재개용 캐시다. 작업 완
 
 OMC `plan`, Superpowers `writing-plans`, Spec Kit이 모두 계획 기능을 가지므로 역할을 나눈다.
 
-| 목적 | 도구 | 산출물 위치 |
-| --- | --- | --- |
-| 무엇을·왜 만드는지(새 기능 명세) | Spec Kit `/speckit-specify` 등 | `specs/` (constitution 확정 후) |
-| 요구가 흐릴 때의 합의 | OMC `deep-interview` / `ralplan` | 결정은 `NEXT.md` `DECIDE`→`DONE` |
-| 실행 계획(파일·테스트·단계) | Superpowers `writing-plans` | `docs/plans/implementation/` |
-| 실행·리뷰·검증 | OMC `executor` / `code-reviewer` / `verifier` | Git 커밋, `NEXT.md` 증거 |
+| 목적                             | 도구                                          | 산출물 위치                      |
+| -------------------------------- | --------------------------------------------- | -------------------------------- |
+| 무엇을·왜 만드는지(새 기능 명세) | Spec Kit `/speckit-specify` 등                | `specs/` (constitution 확정 후)  |
+| 요구가 흐릴 때의 합의            | OMC `deep-interview` / `ralplan`              | 결정은 `NEXT.md` `DECIDE`→`DONE` |
+| 실행 계획(파일·테스트·단계)      | Superpowers `writing-plans`                   | `docs/plans/implementation/`     |
+| 실행·리뷰·검증                   | OMC `executor` / `code-reviewer` / `verifier` | Git 커밋, `NEXT.md` 증거         |
 
 Spec Kit은 `.specify/memory/constitution.md`가 템플릿인 동안 명세 단계에만 선택적으로 쓴다. constitution에는 `AGENTS.md`와 하네스에 이미 있는 규칙만 옮기고, 새 규칙을 만들어 채우지 않는다.
 
 ## 5. 역할과 모델 배치
 
-| 역할 | 에이전트 | 모델 |
-| --- | --- | --- |
-| 코드 탐색 | `explore` | haiku |
-| 구현 | `executor` | sonnet (복잡하면 opus) |
-| 설계·원인 분석 | `architect`, `tracer` | opus |
-| 리뷰 | `code-reviewer` | sonnet |
-| 보안 리뷰 | `security-reviewer` | opus (Secret·권한·서비스 역할 키 경로 변경 시) |
-| 완료 검증 | `verifier` | 규모에 따라 haiku → opus |
+| 역할           | 에이전트              | 모델                                           |
+| -------------- | --------------------- | ---------------------------------------------- |
+| 코드 탐색      | `explore`             | haiku                                          |
+| 구현           | `executor`            | sonnet (복잡하면 opus)                         |
+| 설계·원인 분석 | `architect`, `tracer` | opus                                           |
+| 리뷰           | `code-reviewer`       | sonnet                                         |
+| 보안 리뷰      | `security-reviewer`   | opus (Secret·권한·서비스 역할 키 경로 변경 시) |
+| 완료 검증      | `verifier`            | 규모에 따라 haiku → opus                       |
 
 ## 6. 자동 모드의 경계
 
-| 구분 | OMC 사용 | 경계 |
-| --- | --- | --- |
-| 코드·테스트·문서 | `autopilot`·`ralph`로 끝까지 반복 가능 | 로컬 작업과 `main` 푸시까지 |
-| 운영 DB 읽기, `gh` 조회 | 자동 진행 | 값·비밀 미출력 |
-| `AGENTS.md`가 `APPROVE`로 정한 외부 부작용 | 자동 모드에서 실행 금지 | 도달하면 멈추고 `NEXT.md`에 `APPROVE` 기록 |
-| 병렬 처리 | `/team`은 독립 작업이 2개 이상일 때만 | 같은 파일 동시 수정 금지 |
+| 구분                                       | OMC 사용                               | 경계                                       |
+| ------------------------------------------ | -------------------------------------- | ------------------------------------------ |
+| 코드·테스트·문서                           | `autopilot`·`ralph`로 끝까지 반복 가능 | 로컬 작업과 `main` 푸시까지                |
+| 운영 DB 읽기, `gh` 조회                    | 자동 진행                              | 값·비밀 미출력                             |
+| `AGENTS.md`가 `APPROVE`로 정한 외부 부작용 | 자동 모드에서 실행 금지                | 도달하면 멈추고 `NEXT.md`에 `APPROVE` 기록 |
+| 병렬 처리                                  | `/team`은 독립 작업이 2개 이상일 때만  | 같은 파일 동시 수정 금지                   |
 
 - `ralph`·`autopilot`을 시작할 때 "APPROVE 대상에 닿으면 멈춤"을 명시한다.
 - `main`에 푸시한 코드는 다음 timer 실행에서 운영 workflow가 그대로 checkout한다. 운영 동작(발송 여부·대상·빈도)을 바꾸는 코드는 푸시 전 보고에 "운영 영향"을 명시한다.
