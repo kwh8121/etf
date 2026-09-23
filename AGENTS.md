@@ -46,7 +46,7 @@ Git 이력과 기존 `feat:`, `fix:`, `docs:`, `test:`, `chore:` 형식의 짧�
 
 배경과 근거는 `docs/guides/etf-signal-mvp-codex-autonomous-execution-guide.md`에 있다.
 
-- 다음 작업·순서·완료 상태의 정본(실행 원장)은 `docs/plans/NEXT.md`다(2026-09-22 공식화). Spec Kit(`specs/`·`tasks.md`)은 도입하지 않았으며 새 기능 개발 재개 시 재판단한다. 큰 `AUTO` 구현 항목은 Superpowers `writing-plans` → `subagent-driven-development`로 실행하고 완료 상태는 `NEXT.md`에만 기록한다(활용계획 2.2절). 항목마다 `AUTO`(승인 없이 즉시 가능)·`APPROVE`(승인 필요, 승인 대상 명시)·`WAIT`(시간·이벤트 대기, 해제 조건 명시)·`DECIDE`(사용자 결정, 선택지·권장안 명시)·`DONE` 라벨을 붙인다. 파일이 없으면 가이드 3.1 형식으로 만드는 것을 첫 `AUTO` 작업으로 한다.
+- 다음 작업·순서·완료 상태의 정본(실행 원장)은 `docs/plans/NEXT.md`다(2026-09-22 공식화). Spec Kit 1.0.10은 2026-09-23 설치했다(`.specify/`, `.claude/skills/speckit-*`, Claude 통합). constitution은 아직 템플릿이며 운영 흐름에는 적용하지 않았다. 새 기능 개발 재개 시 `/speckit-constitution`부터 적용 여부를 재판단한다. 큰 `AUTO` 구현 항목은 Superpowers `writing-plans` → `subagent-driven-development`로 실행하고 완료 상태는 `NEXT.md`에만 기록한다(활용계획 2.2절). 항목마다 `AUTO`(승인 없이 즉시 가능)·`APPROVE`(승인 필요, 승인 대상 명시)·`WAIT`(시간·이벤트 대기, 해제 조건 명시)·`DECIDE`(사용자 결정, 선택지·권장안 명시)·`DONE` 라벨을 붙인다. 파일이 없으면 가이드 3.1 형식으로 만드는 것을 첫 `AUTO` 작업으로 한다.
 - `AUTO` 항목이 남아 있으면 턴을 끝내지 않는다. 한 항목의 기록·커밋·푸시는 체크포인트이며 세션 종료가 아니다. 곧바로 다음 `AUTO` 항목을 시작한다.
 - "다음으로 X를 하겠습니다", "다음 실행 단위는 X입니다"라고 쓰고 턴을 끝내지 않는다. X가 `AUTO`면 실행하고, 아니면 `NEXT.md`에 라벨을 붙여 기록한다. 선택지가 있는 작업은 `DECIDE`로 분리한다.
 - 턴을 끝낼 수 있는 경우는 다음뿐이다: (1) `AUTO` 항목 소진, (2) 남은 항목이 모두 `APPROVE`·`DECIDE`·`WAIT`, (3) 같은 원인으로 2회 이상 실패해 안전한 원인 규명이 불가능, (4) 사용자 중지.
