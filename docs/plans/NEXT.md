@@ -5,9 +5,6 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `WAIT` Q-03 KR timer 첫 자동 경로 E2E 및 M6 관측 시작 판정
-  - 해제: Q-02 승인·설치 후 실제 timer 발화 발생. 정시 발화와 다음 기동 따라잡기를 구분
-  - 완료 조건: journal → GitHub run → KRX·신호 저장 결과 연결. 수동 실행과 과거 보충일은 완전 관측일로 자동 산입하지 않음
 - [ ] `APPROVE` Q-04 US 새 상위 10건 보고 형식의 staging 실발송 1회 (KOR-57)
   - 승인 대상: staging 플래그 전환·수동 실행·그룹 발송·플래그 복귀
   - 완료 조건: 발송 결과와 플래그 복귀 확인
@@ -26,6 +23,11 @@
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-03 KR timer 첫 자동 경로 E2E 및 M6 관측 시작 판정
+  - 정시 발화·실행(2026-09-23): 09:30:23 KST timer dispatch가 `kr-daily.yml` GitHub run `35802355828`을 생성했고, 09:32:35 KST 성공으로 완료됐다. workflow 로그의 `catchup:kr` 결과는 `completed=["20260922"]`, `nonTrading=[]`, `blocked=null`이다.
+  - 저장 대조: 운영 Supabase 읽기 전용 집계에서 2026-09-22 KR `COMPLETED` 실행 1건(`kr_full_signal_complete=true`)과 신호 80행을 확인했다.
+  - M6 경계: 이 실행은 전일 누락일 보충으로 Kiwoom·Telegram을 실행하지 않았으므로 M6 완전 거래일에는 산입하지 않는다. 시작 게이트만 통과했고 누적은 0/20이다.
 
 - [x] `DONE` Q-02 runner PC의 KR timer·독립 dispatch 설치본을 저장소의 09:30 방식으로 갱신
   - 설치·검증(2026-09-22 17:54 KST): timer·service·dispatch script 설치본 SHA-256이 저장소 원본 `ba391713…`, `25bb03aa…`, `c23f2abb…`와 일치. 다음 KR 발화는 2026-09-23 09:30 KST.
