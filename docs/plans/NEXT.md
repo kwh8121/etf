@@ -5,17 +5,12 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `WAIT` Q-11 KR timer 완전 보고 경로의 첫 운영 실행 확인 (KOR-58)
-  - 실행 증거(2026-09-29): 09:31 KST timer dispatch의 GitHub run `36503490288` 성공. 로그는 `completed=["20260922","20260923","20260928"]`, `nonTrading=["20260924","20260925"]`, `blocked=null`, `report.reported=true`, 기준일 `20260928`, Kiwoom `COMPLETE`, run ID `fcbf9621-…`를 기록했다.
-  - DB 대조 완료(2026-09-29): 운영 Supabase 읽기 전용 조회로 `signal_run` id `fcbf9621-…` = `COMPLETED`·`kr_full_signal_complete=true`·`telegram_reported_at` 존재를 확인. `signal_daily` 80행이 P0 8개 유형×10건과 정확히 일치. `bas_dd=2026-09-28` KR run·리포트 마커 각 1건으로 중복 없음. `trading_calendar_kr`도 workflow 로그와 일치. 상세: `docs/jobs/2026-09-29-etf-signal-mvp-m6-관측기록.md`
-  - 남은 해제 조건(사용자 확인 필요): 운영 Telegram 채팅에서 2026-09-29 09:34 KST경 KR 보고 메시지 1회 실수신을 사람이 직접 확인한다. 로컬 도구로는 확인 불가.
-  - 완료 조건: 위 실수신 확인 시 M6 1/20로 기록. 같은 기준일 재실행은 `already_reported`여야 한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 미국 휴장 구간과 승인된 US 실행 경로가 마련된 때. 실행이 외부 쓰기·발송을 수반하면 별도 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
 - [ ] `WAIT` Q-08 M6 완전 거래일 20일 관측 (KOR-58)
   - 해제: Q-03 게이트 통과 후 각 KR 거래일의 실제 운영 결과 확인
-  - 완료 조건: `docs/guides/etf-signal-mvp-m6-observation-runbook.md` 기준 20/20; 현재 0/20(잠정 1/20 대기). 2026-09-28 기준일은 workflow 증거와 DB 대조(Q-11 참조)까지 확보했지만 운영 Telegram 실수신 사람 확인 전이므로 아직 산입하지 않는다.
+  - 완료 조건: `docs/guides/etf-signal-mvp-m6-observation-runbook.md` 기준 20/20; 현재 1/20(2026-09-28 기준일, Q-11 참조).
   - 휴장(2026-09-24·25 추석 연휴): 거래일이 아니므로 누적 대상이 아니다. 다음 보충은 KRX 빈 응답을 과거일 `NON_TRADING`으로 기록하고 건너뛴다. runner PC가 꺼져 있으면 다음 기동 후 근무시간 09:30 timer가 2026-09-23 수집과 함께 휴장일을 따라잡는다.
 - [ ] `WAIT` Q-09 M5-A 순설정·환매 추정 설계·착수
   - 결정(2026-09-22): A안. M6의 완전 거래일 20일 관측 완료 뒤 근거를 모아 설계·착수
@@ -23,6 +18,12 @@
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-11 KR timer 완전 보고 경로의 첫 운영 실행 확인 (KOR-58)
+  - 실행 증거(2026-09-29): 09:31 KST timer dispatch의 GitHub run `36503490288` 성공. 로그는 `completed=["20260922","20260923","20260928"]`, `nonTrading=["20260924","20260925"]`, `blocked=null`, `report.reported=true`, 기준일 `20260928`, Kiwoom `COMPLETE`, run ID `fcbf9621-…`를 기록했다.
+  - DB 대조(2026-09-29, 운영 Supabase 읽기 전용): `signal_run` id `fcbf9621-…` = `COMPLETED`·`kr_full_signal_complete=true`·`telegram_reported_at` 존재. `signal_daily` 80행이 P0 8개 유형×10건과 정확히 일치. `bas_dd=2026-09-28` KR run·리포트 마커 각 1건으로 중복 없음. `trading_calendar_kr`도 workflow 로그와 일치.
+  - 실수신 확인(2026-09-29 사용자): 운영 Telegram 채팅에서 KR 보고 메시지 수신을 직접 확인했다("텔레그램을 통해 받았습니다").
+  - 완료 판정: M6 완전 거래일 1/20(2026-09-28 기준일)로 기록. 같은 기준일 재실행은 `already_reported`로 처리되어야 하며 아직 검증 대상은 아니다. 상세: `docs/jobs/2026-09-29-etf-signal-mvp-m6-관측기록.md`
 
 - [x] `DONE` Q-10 M6 완전 거래일 자동 경로 결정·구현 (A안)
   - 결정(2026-09-23 사용자): A. KR timer 보충 뒤 마지막 거래일 1건에 Kiwoom 동기화·신호 재생성·운영 Telegram 보고를 수행한다.
