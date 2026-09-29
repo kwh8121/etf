@@ -1,19 +1,20 @@
 # ETF 신호 MVP 다음 작업 큐
 
-> 기준: 2026-09-23 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
+> 기준: 2026-09-29 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
 > 완료 항목은 검증 증거와 커밋을 기록한다. 새 사실을 확인하면 라벨·해제 조건을 갱신한다.
 
 ## 큐 (위에서부터 실행)
 
 - [ ] `WAIT` Q-11 KR timer 완전 보고 경로의 첫 운영 실행 확인 (KOR-58)
-  - 해제: 다음 근무시간 KR timer 실행(runner PC가 켜져 있으면 2026-09-24 09:30 KST, 아니면 연휴 뒤 첫 기동)
-  - 완료 조건: workflow 로그 `report.reported=true`·기준일 2026-09-23, Kiwoom 스냅샷·신호 실행 `COMPLETED`·`telegram_reported_at` 읽기 전용 확인, 운영 Telegram 1회 수신. 충족 시 M6 1/20 기록. 같은 기준일 재실행은 `already_reported`여야 한다.
+  - 실행 증거(2026-09-29): 09:31 KST timer dispatch의 GitHub run `36503490288` 성공. 로그는 `completed=["20260922","20260923","20260928"]`, `nonTrading=["20260924","20260925"]`, `blocked=null`, `report.reported=true`, 기준일 `20260928`, Kiwoom `COMPLETE`, run ID `fcbf9621-…`를 기록했다.
+  - 남은 해제 조건: 운영 DB에서 위 run의 `COMPLETED`·`kr_full_signal_complete=true`·`telegram_reported_at`과 P0 유형별 행 수를 읽기 전용 대조하고, 운영 Telegram 1회 수신을 확인한다. 현재 로컬에는 운영 읽기 자격 증명이 없어 DB 대조를 실행하지 못했다.
+  - 완료 조건: 남은 증거를 모두 확인해 M6 1/20로 기록. 같은 기준일 재실행은 `already_reported`여야 한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 미국 휴장 구간과 승인된 US 실행 경로가 마련된 때. 실행이 외부 쓰기·발송을 수반하면 별도 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
 - [ ] `WAIT` Q-08 M6 완전 거래일 20일 관측 (KOR-58)
   - 해제: Q-03 게이트 통과 후 각 KR 거래일의 실제 운영 결과 확인
-  - 완료 조건: `docs/guides/etf-signal-mvp-m6-observation-runbook.md` 기준 20/20; 현재 0/20
+  - 완료 조건: `docs/guides/etf-signal-mvp-m6-observation-runbook.md` 기준 20/20; 현재 0/20. 2026-09-28 기준일은 workflow 증거를 확보했지만 DB·실수신 대조 전이므로 아직 산입하지 않는다.
   - 휴장(2026-09-24·25 추석 연휴): 거래일이 아니므로 누적 대상이 아니다. 다음 보충은 KRX 빈 응답을 과거일 `NON_TRADING`으로 기록하고 건너뛴다. runner PC가 꺼져 있으면 다음 기동 후 근무시간 09:30 timer가 2026-09-23 수집과 함께 휴장일을 따라잡는다.
 - [ ] `WAIT` Q-09 M5-A 순설정·환매 추정 설계·착수
   - 결정(2026-09-22): A안. M6의 완전 거래일 20일 관측 완료 뒤 근거를 모아 설계·착수
