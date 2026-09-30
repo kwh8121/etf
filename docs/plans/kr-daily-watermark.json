@@ -1,7 +1,7 @@
 {
-  "lastProcessedRunId": "36503490288",
-  "lastBasDd": "2026-09-28",
-  "updatedAt": "2026-09-29T10:54:00+09:00",
-  "updatedBy": "session",
+  "lastProcessedRunId": "36650719083",
+  "lastBasDd": "2026-09-29",
+  "updatedAt": "2026-09-30T00:46:33Z",
+  "updatedBy": "cloud-routine",
   "note": "KR daily ETF signals GitHub Actions workflow(kr-daily.yml)의 마지막으로 처리된 run id. run id는 GitHub 전역에서 단조 증가하므로 숫자 비교로 새 run 여부를 판단한다. 클라우드 루틴(스케줄) 또는 세션 루프가 새 run을 처리할 때마다 갱신·커밋한다."
 }
