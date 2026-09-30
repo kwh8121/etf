@@ -28,6 +28,11 @@
 
 ## 완료
 
+- [x] `DONE` Q-12 KR 완전 거래일 검증 스크립트 자동화 (M6 대기 중 작업)
+  - 배경: Q-11·Q-08 승격 때마다 임시 Node 스크립트를 손으로 작성해 운영 DB를 대조했다. 실수 위험을 줄이고 재사용 가능하게 정식 스크립트로 만들었다.
+  - 구현: `scripts/verify-kr-daily-candidate.ts`(`verifyKrDailyCandidate(basDd, runId?)`) — `signal_run`·`signal_daily`·`trading_calendar_kr`을 읽기 전용으로 대조해 판정 JSON을 반환한다. 고정 P0 8유형(각 10건) 완전성과 `new_listing`·`turnover_surge`(가변 신호) 분리, 중복 run·중복 Telegram 마커 감지를 포함한다. `npm run verify:kr-candidate -- <bas_dd> [runId]`로 CLI 실행 가능.
+  - 검증: TDD로 테스트 6개(`test/scripts/verify-kr-daily-candidate.test.ts`)를 먼저 작성(RED) 후 구현(GREEN). `npm test` 30개 파일·105개 테스트, `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run continuity:check` 통과. 실제 운영 DB로 2026-09-29 기준일을 재실행해 이전 수동 대조와 동일한 결과(`ok:true`, 86행, `new_listing:raw` 6건)를 확인했다.
+
 - [x] `DONE` Q-11 KR timer 완전 보고 경로의 첫 운영 실행 확인 (KOR-58)
   - 실행 증거(2026-09-29): 09:31 KST timer dispatch의 GitHub run `36503490288` 성공. 로그는 `completed=["20260922","20260923","20260928"]`, `nonTrading=["20260924","20260925"]`, `blocked=null`, `report.reported=true`, 기준일 `20260928`, Kiwoom `COMPLETE`, run ID `fcbf9621-…`를 기록했다.
   - DB 대조(2026-09-29, 운영 Supabase 읽기 전용): `signal_run` id `fcbf9621-…` = `COMPLETED`·`kr_full_signal_complete=true`·`telegram_reported_at` 존재. `signal_daily` 80행이 P0 8개 유형×10건과 정확히 일치. `bas_dd=2026-09-28` KR run·리포트 마커 각 1건으로 중복 없음. `trading_calendar_kr`도 workflow 로그와 일치.
