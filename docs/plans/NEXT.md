@@ -28,6 +28,11 @@
 
 ## 완료
 
+- [x] `DONE` Q-13 웹 현황판에 자동 감지 후보·20일 진행 그리드 추가 (M6 대기 중 작업)
+  - 배경: 현황판 DB의 `candidates` 컬렉션은 클라우드 루틴이 쓰고 있었지만 화면에 렌더링되지 않아 사람이 직접 확인할 방법이 없었다.
+  - 구현: Artifact 페이지에 "자동 감지 후보 (DB 대조 대기)" 섹션(`candidates` 컬렉션 구독)과 M6 카드에 20칸 진행 그리드(확정/대조 대기/미관측 구분)를 추가했다. `https://claude.ai/artifact/JKXpxdQzbryYcVLWWztTdB` version 2로 재게시.
+  - 검증: `candidates` 컬렉션 목록 읽기로 데이터 연결 확인(현재 0건, 정상). 다음 클라우드 루틴 발화나 신규 대기 항목 발생 시 화면 반영을 재확인한다.
+
 - [x] `DONE` Q-12 KR 완전 거래일 검증 스크립트 자동화 (M6 대기 중 작업)
   - 배경: Q-11·Q-08 승격 때마다 임시 Node 스크립트를 손으로 작성해 운영 DB를 대조했다. 실수 위험을 줄이고 재사용 가능하게 정식 스크립트로 만들었다.
   - 구현: `scripts/verify-kr-daily-candidate.ts`(`verifyKrDailyCandidate(basDd, runId?)`) — `signal_run`·`signal_daily`·`trading_calendar_kr`을 읽기 전용으로 대조해 판정 JSON을 반환한다. 고정 P0 8유형(각 10건) 완전성과 `new_listing`·`turnover_surge`(가변 신호) 분리, 중복 run·중복 Telegram 마커 감지를 포함한다. `npm run verify:kr-candidate -- <bas_dd> [runId]`로 CLI 실행 가능.
