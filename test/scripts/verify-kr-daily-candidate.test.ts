@@ -9,6 +9,8 @@ function createQuery(getResult: () => QueryResult) {
   const query: {
     select: ReturnType<typeof vi.fn>;
     eq: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
     maybeSingle: ReturnType<typeof vi.fn>;
     then: (
       resolve: (value: QueryResult) => unknown,
@@ -17,11 +19,15 @@ function createQuery(getResult: () => QueryResult) {
   } = {
     select: vi.fn(),
     eq: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
     maybeSingle: vi.fn(() => Promise.resolve(getResult())),
     then: (resolve, reject) => Promise.resolve(getResult()).then(resolve, reject),
   };
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
+  query.order.mockReturnValue(query);
+  query.limit.mockReturnValue(query);
   return query;
 }
 
@@ -40,7 +46,10 @@ vi.mock("../../lib/supabase/service-role-core.ts", () => ({
   createServiceRoleClient: () => ({ from }),
 }));
 
-import { verifyKrDailyCandidate } from "../../scripts/verify-kr-daily-candidate.ts";
+import {
+  resolveLatestKrBasDd,
+  verifyKrDailyCandidate,
+} from "../../scripts/verify-kr-daily-candidate.ts";
 
 const FIXED_SECTION_KEYS = [
   "daily_price_gain:raw",
@@ -62,6 +71,26 @@ function completeDailyRows(overrides: Record<string, number> = {}) {
   }
   return rows;
 }
+
+describe("resolveLatestKrBasDd", () => {
+  it("가장 최근 KR signal_run의 기준일을 반환한다", async () => {
+    signalRunResult = { data: { bas_dd: "2026-09-30" }, error: null };
+
+    await expect(resolveLatestKrBasDd()).resolves.toBe("2026-09-30");
+  });
+
+  it("KR signal_run이 하나도 없으면 null을 반환한다", async () => {
+    signalRunResult = { data: null, error: null };
+
+    await expect(resolveLatestKrBasDd()).resolves.toBeNull();
+  });
+
+  it("조회 오류는 예외로 전달한다", async () => {
+    signalRunResult = { data: null, error: { message: "db unavailable" } };
+
+    await expect(resolveLatestKrBasDd()).rejects.toThrow("db unavailable");
+  });
+});
 
 describe("verifyKrDailyCandidate", () => {
   it("완전한 KR 완전 거래일 후보를 통과 판정한다", async () => {

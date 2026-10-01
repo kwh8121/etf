@@ -59,6 +59,23 @@ function isFixedSection(key: string): key is (typeof FIXED_KR_P0_SECTIONS)[numbe
 }
 
 /**
+ * KR 신호 실행이 있는 가장 최근 기준일을 읽기 전용으로 찾는다. KR timer 보충은 마지막
+ * 거래일 1건을 보고하므로, 실행 직후의 가장 최근 기준일이 방금 보고된 날짜다.
+ */
+export async function resolveLatestKrBasDd(): Promise<string | null> {
+  const { data, error } = await createServiceRoleClient()
+    .from("signal_run")
+    .select("bas_dd")
+    .eq("market", "KR")
+    .eq("strategy_version", KR_PRICE_SIGNAL_STRATEGY_VERSION)
+    .order("bas_dd", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  throwIfError(error, "read latest KR signal run date");
+  return (data as { bas_dd: string } | null)?.bas_dd ?? null;
+}
+
+/**
  * KR 완전 거래일 완전성 후보를 운영 Supabase에서 읽기 전용으로 대조한다.
  * 어떤 경우에도 쓰기를 수행하지 않는다.
  */
@@ -167,10 +184,16 @@ export async function verifyKrDailyCandidate(
 }
 
 async function main(): Promise<void> {
-  const basDd = process.argv[2];
+  const arg = process.argv[2];
   const runId = process.argv[3];
+  if (!arg) {
+    console.error("usage: verify-kr-daily-candidate <bas_dd YYYY-MM-DD | latest> [runId]");
+    process.exitCode = 1;
+    return;
+  }
+  const basDd = arg === "latest" ? await resolveLatestKrBasDd() : arg;
   if (!basDd) {
-    console.error("usage: verify-kr-daily-candidate <bas_dd YYYY-MM-DD> [runId]");
+    console.error("KR signal run이 하나도 없어 최근 기준일을 찾을 수 없습니다.");
     process.exitCode = 1;
     return;
   }

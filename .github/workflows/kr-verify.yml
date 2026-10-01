@@ -1,0 +1,57 @@
+name: KR daily verification
+
+on:
+  # KR daily가 성공하면 직후에 운영 DB를 읽기 전용으로 대조한다.
+  # 같은 날짜 안에서 이미 보고된 실행(already_reported)도 같은 기준일을 다시 확인할 뿐 부작용이 없다.
+  workflow_run:
+    workflows: ["KR daily ETF signals"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kr-verify-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # IP 제한이 있는 외부 API를 호출하지 않으므로 GitHub 호스팅 runner에서 실행한다.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      # 읽기 전용 대조에 필요한 자격 증명만 전달한다.
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: 최근 KR 기준일 운영 DB 대조 (읽기 전용)
+        run: |
+          set +e
+          npm run verify:kr-candidate --silent -- latest > result.json
+          status=$?
+          set -e
+          {
+            echo "## KR daily 운영 DB 대조 (읽기 전용)"
+            if [ -s result.json ]; then
+              jq -r '
+                "- 판정: " + (if .ok then "**통과**" else "**실패**" end),
+                "- 기준일: `\(.basDd)` / run: `\(.runId)`",
+                "- signal_run 상태: `\(.status)`, 완전성 표식: `\(.krFullSignalComplete)`, Telegram 표식: `\(.telegramReportedAt)`",
+                "- 고정 P0 8유형 각 10건: `\(.fixedTypesOk)` (총 \(.totalRows)행, 가변 신호: `\(.variableTypeCounts)`)",
+                "- 같은 기준일 run \(.duplicateRunCount)건, Telegram 표식 \(.reportedMarkerCount)건, 거래일 상태: `\(.tradingCalendarStatus)`",
+                "- 사유: " + (if (.reasons | length) == 0 then "없음" else (.reasons | join("; ")) end)
+              ' result.json
+            else
+              echo "- 결과 없음: 스크립트가 오류로 종료했습니다. 이 job의 로그를 확인하세요."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
