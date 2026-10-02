@@ -12,7 +12,7 @@
   - 사전 준비(2026-09-30): 코드의 중복 감지 경로(`persistUsEtfMoverSnapshot`)는 이미 구현·테스트돼 있어 추가 구현이 필요 없음을 확인했다. 실행 절차·승인 체크포인트·증거 수집 방법은 `docs/guides/etf-signal-mvp-q07-us-holiday-observation-runbook.md`에 정리했다.
 - [ ] `WAIT` Q-08 M6 완전 거래일 20일 관측 (KOR-58)
   - 해제: Q-03 게이트 통과 후 각 KR 거래일의 실제 운영 결과 확인
-  - 완료 조건: `docs/guides/etf-signal-mvp-m6-observation-runbook.md` 기준 20/20; **확정 누적 3/20**(2026-09-28·2026-09-29·2026-09-30 기준일, Q-11 및 자동 감지 승격 기록 `docs/jobs/2026-09-30-…`·`docs/jobs/2026-10-01-…` 참조).
+  - 완료 조건: `docs/guides/etf-signal-mvp-m6-observation-runbook.md` 기준 20/20; **확정 누적 4/20**(2026-09-28·09-29·09-30·10-01 기준일, Q-11 및 자동 감지 승격 기록 `docs/jobs/2026-09-30-…`·`2026-10-01-…`·`2026-10-02-…` 참조).
   - 휴장(2026-09-24·25 추석 연휴): 거래일이 아니므로 누적 대상이 아니다. 다음 보충은 KRX 빈 응답을 과거일 `NON_TRADING`으로 기록하고 건너뛴다. runner PC가 꺼져 있으면 다음 기동 후 근무시간 09:30 timer가 2026-09-23 수집과 함께 휴장일을 따라잡는다.
   - 휴장 예정(2026-10-01 사용자 확인, KRX 공식 캘린더는 미대조): 2026-10-05(월)·2026-10-09(금). 두 날도 추석 연휴와 같이 KRX 빈 응답이 `NON_TRADING`으로 기록되어 누적 대상이 아니다. 해당일 timer 실행은 기준일을 하루 앞선 거래일의 `already_reported`가 되거나, PC가 꺼져 있으면 다음 근무일 실행이 마지막 거래일 1건을 보고하므로 관측 손실은 없다.
   - 예상 일정(2026-10-01 기준 추정): 확정 3/20에서 남은 17개 거래일을 채우려면 휴장 2일을 제외하고 기준일 2026-10-27(화)이 20번째 거래일이다. 이를 처리하는 KR timer 실행은 2026-10-28(수) 09:30 KST다. 다른 휴장이나 runner PC 장기 정지가 없다는 가정이며, 어긋나면 하루씩 뒤로 밀린다.
@@ -23,21 +23,18 @@
 
   (클라우드 루틴이 새 완전 거래일 후보를 발견하면 이 아래에 `- 기준일 / run id / 감지 시각`을 추가한다. 확정 후에는 위 확정 누적에 반영하고 이 목록에서 제거한다.)
 
-  - 기준일 2026-10-01 / run `36946389398`(https://github.com/kwh8121/etf/actions/runs/36946389398) / 감지 2026-10-02T00:46Z(클라우드 루틴) / catchup: completed=["20260922","20260923","20260928","20260929","20260930","20261001"] nonTrading=["20260924","20260925"] blocked=null / report: reported=true, reportRunId=ba9f1ec0-68a8-5fda-a5af-3e6cfe45b43f
-
-  (2026-09-30 기준일 후보(run `36796579546`)는 2026-10-01 DB 대조 후 확정 누적으로 승격했다. 상세: `docs/jobs/2026-10-01-etf-signal-mvp-kr-daily-자동감지.md`)
-- [ ] `WAIT` Q-14 KR 관측 검증 GitHub Actions 자동 연결 첫 실측
-  - 구현(2026-10-01): `.github/workflows/kr-verify.yml` — KR daily 성공 직후(`workflow_run`)와 수동 실행 시 `npm run verify:kr-candidate -- latest`로 운영 DB를 읽기 전용 대조하고 job 요약에 판정을 남긴다. 판정이 실패면 job이 실패해 GitHub 알림 대상이 된다. 호스팅 runner에서 실행하며 `production` 환경의 `SUPABASE_SERVICE_ROLE_KEY`와 URL만 쓴다(KRX·Kiwoom·Telegram 시크릿 미전달).
-  - 검증: TDD(스크립트 `latest` 3건·워크플로 정적 검증 5건), `npm test` 31파일·113테스트, `tsc`·`lint`·`build`·`continuity:check` 통과. 수동 실행 run `36799258625`가 호스팅 runner에서 전 step 성공(통과 판정, 기준일 2026-09-30).
-  - 해제: 다음 KR timer 실행(2026-10-02 09:30 KST) 완료 후.
-  - 완료 조건: `kr-verify.yml`이 `event=workflow_run`으로 자동 실행돼 성공하는 것을 확인. 실패 시 알림이 실제로 오는지는 GitHub 알림 설정(Settings → Notifications → Actions)을 사용자가 확인해야 한다.
-  - 한계: Telegram **실수신**은 사람만 확인할 수 있다. 자동화되는 것은 DB의 `telegram_reported_at` 표식까지이며, 누적 승격의 최종 판정에는 여전히 사용자의 실수신 확인을 쓴다. `production` 환경에 브랜치 제한이 없다(기존 상태) — 필요하면 `main`으로 제한하는 설정 변경을 별도로 검토한다.
+  (현재 대기 중인 후보 없음 — 2026-10-01 기준일 후보(run `36946389398`)는 2026-10-02 DB 대조 후 확정 누적으로 승격했다. 상세: `docs/jobs/2026-10-02-etf-signal-mvp-kr-daily-자동감지.md`. 이전 승격: 2026-09-30 기준일은 `2026-10-01-…`, 2026-09-29 기준일은 `2026-09-30-…`)
 - [ ] `WAIT` Q-09 M5-A 순설정·환매 추정 설계·착수
   - 결정(2026-09-22): A안. M6의 완전 거래일 20일 관측 완료 뒤 근거를 모아 설계·착수
   - 해제: Q-08 완료 및 M6 관측 근거·수치 계약 확정
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-14 KR 관측 검증 GitHub Actions 자동화 및 자동 연결 첫 실측
+  - 구현(2026-10-01): `.github/workflows/kr-verify.yml` — KR daily 성공 직후(`workflow_run`)와 수동 실행 시 `npm run verify:kr-candidate -- latest`로 운영 DB를 읽기 전용 대조하고 job 요약에 판정을 남긴다. 판정이 실패면 job이 실패한다. 호스팅 runner에서 `production` 환경의 `SUPABASE_SERVICE_ROLE_KEY`와 URL만 쓴다(KRX·Kiwoom·Telegram 시크릿 미전달). 검증: TDD, `npm test` 31파일·113테스트, `tsc`·`lint`·`build`·`continuity:check` 통과, 수동 실행 run `36799258625` 성공.
+  - 자동 연결 실측(2026-10-02): KR daily run `36946389398`(09:31 KST) 종료 직후 `kr-verify` run `36946604837`이 `event=workflow_run`으로 자동 실행돼 성공했다(09:33 KST). 같은 기준일(2026-10-01)을 로컬 `verify:kr-candidate -- latest`로도 대조해 `ok:true`를 확인했다.
+  - 남은 한계: ① 판정 실패 시 GitHub 알림이 실제로 도착하는지는 실패를 만들어 보지 않았고 알림 설정(Settings → Notifications → Actions)도 사용자 확인 전이다. ② Telegram **실수신**은 사람만 확인할 수 있어 누적 승격에는 사용자 확인을 계속 쓴다. ③ `production` 환경에 브랜치 제한이 없다(기존 상태) — `main`으로 제한하는 설정 변경을 별도로 검토한다.
 
 - [x] `DONE` Q-13 웹 현황판에 자동 감지 후보·20일 진행 그리드 추가 (M6 대기 중 작업)
   - 배경: 현황판 DB의 `candidates` 컬렉션은 클라우드 루틴이 쓰고 있었지만 화면에 렌더링되지 않아 사람이 직접 확인할 방법이 없었다.
