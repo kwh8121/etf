@@ -23,7 +23,9 @@
 
   (클라우드 루틴이 새 완전 거래일 후보를 발견하면 이 아래에 `- 기준일 / run id / 감지 시각`을 추가한다. 확정 후에는 위 확정 누적에 반영하고 이 목록에서 제거한다.)
 
-  (현재 대기 중인 후보 없음 — 2026-09-30 기준일 후보(run `36796579546`)는 2026-10-01 DB 대조 후 확정 누적으로 승격했다. 상세: `docs/jobs/2026-10-01-etf-signal-mvp-kr-daily-자동감지.md`)
+  - 기준일 2026-10-01 / run `36946389398`(https://github.com/kwh8121/etf/actions/runs/36946389398) / 감지 2026-10-02T00:46Z(클라우드 루틴) / catchup: completed=["20260922","20260923","20260928","20260929","20260930","20261001"] nonTrading=["20260924","20260925"] blocked=null / report: reported=true, reportRunId=ba9f1ec0-68a8-5fda-a5af-3e6cfe45b43f
+
+  (2026-09-30 기준일 후보(run `36796579546`)는 2026-10-01 DB 대조 후 확정 누적으로 승격했다. 상세: `docs/jobs/2026-10-01-etf-signal-mvp-kr-daily-자동감지.md`)
 - [ ] `WAIT` Q-14 KR 관측 검증 GitHub Actions 자동 연결 첫 실측
   - 구현(2026-10-01): `.github/workflows/kr-verify.yml` — KR daily 성공 직후(`workflow_run`)와 수동 실행 시 `npm run verify:kr-candidate -- latest`로 운영 DB를 읽기 전용 대조하고 job 요약에 판정을 남긴다. 판정이 실패면 job이 실패해 GitHub 알림 대상이 된다. 호스팅 runner에서 실행하며 `production` 환경의 `SUPABASE_SERVICE_ROLE_KEY`와 URL만 쓴다(KRX·Kiwoom·Telegram 시크릿 미전달).
   - 검증: TDD(스크립트 `latest` 3건·워크플로 정적 검증 5건), `npm test` 31파일·113테스트, `tsc`·`lint`·`build`·`continuity:check` 통과. 수동 실행 run `36799258625`가 호스팅 runner에서 전 step 성공(통과 판정, 기준일 2026-09-30).
