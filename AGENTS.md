@@ -4,6 +4,13 @@
 
 이 저장소는 Next.js 16 App Router와 Supabase SSR을 사용하는 TypeScript 애플리케이션이다. 페이지와 Route Handler는 `app/`에 두고, 재사용 컴포넌트는 `components/`, shadcn/ui 기반 요소는 `components/ui/`에 둔다. Supabase 브라우저·서버·프록시 클라이언트는 `lib/supabase/`에서 관리한다. 정적 이미지는 `public/` 또는 `app/`의 메타데이터 이미지로 관리한다. 계획서는 `docs/plans/`, API 조사 자료는 `docs/references/`, 운영 지침은 `docs/guides/`에 저장한다. 신규 및 수정 문서는 한국어로 작성하되 API ID, 필드명, 코드, 명령어는 원문을 유지한다.
 
+## 디렉터리와 운영 스크립트
+
+- `scripts/`: 수집·신호·보고 CLI. 자주 쓰는 진입점은 `npm run daily:kr`(KR 일일 전체 경로), `catchup:kr`(누락일 보충), `verify:kr-candidate -- <bas_dd>`(운영 DB 읽기 전용 완전성 대조), `ingest:*`·`signals:*`·`report:*`다. `.ts`를 `node --experimental-strip-types`로 직접 실행하며 `.env`를 읽는다(`ingest:kr`·`backfill:kr`는 필수).
+- `ops/systemd/`: runner PC의 KR·US timer·dispatch 원본. 설치본은 저장소와 별개이므로 변경 시 SHA-256으로 일치를 확인한다.
+- `.github/workflows/`: `kr-daily`·`us-etf-movers`는 timer가 `workflow_dispatch`로 호출하고, `kr-verify`는 `kr-daily` 성공 직후 자동 실행된다. 운영 경로를 바꾸면 세 workflow를 함께 확인한다.
+- `lib/`: 도메인 로직(`signals`, `market-data`, `notifications`, `dashboard`, `config`)과 `supabase/` 클라이언트. `test/`는 같은 영역 이름으로 Vitest 테스트를 둔다. `supabase/migrations/`: 스키마 마이그레이션.
+
 ## 빌드, 검사 및 개발 명령
 
 - `npm install`: `package-lock.json` 기준으로 의존성을 설치한다.
@@ -34,12 +41,12 @@ Git 이력과 기존 `feat:`, `fix:`, `docs:`, `test:`, `chore:` 형식의 짧�
 
 - 정본 문서: `docs/plans/ETF-signal-MVP-plan-v2.2.md`, `docs/plans/ETF-signal-MVP-v2.2-ROADMAP.md`, `docs/plans/ETF-signal-MVP-v2.2-상세-개발-실행방안.md`
 - 현재 현황·재개 기준: `docs/plans/implementation/`, `docs/guides/etf-signal-mvp-e2e-configuration-guide.md`, `docs/guides/etf-signal-mvp-m6-observation-runbook.md`, `docs/guides/etf-signal-mvp-continuity-harness.md`, `docs/jobs/2026-09-22-etf-signal-mvp-kr-누락일-보충-작업기록.md`
-- 2026-09-22 기준 M0–M4·R1과 M5-B 미국 P1 기본 E2E를 완료했다. KR·US 저장 완료 경계는 코드·테스트로 보완했고, US 보고는 유형별 상위 10건이며 실제 데이터 발송 없는 dry-run 결과 1건이다. 첫 KR timer 경로 실행, KR·US 실패 복구·US 휴장 중복 실측, 새 US 형식의 staging 실발송은 미검증이다. 회사 PC는 근무시간에만 운영 가능하지만 설치된 timer는 KR 19:15·US 07:30으로, 정시 실행이 보장되지 않는다. 다음 기동 따라잡기와 정시 실행을 구분해 기록한다.
-- 같은 날 KR 누락일 보충 코드와 KR 09:30 timer 원본을 구현했다. US 무손실 필수 요구는 철회했다. 운영 KR timer·독립 dispatch 스크립트 설치본은 아직 19:15 방식이며 첫 자동 E2E 전이다. 보충은 과거 KRX 일별 데이터·신호만 대상으로 하며 과거 Kiwoom·Telegram은 복원하지 않는다.
-- Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용한다. 2026-09-22 KR 보충 변경의 전체 검증은 `npm test`(29 파일·90 테스트), `npx tsc --noEmit`, `npm run lint`, `npm run build` 통과다.
+- 진행·대기·완료 상태(M6 관측 누적, 휴장 대기, 승인 대상)의 정본은 `docs/plans/NEXT.md`다. 이 파일에는 날짜별 현황을 적지 않는다.
+- 회사 PC는 근무시간에만 운영 가능해 timer 정시 실행이 보장되지 않는다. 다음 기동 따라잡기와 정시 실행을 구분해 기록한다.
+- KR 누락일 보충은 과거 KRX 일별 데이터·신호만 대상으로 하며 과거 Kiwoom·Telegram은 복원하지 않는다. US 보고는 유형별 상위 10건이고 US 무손실 필수 요구는 철회했다.
+- Node `22.23.2`를 `.nvmrc`로 고정한다. `npm run build`는 공식 Webpack 경로를 사용한다. 전체 검증은 `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`를 모두 통과해야 한다.
 - Linear 프로젝트·이슈는 실행 상태 추적용이며, 설계·코드의 정본은 위 저장소 문서와 Git이다. 비밀값·토큰·DB 비밀번호를 어떤 기록에도 남기지 않는다.
 - 세션 시작·종료 시에는 `npm run continuity:check`와 연속성 하네스의 작업 기록→정본 문서→Linear→OpenViking 순서를 따른다.
-- 2026-09-22 Linear 상태: KOR-55 Done, KOR-56 Todo, KOR-57 In Progress(실발송 대기), KOR-58 Todo(관측 0/20), KOR-59 In Progress(실패 복구 E2E 대기). 첫 KR timer 경로 실행은 아직 미검증이다.
 - 기본 개발 실행 루프는 **TDD → 구현 → 포맷 → 대상/전체 테스트 → lint/build → 리뷰 → 문서·Linear·OpenViking 메모리 → 원자적 커밋·푸시**다. 안전하고 되돌릴 수 있는 작업은 이 순서로 중단 없이 계속한다. 운영 데이터·보안·권한·비가역 외부 부작용·요구사항 분기·반복 실패처럼 중요한 이슈에서만 멈추고, 증거·영향·대안을 보고해 승인받는다. 상세 기준은 `docs/guides/etf-signal-mvp-continuity-harness.md`의 “기본 개발 실행 루프와 중단 기준”을 따른다.
 
 ### 턴 종료 규칙과 상시 승인
