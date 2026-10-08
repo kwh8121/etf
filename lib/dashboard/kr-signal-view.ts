@@ -45,3 +45,45 @@ export function formatDashboardSignalValue(row: DashboardSignalRow): string {
   if (row.valueUnit === "ratio") return `${row.value.toFixed(2)}배`;
   return row.valueUnit === "event" ? "신규" : String(row.value);
 }
+
+export type SignalPeriod = "daily" | "five_day";
+export type SignalDirection = "gain" | "loss";
+
+export interface KrSignalClassification {
+  period: SignalPeriod;
+  direction: SignalDirection;
+}
+
+const FIXED_SIGNAL_TYPES: Record<string, KrSignalClassification> = {
+  daily_price_gain: { period: "daily", direction: "gain" },
+  daily_price_loss: { period: "daily", direction: "loss" },
+  five_day_price_gain: { period: "five_day", direction: "gain" },
+  five_day_price_loss: { period: "five_day", direction: "loss" },
+};
+
+export function classifyKrSignalType(signalType: string): KrSignalClassification | null {
+  return FIXED_SIGNAL_TYPES[signalType] ?? null;
+}
+
+export function selectDirectionRows(
+  rows: readonly DashboardSignalRow[],
+  period: SignalPeriod,
+  screen: "raw" | "liquid",
+  direction: SignalDirection,
+): DashboardSignalRow[] {
+  return rows
+    .filter((row) => {
+      if (row.screen !== screen) return false;
+      const classification = classifyKrSignalType(row.signalType);
+      return classification?.period === period && classification.direction === direction;
+    })
+    .sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER));
+}
+
+export function selectVariableSections(
+  rows: readonly DashboardSignalRow[],
+): DashboardSignalSection[] {
+  return createDashboardSignalSections(
+    rows.filter((row) => classifyKrSignalType(row.signalType) === null),
+  );
+}
