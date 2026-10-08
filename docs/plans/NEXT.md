@@ -6,7 +6,7 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `APPROVE` Q-17 Vercel 배포와 `ETF_WEB_BASE_URL` 설정
+- [ ] `APPROVE` Q-17 Vercel 배포와 `ETF_WEB_BASE_URL` 설정 (Linear KOR-65)
   - 해제: 충족(Q-16 구현 완료 2026-10-08). 승인 요청 대기
   - 승인 대상: ① Vercel 프로젝트 연결과 배포(환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`만, 서비스 역할 키 제외) ② Supabase Auth Redirect URL에 배포 도메인 추가 ③ **가입 차단**: Supabase Auth의 새 가입 비활성화 또는 RLS 허용목록 전환 — 현재 `/auth/sign-up`이 열려 있고 RLS가 `authenticated using (true)`라 가입한 누구나 신호를 읽을 수 있어, 이를 막지 않으면 배포된 페이지가 사실상 공개다(호스팅 Supabase의 "Allow new users to sign up" 설정값은 저장소에서 확인할 수 없다. ①보다 먼저 확인) ④ **워크플로 env 매핑**: `.github/workflows/kr-daily.yml` job `env:`에 `ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}` 추가 — 이 줄이 없으면 변수를 만들어도 링크가 영원히 붙지 않고 오류도 없다. 변수 미정의 시 `""`로 평가돼 비활성이 유지되므로 변수 설정(⑤)보다 먼저 적용해도 안전하다. M6 관측 중인 운영 파일이라 승인 후에만 변경한다 ⑤ GitHub Actions 변수 `ETF_WEB_BASE_URL` 설정(값은 `https://` 포함 필수)
   - 순서 권장: ③ 확인·조치 → ① 배포 → ② Redirect URL → Q7 UI Smoke → ④ 매핑 → ⑤ 변수 설정(이 순간부터 Telegram에 링크 줄 추가).
@@ -38,7 +38,7 @@
 
 ## 완료
 
-- [x] `DONE` Q-16 KR 신호 웹 열람 경로 구현 (Q-15 사양서 승인 후)
+- [x] `DONE` Q-16 KR 신호 웹 열람 경로 구현 (Q-15 사양서 승인 후, Linear KOR-64)
   - 승인(2026-10-08 사용자): 사양서 `docs/plans/implementation/kr-signal-web-view-design.md` 승인 후 구현 계획 `docs/plans/implementation/kr-signal-web-view-plan.md`로 전개·실행.
   - 구현: 기준일 라우트 `app/signals/kr/[basDd]/page.tsx`(상승 적색 ▲·하락 청색 ▼ 대비, 기간·스크린 세그먼트, 전·후 거래일 이동, 가변 신호 섹션), `/protected`는 최신 기준일 리다이렉트, Telegram 헤더에 `상세: <url>` 한 줄(`ETF_WEB_BASE_URL` 미설정 시 생략). 커밋 `de1a2f4`..`e5b01b6` 10개.
   - 검증(2026-10-08, Node 22.23.2): `npm test` 37파일·159테스트, `npx tsc --noEmit`, `npm run lint`, `npm run build` 통과. 미구현 흔적 0건. 태스크별 독립 리뷰 5회와 전체 브랜치 최종 리뷰(`Approved with required fixes`) 후 필수 수정 8건 반영·재리뷰 통과.
