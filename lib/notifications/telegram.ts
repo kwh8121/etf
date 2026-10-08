@@ -12,6 +12,8 @@ export interface TelegramReportInput {
   runId: string;
   source: string;
   sections: readonly TelegramReportSection[];
+  /** 기준일 웹 열람 링크. 없으면 헤더에 줄을 추가하지 않는다. */
+  webUrl?: string;
 }
 
 export function formatTelegramReport(
@@ -25,7 +27,13 @@ export function formatTelegramReport(
   }
   const disclosure =
     "5거래일 값은 KRX 종가 기준 가격수익률이며 분배금·기업행동 조정 총수익률이 아닙니다.";
-  const header = `[ETF 신호][${input.market}][${input.status}] ${input.basDd}\n원천: ${input.source}\n실행: ${input.runId}\n${disclosure}`;
+  const header = [
+    `[ETF 신호][${input.market}][${input.status}] ${input.basDd}`,
+    `원천: ${input.source}`,
+    `실행: ${input.runId}`,
+    disclosure,
+    ...(input.webUrl ? [`상세: ${input.webUrl}`] : []),
+  ].join("\n");
   const disclaimer = "자동매매 또는 매수·매도 추천이 아닌 탐색 결과입니다.";
   const blocks = input.sections.flatMap((section) =>
     section.lines.length

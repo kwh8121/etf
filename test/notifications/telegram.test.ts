@@ -78,6 +78,71 @@ describe("Telegram reports", () => {
     ).toBe(true);
   });
 
+  it("webUrl이 없으면 기존 헤더와 완전히 같은 출력을 낸다", () => {
+    const base = {
+      market: "KR" as const,
+      basDd: "2026-10-07",
+      status: "COMPLETED" as const,
+      runId: "run-1",
+      source: "KRX etf_bydd_trd",
+      sections: [{ title: "일간 상승", lines: ["1. ETF +1.00%"] }],
+    };
+
+    expect(formatTelegramReport(base)).toEqual(formatTelegramReport({ ...base, webUrl: undefined }));
+    expect(formatTelegramReport(base)[0]).not.toContain("상세:");
+  });
+
+  it("webUrl이 있으면 모든 분할 조각의 헤더에 링크가 한 번씩 들어간다", () => {
+    const messages = formatTelegramReport(
+      {
+        market: "KR",
+        basDd: "2026-10-07",
+        status: "COMPLETED",
+        runId: "run-1",
+        source: "KRX etf_bydd_trd",
+        webUrl: "https://etf.example.app/signals/kr/2026-10-07",
+        sections: [
+          {
+            title: "일간 상승",
+            lines: Array.from({ length: 20 }, (_, index) => `ETF ${index} +1.00%`),
+          },
+        ],
+      },
+      300,
+    );
+
+    expect(messages.length).toBeGreaterThan(1);
+    expect(messages.every((message) => message.length <= 300)).toBe(true);
+    expect(
+      messages.every(
+        (message) =>
+          message.split("상세: https://etf.example.app/signals/kr/2026-10-07").length === 2,
+      ),
+    ).toBe(true);
+  });
+
+  it("링크가 붙어도 maxLength를 넘는 메시지를 만들지 않는다", () => {
+    const messages = formatTelegramReport(
+      {
+        market: "KR",
+        basDd: "2026-10-07",
+        status: "COMPLETED",
+        runId: "run-1",
+        source: "KRX etf_bydd_trd",
+        webUrl: `https://etf.example.app/signals/kr/2026-10-07`,
+        sections: [
+          {
+            title: "일간 상승",
+            lines: Array.from({ length: 40 }, (_, index) => `${index}. ${"긴종목명".repeat(30)} +1.00%`),
+          },
+        ],
+      },
+      4096,
+    );
+
+    expect(messages.every((message) => message.length <= 4096)).toBe(true);
+  });
+
   it("posts each generated message through Telegram sendMessage", async () => {
     const fetchFn = vi
       .fn()

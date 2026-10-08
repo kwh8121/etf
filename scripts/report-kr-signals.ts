@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getRequiredServerSecret } from "../lib/config/server-env.ts";
+import { buildKrSignalUrl, resolveWebBaseUrl } from "../lib/config/web-url.ts";
 import {
   formatTelegramReport,
   sendTelegramMessages,
@@ -54,6 +55,7 @@ export async function reportLatestKrxSignals(
     .order("rank");
   throwIfError(rowError, "read latest KR signal results");
 
+  const webBaseUrl = resolveWebBaseUrl();
   const messages = formatTelegramReport({
     market: "KR",
     basDd: latest.bas_dd,
@@ -61,6 +63,7 @@ export async function reportLatestKrxSignals(
     runId: latest.id,
     source: "KRX etf_bydd_trd, Kiwoom ka10099",
     sections: createSections(rows ?? []),
+    webUrl: webBaseUrl ? buildKrSignalUrl(webBaseUrl, latest.bas_dd) : undefined,
   });
   if (send) {
     await sendTelegramMessages({
