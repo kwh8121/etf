@@ -30,6 +30,9 @@ Supabase의 권장 패턴도 서버 전용 모듈에서만 admin client를 만�
 | `TELEGRAM_BOT_TOKEN`                   | 서버·CI Secret·예약 작업                         | M3 Telegram E2E부터 | Telegram Bot API 인증           | 비밀      |
 | `TELEGRAM_CHAT_ID`                     | 서버·CI Secret·예약 작업                         | M3 Telegram E2E부터 | 허용된 수신 대화 식별자         | 비밀 취급 |
 | `ENABLE_US_ETF_P1`                     | 로컬 `.env`, GitHub Actions Variable, 배포 환경  | M5 미국 실험 실행   | `true`일 때만 미국 P1 활성화    | 공개 가능 |
+| `ETF_WEB_BASE_URL`                     | 로컬 `.env`, GitHub Actions Variable             | 웹 배포 뒤(Q-17)    | KR Telegram 보고의 웹 링크 base | 공개 가능 |
+
+`ETF_WEB_BASE_URL`은 비밀이 아니며 `serverSecretEnvKeys`에 넣지 않는다. 값은 스킴을 포함한 `https://<도메인>` 형식으로 쓴다(스킴이 없으면 Telegram이 링크로 인식하지 못할 수 있다). 후행 `/`와 앞뒤 공백은 코드가 제거한다. **미설정·빈 값·공백이면 KR 보고에 링크 줄이 붙지 않고 출력은 변경 전과 바이트 단위로 같다.** 따라서 M6 관측 중에도 이 변수를 정의하기 전까지는 영향이 없다. GitHub Actions에서 값을 전달하려면 `.github/workflows/kr-daily.yml`의 job `env:`에 `ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}` 매핑이 있어야 한다(워크플로는 변수를 명시적으로 나열하며 `.env` 파일은 checkout 작업 공간에 없다). 이 매핑은 Q-17 승인 범위다.
 
 현재 저장소에 이미 있을 수 있는 `APP_KEY`·`APP_SECRET` 같은 일반 이름은 자동으로 사용하지 않는다. Kiwoom에는 반드시 `KIWOOM_APP_KEY`, `KIWOOM_SECRET_KEY`라는 명시적 계약을 사용한다. 중복 키의 실제 값 비교·복사는 사람이 안전한 비밀 관리 화면에서만 한다.
 

@@ -1,25 +1,18 @@
 # ETF 신호 MVP 다음 작업 큐
 
-> 기준: 2026-10-06 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
+> 기준: 2026-10-08 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
 > 완료 항목은 검증 증거와 커밋을 기록한다. 새 사실을 확인하면 라벨·해제 조건을 갱신한다.
 > 웹 현황판(읽기 전용 보조 화면): `docs/guides/etf-signal-mvp-status-dashboard.md` 참조.
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `DECIDE` Q-15 KR 신호 웹 열람 경로 사양서 검토
-  - 사양서: `docs/plans/implementation/kr-signal-web-view-design.md`(2026-10-08 작성)
-  - 배경: Telegram 평문 보고의 가독성 문제(섹션 제목이 한두 글자만 다름, 방향 기호·색 없음, 80행이 메시지 2개 이상으로 분할). 웹 대시보드는 M4에서 이미 구현돼 있으나 배포·링크·방향 색이 없다.
-  - 확정된 결정(2026-10-08 사용자): ① Vercel 배포 + Supabase 로그인 ② Telegram은 링크 한 줄만 추가 ③ 기준일 라우트 + 방향 대비 레이아웃(A안) ④ 상승 적색·하락 청색 ⑤ 날짜 피커 대신 전·후 거래일 이동
-  - 선택지: 사양서 승인(→ `writing-plans`로 구현 계획 작성 후 Q-16 구현) / 수정 요청
-- [ ] `AUTO` Q-16 KR 신호 웹 열람 경로 구현 (Q-15 승인 후)
-  - 해제: Q-15 사양서 승인
-  - 실행 방식: `writing-plans`로 구현 계획을 만든 뒤 `subagent-driven-development`로 TDD 실행(활용계획 2.2절)
-  - 완료 조건: 사양서 11절 완료 정의의 배포 외 항목 전부와 `npm test`·`tsc`·`lint`·`build` 통과
 - [ ] `APPROVE` Q-17 Vercel 배포와 `ETF_WEB_BASE_URL` 설정
-  - 해제: Q-16 구현 완료
-  - 승인 대상: ① Vercel 프로젝트 연결과 배포(환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`만, 서비스 역할 키 제외) ② Supabase Auth Redirect URL에 배포 도메인 추가 ③ GitHub Actions 변수 `ETF_WEB_BASE_URL` 설정
-  - 주의: ③을 설정하는 순간부터 Telegram 보고에 링크 줄이 추가된다. 그전까지 출력은 현재와 동일하므로 M6 관측(7/20 진행 중)에 영향이 없다.
-  - 완료 조건: Q7 UI Smoke 증거와 배포 ID·URL·commit SHA 기록
+  - 해제: 충족(Q-16 구현 완료 2026-10-08). 승인 요청 대기
+  - 승인 대상: ① Vercel 프로젝트 연결과 배포(환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`만, 서비스 역할 키 제외) ② Supabase Auth Redirect URL에 배포 도메인 추가 ③ **가입 차단**: Supabase Auth의 새 가입 비활성화 또는 RLS 허용목록 전환 — 현재 `/auth/sign-up`이 열려 있고 RLS가 `authenticated using (true)`라 가입한 누구나 신호를 읽을 수 있어, 이를 막지 않으면 배포된 페이지가 사실상 공개다(호스팅 Supabase의 "Allow new users to sign up" 설정값은 저장소에서 확인할 수 없다. ①보다 먼저 확인) ④ **워크플로 env 매핑**: `.github/workflows/kr-daily.yml` job `env:`에 `ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}` 추가 — 이 줄이 없으면 변수를 만들어도 링크가 영원히 붙지 않고 오류도 없다. 변수 미정의 시 `""`로 평가돼 비활성이 유지되므로 변수 설정(⑤)보다 먼저 적용해도 안전하다. M6 관측 중인 운영 파일이라 승인 후에만 변경한다 ⑤ GitHub Actions 변수 `ETF_WEB_BASE_URL` 설정(값은 `https://` 포함 필수)
+  - 순서 권장: ③ 확인·조치 → ① 배포 → ② Redirect URL → Q7 UI Smoke → ④ 매핑 → ⑤ 변수 설정(이 순간부터 Telegram에 링크 줄 추가).
+  - 주의: ⑤를 설정하는 순간부터 Telegram 보고에 링크 줄이 추가된다. 그전까지 출력은 현재와 바이트 단위로 같으므로 M6 관측(7/20 진행 중)에 영향이 없다. 링크를 켠 날부터는 보고 헤더가 한 줄 길어지므로 작업 기록에 켠 시각을 남긴다.
+  - 알려진 한계(수용): 미인증 상태로 Telegram 링크를 열면 로그인 후 원래 기준일이 아니라 최신 기준일로 이동한다(Telegram 인앱 브라우저는 쿠키가 따로라 자주 발생). 당일 링크는 영향이 없고 며칠 지난 메시지만 해당한다. `next` 파라미터 복귀는 후속 과제다.
+  - 완료 조건: Q7 UI Smoke 증거(비인증 redirect, 인증 후 필수 섹션, 360px 무가로스크롤 브라우저 확인)와 배포 ID·URL·commit SHA 기록
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 다음 미국 시장 완전 휴장일 2026-11-26(추수감사절, 가장 이른 기회) 또는 2026-12-25(크리스마스). 실행은 기능 플래그 전환을 포함한 외부 부작용이라 매번 사용자 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
@@ -44,6 +37,14 @@
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-16 KR 신호 웹 열람 경로 구현 (Q-15 사양서 승인 후)
+  - 승인(2026-10-08 사용자): 사양서 `docs/plans/implementation/kr-signal-web-view-design.md` 승인 후 구현 계획 `docs/plans/implementation/kr-signal-web-view-plan.md`로 전개·실행.
+  - 구현: 기준일 라우트 `app/signals/kr/[basDd]/page.tsx`(상승 적색 ▲·하락 청색 ▼ 대비, 기간·스크린 세그먼트, 전·후 거래일 이동, 가변 신호 섹션), `/protected`는 최신 기준일 리다이렉트, Telegram 헤더에 `상세: <url>` 한 줄(`ETF_WEB_BASE_URL` 미설정 시 생략). 커밋 `de1a2f4`..`e5b01b6` 10개.
+  - 검증(2026-10-08, Node 22.23.2): `npm test` 37파일·159테스트, `npx tsc --noEmit`, `npm run lint`, `npm run build` 통과. 미구현 흔적 0건. 태스크별 독립 리뷰 5회와 전체 브랜치 최종 리뷰(`Approved with required fixes`) 후 필수 수정 8건 반영·재리뷰 통과.
+  - 불변성 증거: 변경 전후 `formatTelegramReport` 출력이 maxLength 4096·1000·300에서 바이트 동일. 불변성 테스트가 구 헤더 리터럴을 직접 단정하며 변이 2종(링크 상시 부착, 헤더 줄 순서 변경)에서 실패함을 확인. 운영 DB(기준일 2026-10-07, 81행) 읽기 전용 실행에서 `ETF_WEB_BASE_URL` 미설정·빈 값·공백·설정 4경우 모두 `messageCount:1`.
+  - 인증 smoke: `next start` 미인증 요청이 `/signals/kr/2026-10-07`·`/signals/kr/latest`·`/protected` 모두 307 → `/auth/login`, 응답 본문에 신호 데이터 0건.
+  - 남은 한계: ① 라우트·컴포넌트는 문자열 계약 테스트와 빌드로만 검증(Vitest `node` 환경, RTL 없음). 실제 렌더링과 360px 무가로스크롤은 Q-17 배포 후 브라우저 UI smoke로 확인한다. ② 이월한 Minor(인접 거래일 조회 `.error` 무시, 가변 섹션 행 줄바꿈 일관성, 전 종목 상승일 하락 블록에 양수 표시, `SECTION_TITLES` 중복 등)는 후속 정리 대상이다. 상세: `docs/jobs/2026-10-08-etf-signal-mvp-kr-daily-관측.md`.
 
 - [x] `DONE` Q-14 KR 관측 검증 GitHub Actions 자동화 및 자동 연결 첫 실측
   - 구현(2026-10-01): `.github/workflows/kr-verify.yml` — KR daily 성공 직후(`workflow_run`)와 수동 실행 시 `npm run verify:kr-candidate -- latest`로 운영 DB를 읽기 전용 대조하고 job 요약에 판정을 남긴다. 판정이 실패면 job이 실패한다. 호스팅 runner에서 `production` 환경의 `SUPABASE_SERVICE_ROLE_KEY`와 URL만 쓴다(KRX·Kiwoom·Telegram 시크릿 미전달). 검증: TDD, `npm test` 31파일·113테스트, `tsc`·`lint`·`build`·`continuity:check` 통과, 수동 실행 run `36799258625` 성공.

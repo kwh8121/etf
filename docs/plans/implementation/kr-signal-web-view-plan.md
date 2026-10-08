@@ -21,7 +21,7 @@
 - `ETF_WEB_BASE_URL`은 비밀값이 아니므로 `lib/config/server-env.ts`의 `serverSecretEnvKeys`에 추가하지 않는다.
 - `ETF_WEB_BASE_URL`이 없으면 Telegram 출력은 현재와 바이트 단위로 동일해야 한다. M6 관측이 7/20 진행 중이다.
 - Vitest는 `environment: "node"`이고 React Testing Library가 없다. UI는 기존 `protected-page-contract.test.ts` 방식의 문자열 계약 테스트로 고정하고, 테스트용 의존성을 새로 추가하지 않는다.
-- 커밋 메시지는 `feat:`·`fix:`·`docs:`·`test:`·`chore:` 형식의 짧은 한국어 제목을 쓰고 `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`으로 끝낸다.
+- 커밋 메시지는 `feat:`·`fix:`·`docs:`·`test:`·`chore:` 형식의 짧은 한국어 제목을 쓰고 `Co-Authored-By: Claude <모델명> <noreply@anthropic.com>` 트레일러로 끝낸다. 모델명은 실제로 그 커밋을 작성한 모델을 쓴다(이 저장소 이력도 커밋마다 작성 모델을 적고 있다).
 
 ## Review Focus
 
