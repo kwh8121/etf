@@ -49,3 +49,15 @@
 - Linear(프로젝트 `ETF 일일 신호 시스템 MVP v2.2`): KOR-58 본문을 7/20 기준으로 보정, M6 마일스톤 설명과 프로젝트 요약·본문 보정, KOR-64(M4 후속, Done, 웹 열람 경로 구현) 생성, KOR-65(Todo, 마일스톤 없음, Q-17 배포 승인 대기) 생성, 프로젝트 update 게시(health `onTrack`). read-back으로 M6 진행률 62.5%, M4 100% 유지, 이슈 상태를 확인했다.
 - 실수 두 건을 바로잡았다. ① KOR-64를 처음 M6에 연결해 M6 진행률이 63%에서 75%로 부풀었다 → M4로 이동해 62.5%로 복구했다(M6는 20일 관측 지표라 관측과 무관한 이슈를 넣지 않는다). ② 이슈 본문에 `\n` 이스케이프를 그대로 보내 리터럴 문자로 저장됐다 → 실제 개행으로 재저장했다. KOR-58에서는 `replace_range` 경계 문구가 중복되어 정정했다.
 - OpenViking: 정본 경로, 완료/미완료, 외부 상태, 다음 작업, 교훈을 `remember`로 저장했다(`Stored 2 message(s) and committed for memory extraction`). 저장 직후 두 차례 검색에서 새 메모리가 아직 나타나지 않았다. 추출이 비동기라 지연으로 보이나 **회수 여부는 미확인**이다. 다음 세션 시작 시 `ETF 신호 MVP 확정 누적 7/20 KOR-64 KOR-65`로 recall해 확인하고, 없으면 같은 내용을 다시 저장한다. 기존 2026-09-21~22 메모리(예: "M6 0/20")는 낡았지만 삭제하지 않았다.
+
+### Q-17 부분 실행: 가입 차단 확인과 Vercel 배포 (사용자 승인)
+
+- 가입 차단: 사용자가 Supabase에서 "Allow new users to sign up"을 껐다. 배포 전 `GET /auth/v1/settings`(publishable key, 읽기 전용)로 확인했다. 차단 전 `disable_signup=False`, 차단 후 `True`. `mailer_autoconfirm=False`(이메일 인증 켜짐)는 그대로다.
+- 배포: `vercel link --yes --project etf-signal` → 환경 변수 2개 Production 등록 → `vercel deploy --prod --yes`. 프로젝트 `prj_JhJPxGjeFag4dOejMd59Ay8cTqZo`, 배포 `dpl_777hwNR6ddq4ynXG1dA1UCqKp1Mk`, 빌드 약 1분, 빌드 Node 22.x(저장소 `engines` `>=22.23.2 <23`이 프로젝트 설정 24.x보다 우선). 프로덕션 URL `https://etf-signal-azure.vercel.app`. 배포의 `githubCommitSha`는 `c639da9`.
+- 환경 변수 범위: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`만. `SUPABASE_SERVICE_ROLE_KEY`, Telegram, KRX, Kiwoom 값은 넣지 않았다.
+- 미인증 smoke(인터넷, 프로덕션 별칭): `/signals/kr/2026-10-07`, `/signals/kr/latest`, `/protected` → 307 `/auth/login`, 본문 신호 데이터 0건. `/auth/login` → 200. 프로덕션 별칭은 Vercel 로그인 보호 없이 공개이고 앱 자체 인증이 막는다.
+- 계획 밖 부작용 세 건을 바로잡거나 기록했다.
+  1. `vercel link`가 GitHub 저장소를 자동 연결했다. 의도한 `main` 푸시 배포 트리거이지만 환경 변수보다 먼저 연결돼, 변수 등록 전 푸시가 있었다면 빌드가 실패했을 것이다(실제 푸시 없었음). 이후 모든 `main` 푸시가 배포를 유발한다.
+  2. `.gitignore`에 `.env*`가 추가됐다. 추적 중인 `.env.example`까지 무시하게 되므로 `git checkout`으로 되돌렸다.
+  3. `.env.local`이 생기고 `VERCEL_OIDC_TOKEN`이 들어갔다. 배포에 불필요해 삭제했다.
+- 아직 안 한 것: ② Supabase Redirect URL 추가(사용자), ④ 인증 후 브라우저 UI smoke(사용자 로그인 필요), ⑤ `kr-daily.yml` env 매핑, ⑥ `ETF_WEB_BASE_URL` 설정. ⑤⑥ 전까지 Telegram 출력은 변경 전과 동일하다.
