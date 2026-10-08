@@ -61,3 +61,17 @@
   2. `.gitignore`에 `.env*`가 추가됐다. 추적 중인 `.env.example`까지 무시하게 되므로 `git checkout`으로 되돌렸다.
   3. `.env.local`이 생기고 `VERCEL_OIDC_TOKEN`이 들어갔다. 배포에 불필요해 삭제했다.
 - 아직 안 한 것: ② Supabase Redirect URL 추가(사용자), ④ 인증 후 브라우저 UI smoke(사용자 로그인 필요), ⑤ `kr-daily.yml` env 매핑, ⑥ `ETF_WEB_BASE_URL` 설정. ⑤⑥ 전까지 Telegram 출력은 변경 전과 동일하다.
+
+### Q-17 완료: Telegram 링크 활성화 (사용자 승인)
+
+- 사용자가 인증 후 브라우저 UI를 확인하고 링크 활성화를 승인했다.
+- ⑤ `.github/workflows/kr-daily.yml` job `env:`에 `ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}` 추가, 커밋 `3661504`. YAML 유효성과 변경 범위(주석 1줄·env 1줄, 기존 키 불변)를 확인하고 푸시했다. 변수 미정의 시 빈 값이라 이 커밋만으로는 출력이 바뀌지 않는다.
+- ⑥ `gh variable set ETF_WEB_BASE_URL --env production`으로 `https://etf-signal-azure.vercel.app` 설정. **설정 시각 2026-10-08 16:57:37 KST.** 기존 공개 변수와 같은 `production` environment에 두었다.
+- 발송 없는 렌더링 비교: 활성 시 헤더에 `상세: https://etf-signal-azure.vercel.app/signals/kr/<기준일>` 한 줄만 추가되고 나머지 4줄과 메시지 수(1건)는 동일하다.
+- 운영 워크플로를 수동 dispatch하지 않았다(운영 DB 쓰기·Telegram 발송 부작용). 첫 링크 포함 보고는 다음 KR timer 실행에서 나온다.
+- 실수: 변수 목록을 확인하려고 출력하다 `NEXT_PUBLIC_SUPABASE_URL`·`PUBLISHABLE_KEY` 값이 화면에 찍혔다. 두 값은 브라우저에 공개되도록 설계된 값이라 비밀 노출은 아니지만 불필요한 출력이었다. 이후 변수는 이름만 확인한다.
+
+### 다음 작업
+
+1. 다음 KR timer 실행(10-09 휴장 예정, 10-12 이후)의 결과를 Q-08 방식으로 대조하되, **첫 링크 포함 보고를 함께 확인**한다: Telegram 헤더에 링크가 있고, 링크의 기준일이 보고 기준일과 같고, 링크가 해당 기준일 화면을 연다.
+2. 링크가 붙지 않았다면 워크플로가 변수를 받았는지(`production` environment 변수, 매핑)를 먼저 의심한다.

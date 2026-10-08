@@ -6,16 +6,6 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `APPROVE` Q-17 Vercel 배포와 `ETF_WEB_BASE_URL` 설정 (Linear KOR-65)
-  - 해제: 충족(Q-16 구현 완료 2026-10-08). 승인 요청 대기
-  - 승인 대상: ① Vercel 프로젝트 연결과 배포(환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`만, 서비스 역할 키 제외) ② Supabase Auth Redirect URL에 배포 도메인 추가 ③ **가입 차단**: Supabase Auth의 새 가입 비활성화 또는 RLS 허용목록 전환 — 현재 `/auth/sign-up`이 열려 있고 RLS가 `authenticated using (true)`라 가입한 누구나 신호를 읽을 수 있어, 이를 막지 않으면 배포된 페이지가 사실상 공개다(호스팅 Supabase의 "Allow new users to sign up" 설정값은 저장소에서 확인할 수 없다. ①보다 먼저 확인) ④ **워크플로 env 매핑**: `.github/workflows/kr-daily.yml` job `env:`에 `ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}` 추가 — 이 줄이 없으면 변수를 만들어도 링크가 영원히 붙지 않고 오류도 없다. 변수 미정의 시 `""`로 평가돼 비활성이 유지되므로 변수 설정(⑤)보다 먼저 적용해도 안전하다. M6 관측 중인 운영 파일이라 승인 후에만 변경한다 ⑤ GitHub Actions 변수 `ETF_WEB_BASE_URL` 설정(값은 `https://` 포함 필수)
-  - 진행(2026-10-08, 사용자 승인 후): ③ 가입 차단 완료(사용자 설정, `/auth/v1/settings` 조회로 `disable_signup=True` 확인) → ① Vercel 배포 완료. 프로젝트 `etf-signal`(`prj_JhJPxGjeFag4dOejMd59Ay8cTqZo`), 배포 `dpl_777hwNR6ddq4ynXG1dA1UCqKp1Mk`(Production, Ready, 빌드 Node 22.x), 프로덕션 URL `https://etf-signal-azure.vercel.app`. 환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 2개만 Production에 등록(서비스 역할 키·Telegram·KRX·Kiwoom 없음). 인터넷 미인증 smoke: `/signals/kr/2026-10-07`·`/signals/kr/latest`·`/protected` 모두 307 → `/auth/login`, 본문 신호 데이터 0건, `/auth/login` 200.
-  - 남은 단계: ② Supabase Auth Redirect URL에 `https://etf-signal-azure.vercel.app` 추가(비밀번호 로그인에는 불필요, 비밀번호 재설정 메일 링크용) / ④ 인증 후 브라우저 UI smoke(로그인 → 필수 섹션 → 360px 무가로스크롤 → 전·후 거래일 이동) / ⑤ `kr-daily.yml` env 매핑 / ⑥ `ETF_WEB_BASE_URL` 설정. ⑤⑥은 M6 관측 중인 운영 Telegram 변경이라 UI smoke 통과 뒤 별도 승인.
-  - 부작용 기록: `vercel link`가 GitHub 저장소(`kwh8121/etf`)를 자동 연결했다. 이후 `main` 푸시마다 Vercel Production 빌드가 실행된다(문서만 바뀌어도). 클라우드 루틴 커밋도 배포를 유발한다. 원치 않으면 `vercel git disconnect`로 해제한다.
-  - 순서 권장: ③ 확인·조치 → ① 배포 → ② Redirect URL → Q7 UI Smoke → ④ 매핑 → ⑤ 변수 설정(이 순간부터 Telegram에 링크 줄 추가).
-  - 주의: ⑤를 설정하는 순간부터 Telegram 보고에 링크 줄이 추가된다. 그전까지 출력은 현재와 바이트 단위로 같으므로 M6 관측(7/20 진행 중)에 영향이 없다. 링크를 켠 날부터는 보고 헤더가 한 줄 길어지므로 작업 기록에 켠 시각을 남긴다.
-  - 알려진 한계(수용): 미인증 상태로 Telegram 링크를 열면 로그인 후 원래 기준일이 아니라 최신 기준일로 이동한다(Telegram 인앱 브라우저는 쿠키가 따로라 자주 발생). 당일 링크는 영향이 없고 며칠 지난 메시지만 해당한다. `next` 파라미터 복귀는 후속 과제다.
-  - 완료 조건: Q7 UI Smoke 증거(비인증 redirect, 인증 후 필수 섹션, 360px 무가로스크롤 브라우저 확인)와 배포 ID·URL·commit SHA 기록
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 다음 미국 시장 완전 휴장일 2026-11-26(추수감사절, 가장 이른 기회) 또는 2026-12-25(크리스마스). 실행은 기능 플래그 전환을 포함한 외부 부작용이라 매번 사용자 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
@@ -23,6 +13,7 @@
 - [ ] `WAIT` Q-08 M6 완전 거래일 20일 관측 (KOR-58)
   - 해제: Q-03 게이트 통과 후 각 KR 거래일의 실제 운영 결과 확인
   - 완료 조건: `docs/guides/etf-signal-mvp-m6-observation-runbook.md` 기준 20/20; **확정 누적 7/20**(2026-09-28·09-29·09-30·10-01·10-02·10-06·10-07 기준일, Q-11 및 `docs/jobs/2026-09-30-…`·`2026-10-01-…`·`2026-10-02-…`·`2026-10-06-…`·`2026-10-08-etf-signal-mvp-kr-daily-관측.md` 참조).
+  - **링크 활성화 후 첫 보고 확인(2026-10-08 16:57 KST 이후 첫 timer 실행):** 확정 대조 때 함께 본다. Telegram 헤더에 `상세: https://etf-signal-azure.vercel.app/signals/kr/<기준일>` 한 줄이 있는지, 기준일이 보고 기준일과 같은지, 링크가 해당 기준일 화면을 여는지. 링크가 없으면 `production` environment 변수와 `kr-daily.yml` 매핑을 먼저 확인한다. 상세: Q-17.
   - 휴장(2026-09-24·25 추석 연휴): 거래일이 아니므로 누적 대상이 아니다. 다음 보충은 KRX 빈 응답을 과거일 `NON_TRADING`으로 기록하고 건너뛴다. runner PC가 꺼져 있으면 다음 기동 후 근무시간 09:30 timer가 2026-09-23 수집과 함께 휴장일을 따라잡는다.
   - 휴장: 2026-10-05는 운영 DB에서 `NON_TRADING` 확인. 2026-10-09(금)는 휴장 예정(2026-10-01 사용자 확인, KRX 공식 캘린더 미대조)이며 실제 기록을 확인한 뒤 제외한다. 휴장일은 누적 대상이 아니다.
   - 예상 일정(2026-10-08 기준 추정, 일정 변동 없음): 확정 7/20에서 남은 13개 거래일을 채우면 기준일 2026-10-27(화)이 20번째 거래일이다. 이를 처리하는 KR timer 실행은 2026-10-28(수) 09:30 KST다. 10-09 외 추가 휴장이나 runner PC 장기 정지가 없다는 가정이며, 어긋나면 뒤로 밀린다.
@@ -40,6 +31,15 @@
   - 완료 조건: 별도 구현 계획과 임계값 계약을 정본에 반영
 
 ## 완료
+
+- [x] `DONE` Q-17 Vercel 배포·가입 차단·Telegram 링크 활성화 (Linear KOR-65)
+  - 승인(2026-10-08 사용자): 가입 차단 확인 후 배포, 사용자 브라우저 UI 확인 후 링크 활성화.
+  - 가입 차단: 사용자가 Supabase에서 새 가입을 껐다. `/auth/v1/settings` 조회로 `disable_signup` False → True 확인.
+  - 배포: Vercel 프로젝트 `etf-signal`(`prj_JhJPxGjeFag4dOejMd59Ay8cTqZo`), Production, 빌드 Node 22.x, URL `https://etf-signal-azure.vercel.app`. 환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 2개만. 인터넷 미인증 smoke는 신호 경로 3개 모두 307 → `/auth/login`, 본문 데이터 0건. 사용자가 인증 후 브라우저 UI를 확인했다.
+  - **링크 활성화(M6 증거 경계): 2026-10-08 16:57:37 KST.** `kr-daily.yml` job `env:`에 `ETF_WEB_BASE_URL` 매핑 추가(커밋 `3661504`, 변경은 주석 1줄·env 1줄), `production` environment 변수 `ETF_WEB_BASE_URL=https://etf-signal-azure.vercel.app` 설정. 이 시각 이후 첫 KR timer 실행의 Telegram 보고부터 헤더 끝에 `상세: <url>/signals/kr/<기준일>` 한 줄이 붙는다. 이 한 줄 외 본문·분할은 변경 전과 같다(발송 없는 렌더링 비교로 확인: 활성/비활성 모두 1메시지, 나머지 4줄 동일).
+  - M6 관측 영향: 링크 활성화 전 기준일(2026-09-28~10-07, 확정 7일)의 보고는 링크가 없다. 이후 기준일의 보고는 링크 한 줄이 포함되지만 완전성 판정은 `signal_run`·`signal_daily` 대조라 영향이 없다. **첫 링크 포함 보고 확인은 Q-08 대조 때 함께 한다**(헤더 링크 존재, 링크가 보고 기준일과 일치, 링크 클릭 시 해당 기준일 화면).
+  - 부작용: `vercel link`가 GitHub 저장소를 자동 연결해 이후 `main` 푸시마다 Production 빌드가 실행된다. 푸시 직후 자동 빌드 성공 확인. 원치 않으면 `vercel git disconnect`.
+  - 남은 선택 사항: Supabase Auth Redirect URL에 배포 도메인 추가(비밀번호 재설정 메일 링크용, 비밀번호 로그인에는 불필요). 알려진 한계: 미인증으로 Telegram 링크를 열면 로그인 후 원래 기준일 대신 최신 기준일로 이동.
 
 - [x] `DONE` Q-16 KR 신호 웹 열람 경로 구현 (Q-15 사양서 승인 후, Linear KOR-64)
   - 승인(2026-10-08 사용자): 사양서 `docs/plans/implementation/kr-signal-web-view-design.md` 승인 후 구현 계획 `docs/plans/implementation/kr-signal-web-view-plan.md`로 전개·실행.
