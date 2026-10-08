@@ -108,8 +108,10 @@ function DirectionList({
               <span className="w-5 shrink-0 text-right tabular-nums text-muted-foreground">
                 {row.rank ?? "-"}
               </span>
-              <span className="min-w-0 flex-1 break-keep">{row.name}</span>
-              <span className={`shrink-0 font-medium tabular-nums ${tone}`}>
+              <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere] line-clamp-2">
+                {row.name}
+              </span>
+              <span className={`w-20 shrink-0 text-right font-medium tabular-nums ${tone}`}>
                 {formatDashboardSignalValue(row)}
               </span>
             </li>

@@ -32,6 +32,13 @@ describe("방향 대비 보드 계약", () => {
     expect(board).toContain("md:grid-cols-2");
   });
 
+  it("긴 이름은 2줄까지 줄바꿈하고 값 칼럼 폭을 고정한다", () => {
+    expect(board).toContain("line-clamp-2");
+    expect(board).toContain("[overflow-wrap:anywhere]");
+    expect(board).toContain("w-20");
+    expect(board).not.toContain("break-keep");
+  });
+
   it("해당 조건의 행이 없을 때를 처리한다", () => {
     expect(board).toContain("해당 조건의 신호가 없습니다.");
   });
