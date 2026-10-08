@@ -6,6 +6,20 @@
 
 ## 큐 (위에서부터 실행)
 
+- [ ] `DECIDE` Q-15 KR 신호 웹 열람 경로 사양서 검토
+  - 사양서: `docs/plans/implementation/kr-signal-web-view-design.md`(2026-10-08 작성)
+  - 배경: Telegram 평문 보고의 가독성 문제(섹션 제목이 한두 글자만 다름, 방향 기호·색 없음, 80행이 메시지 2개 이상으로 분할). 웹 대시보드는 M4에서 이미 구현돼 있으나 배포·링크·방향 색이 없다.
+  - 확정된 결정(2026-10-08 사용자): ① Vercel 배포 + Supabase 로그인 ② Telegram은 링크 한 줄만 추가 ③ 기준일 라우트 + 방향 대비 레이아웃(A안) ④ 상승 적색·하락 청색 ⑤ 날짜 피커 대신 전·후 거래일 이동
+  - 선택지: 사양서 승인(→ `writing-plans`로 구현 계획 작성 후 Q-16 구현) / 수정 요청
+- [ ] `AUTO` Q-16 KR 신호 웹 열람 경로 구현 (Q-15 승인 후)
+  - 해제: Q-15 사양서 승인
+  - 실행 방식: `writing-plans`로 구현 계획을 만든 뒤 `subagent-driven-development`로 TDD 실행(활용계획 2.2절)
+  - 완료 조건: 사양서 11절 완료 정의의 배포 외 항목 전부와 `npm test`·`tsc`·`lint`·`build` 통과
+- [ ] `APPROVE` Q-17 Vercel 배포와 `ETF_WEB_BASE_URL` 설정
+  - 해제: Q-16 구현 완료
+  - 승인 대상: ① Vercel 프로젝트 연결과 배포(환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`만, 서비스 역할 키 제외) ② Supabase Auth Redirect URL에 배포 도메인 추가 ③ GitHub Actions 변수 `ETF_WEB_BASE_URL` 설정
+  - 주의: ③을 설정하는 순간부터 Telegram 보고에 링크 줄이 추가된다. 그전까지 출력은 현재와 동일하므로 M6 관측(7/20 진행 중)에 영향이 없다.
+  - 완료 조건: Q7 UI Smoke 증거와 배포 ID·URL·commit SHA 기록
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 다음 미국 시장 완전 휴장일 2026-11-26(추수감사절, 가장 이른 기회) 또는 2026-12-25(크리스마스). 실행은 기능 플래그 전환을 포함한 외부 부작용이라 매번 사용자 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
