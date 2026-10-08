@@ -38,8 +38,8 @@
   - 배포: Vercel 프로젝트 `etf-signal`(`prj_JhJPxGjeFag4dOejMd59Ay8cTqZo`), Production, 빌드 Node 22.x, URL `https://etf-signal-azure.vercel.app`. 환경 변수는 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 2개만. 인터넷 미인증 smoke는 신호 경로 3개 모두 307 → `/auth/login`, 본문 데이터 0건. 사용자가 인증 후 브라우저 UI를 확인했다.
   - **링크 활성화(M6 증거 경계): 2026-10-08 16:57:37 KST.** `kr-daily.yml` job `env:`에 `ETF_WEB_BASE_URL` 매핑 추가(커밋 `3661504`, 변경은 주석 1줄·env 1줄), `production` environment 변수 `ETF_WEB_BASE_URL=https://etf-signal-azure.vercel.app` 설정. 이 시각 이후 첫 KR timer 실행의 Telegram 보고부터 헤더 끝에 `상세: <url>/signals/kr/<기준일>` 한 줄이 붙는다. 이 한 줄 외 본문·분할은 변경 전과 같다(발송 없는 렌더링 비교로 확인: 활성/비활성 모두 1메시지, 나머지 4줄 동일).
   - M6 관측 영향: 링크 활성화 전 기준일(2026-09-28~10-07, 확정 7일)의 보고는 링크가 없다. 이후 기준일의 보고는 링크 한 줄이 포함되지만 완전성 판정은 `signal_run`·`signal_daily` 대조라 영향이 없다. **첫 링크 포함 보고 확인은 Q-08 대조 때 함께 한다**(헤더 링크 존재, 링크가 보고 기준일과 일치, 링크 클릭 시 해당 기준일 화면).
-  - 부작용: `vercel link`가 GitHub 저장소를 자동 연결해 이후 `main` 푸시마다 Production 빌드가 실행된다. 푸시 직후 자동 빌드 성공 확인. 원치 않으면 `vercel git disconnect`.
-  - 남은 선택 사항: Supabase Auth Redirect URL에 배포 도메인 추가(비밀번호 재설정 메일 링크용, 비밀번호 로그인에는 불필요). 알려진 한계: 미인증으로 Telegram 링크를 열면 로그인 후 원래 기준일 대신 최신 기준일로 이동.
+  - 자동 배포(2026-10-08 사용자 결정: **유지**): `vercel link`가 GitHub 저장소를 자동 연결해 이후 `main` 푸시마다 Production 빌드가 실행된다(문서만 바뀌어도, 클라우드 루틴 커밋 포함). 최근 푸시 `3661504`·`f85b638`·`72c040b`가 각각 Production READY임을 Vercel API 조회로 확인했다. 해제하려면 `vercel git disconnect`.
+  - Supabase Auth Redirect URL: 사용자가 배포 도메인을 추가하고(2026-10-08) 비밀번호를 변경해 재설정 경로를 직접 확인했다. 저장소에서는 Redirect URL 설정값을 읽을 수 없어 사용자 보고 기준이다. 알려진 한계: 미인증으로 Telegram 링크를 열면 로그인 후 원래 기준일 대신 최신 기준일로 이동.
 
 - [x] `DONE` Q-16 KR 신호 웹 열람 경로 구현 (Q-15 사양서 승인 후, Linear KOR-64)
   - 승인(2026-10-08 사용자): 사양서 `docs/plans/implementation/kr-signal-web-view-design.md` 승인 후 구현 계획 `docs/plans/implementation/kr-signal-web-view-plan.md`로 전개·실행.

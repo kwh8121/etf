@@ -83,3 +83,10 @@
 - 원본은 보존됨: 위 세션의 `messages.jsonl`에 원문이 남아 있으나 검색으로는 회수되지 않는다. 검색되는 ETF 관련 항목은 `trajectories/ETF 신호 MVP 기록 저장_20261008055415.md`(낡은 "KOR-65 Todo" 포함, 다음 작업 없음)와 자동 캡처된 `trajectories/Q-17 완료 기록_20261008055506.md`(KOR-65 Done 본문, 링크 활성화 시각 포함)이다. `experiences/etf_signal_mvp_storage.md`는 버전 4에서 내용 없는 문장으로 덮어써졌고 `trajectories/ETF 신호 MVP 저장_20261008055415.md`는 본문이 비었으며 `case_name`이 `fix_playwright_browser`로 오분류돼 무관한 항목과 링크됐다.
 - 영향: 낮음. 정본은 이 저장소(`docs/plans/NEXT.md`, 이 파일)와 Linear이고 세션 시작 절차가 정본 문서를 먼저 읽는다. OpenViking은 요약 보조다.
 - 재시도 조건: 추출기 컨텍스트 문제(모델의 컨텍스트 한도 또는 추출 시 싣는 기존 메모리 양)가 해결된 뒤에만 다시 `remember`한다. 저장 후에는 문자열 검색이 아니라 세션의 `history/archive_001/` 아래 `.done`과 `memory_diff.json` 존재, 또는 `.failed.json` 부재로 성공을 판정한다(추출은 요약이라 리터럴이 사라질 수 있다). 서버 설정(`~/.openviking/ov.conf`)은 변경하지 않았다.
+
+### Q-17 후속 정리: Redirect URL · 자동 배포 유지 (사용자 보고)
+
+- Supabase Auth Redirect URL: 사용자가 `https://etf-signal-azure.vercel.app`을 추가하고 비밀번호를 변경했다. 비밀번호 재설정 경로가 배포 도메인에서 동작한 것으로 본다. 설정값은 저장소에서 읽을 수 없어 사용자 보고를 근거로 기록한다.
+- Vercel 자동 배포: 사용자가 `main` 푸시 자동 배포를 **유지**하기로 했다. 최근 푸시 세 건(`3661504`, `f85b638`, `72c040b`)이 Production READY로 배포된 것을 Vercel API 조회로 확인했다. 해제 방법은 `vercel git disconnect`.
+- 이로써 Q-17의 선택 사항 두 가지가 모두 정리됐다. 남은 열린 항목은 없다.
+- 실수 기록: 이 정리를 처음 반영할 때 `NEXT.md`의 원문을 기억에 의존해 교체하다 문자열 불일치로 편집이 실패했다. 실제 줄을 읽고 다시 적용했다.
