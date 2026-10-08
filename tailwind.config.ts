@@ -52,6 +52,10 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        signal: {
+          gain: "hsl(var(--signal-gain))",
+          loss: "hsl(var(--signal-loss))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
