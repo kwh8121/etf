@@ -18,3 +18,8 @@ export function resolveWebBaseUrl(env: Environment = process.env): string | null
 export function buildKrSignalUrl(baseUrl: string, basDd: string): string {
   return `${stripTrailingSlashes(baseUrl)}/signals/kr/${basDd}`;
 }
+
+export function resolveKrSignalWebUrl(basDd: string, env: Environment = process.env): string | undefined {
+  const baseUrl = resolveWebBaseUrl(env);
+  return baseUrl === null ? undefined : buildKrSignalUrl(baseUrl, basDd);
+}

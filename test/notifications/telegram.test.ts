@@ -88,8 +88,18 @@ describe("Telegram reports", () => {
       sections: [{ title: "일간 상승", lines: ["1. ETF +1.00%"] }],
     };
 
-    expect(formatTelegramReport(base)).toEqual(formatTelegramReport({ ...base, webUrl: undefined }));
-    expect(formatTelegramReport(base)[0]).not.toContain("상세:");
+    const legacyHeader = [
+      "[ETF 신호][KR][COMPLETED] 2026-10-07",
+      "원천: KRX etf_bydd_trd",
+      "실행: run-1",
+      "5거래일 값은 KRX 종가 기준 가격수익률이며 분배금·기업행동 조정 총수익률이 아닙니다.",
+    ].join("\n");
+    const expected = [
+      `${legacyHeader}\n\n일간 상승\n1. ETF +1.00%\n\n자동매매 또는 매수·매도 추천이 아닌 탐색 결과입니다.`,
+    ];
+
+    expect(formatTelegramReport(base)).toEqual(expected);
+    expect(formatTelegramReport({ ...base, webUrl: undefined })).toEqual(expected);
   });
 
   it("webUrl이 있으면 모든 분할 조각의 헤더에 링크가 한 번씩 들어간다", () => {

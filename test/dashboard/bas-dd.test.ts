@@ -21,6 +21,11 @@ describe("기준일 정규화", () => {
     expect(normalizeBasDd("2026-00-10")).toBeNull();
   });
 
+  it("윤년의 2월 29일만 유효하다", () => {
+    expect(normalizeBasDd("2028-02-29")).toBe("2028-02-29");
+    expect(normalizeBasDd("2026-02-29")).toBeNull();
+  });
+
   it("요일을 붙인 표시 라벨을 만든다", () => {
     expect(formatBasDdLabel("2026-10-07")).toBe("2026-10-07 (수)");
     expect(formatBasDdLabel("2026-10-09")).toBe("2026-10-09 (금)");

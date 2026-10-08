@@ -12,7 +12,7 @@ export default async function ProtectedPage() {
   const { data: claims, error: claimsError } = await supabase.auth.getClaims();
   if (claimsError || !claims?.claims) redirect("/auth/login");
 
-  const { data: run } = await supabase
+  const { data: run, error: runError } = await supabase
     .from("signal_run")
     .select("bas_dd")
     .eq("market", "KR")
@@ -22,6 +22,16 @@ export default async function ProtectedPage() {
     .order("completed_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (runError) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-sm text-destructive">
+          신호 결과를 불러오지 못했습니다. 잠시 후 다시 시도하세요.
+        </CardContent>
+      </Card>
+    );
+  }
 
   const latestBasDd = (run as { bas_dd: string | null } | null)?.bas_dd;
   if (!latestBasDd) {

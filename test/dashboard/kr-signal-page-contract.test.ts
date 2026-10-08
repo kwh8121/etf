@@ -7,8 +7,16 @@ const signalPage = readFileSync("app/signals/kr/[basDd]/page.tsx", "utf8");
 describe("기준일 신호 라우트 계약", () => {
   it("현재 KR 신호 전략으로 실행을 한정하고 재실행 시 최신 건을 고른다", () => {
     expect(signalPage).toContain('.eq("strategy_version", "m3-price-movers-v1")');
-    expect(signalPage).toContain('.order("completed_at", { ascending: false })');
+    expect(signalPage).toContain('.order("completed_at", { ascending: false, nullsFirst: false })');
     expect(signalPage).toContain('.order("id", { ascending: false })');
+  });
+
+  it("인증 확인이 첫 DB 조회보다 앞선다", () => {
+    const claimsAt = signalPage.indexOf("getClaims");
+    const queryAt = signalPage.indexOf('.from("signal_run")');
+    expect(claimsAt).not.toBe(-1);
+    expect(queryAt).not.toBe(-1);
+    expect(claimsAt).toBeLessThan(queryAt);
   });
 
   it("경로의 기준일로 실행을 조회한다", () => {
@@ -47,5 +55,6 @@ describe("기준일 신호 라우트 계약", () => {
   it("서비스 역할 클라이언트를 UI 경로에 만들지 않는다", () => {
     expect(signalPage).not.toContain("service-role");
     expect(signalPage).not.toContain("SERVICE_ROLE");
+    expect(signalPage).not.toContain("createServiceRoleClient");
   });
 });

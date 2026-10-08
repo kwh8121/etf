@@ -24,7 +24,7 @@ describe("KR signal dashboard view", () => {
 });
 
 describe("KR 신호 유형 분류", () => {
-  it("고정 8유형의 기간과 방향을 분류한다", () => {
+  it("기간·방향 신호 4유형을 분류한다", () => {
     expect(classifyKrSignalType("daily_price_gain")).toEqual({ period: "daily", direction: "gain" });
     expect(classifyKrSignalType("daily_price_loss")).toEqual({ period: "daily", direction: "loss" });
     expect(classifyKrSignalType("five_day_price_gain")).toEqual({ period: "five_day", direction: "gain" });

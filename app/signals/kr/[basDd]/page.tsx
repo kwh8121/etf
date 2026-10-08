@@ -65,7 +65,7 @@ export default async function KrSignalDatePage({
     .eq("market", "KR")
     .eq("strategy_version", "m3-price-movers-v1")
     .eq("bas_dd", basDd)
-    .order("completed_at", { ascending: false })
+    .order("completed_at", { ascending: false, nullsFirst: false })
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -154,7 +154,9 @@ export default async function KrSignalDatePage({
           상태 {latestRun?.status ?? "실행 없음"} · 완료 시각{" "}
           {latestRun?.completed_at ?? "미정"}
         </p>
-        <p className="text-sm text-muted-foreground">데이터 품질: {qualityMessage}</p>
+        {latestRun && !runError && !signalsError && (
+          <p className="text-sm text-muted-foreground">데이터 품질: {qualityMessage}</p>
+        )}
         <nav className="flex items-center gap-4 text-sm">
           {previousBasDd ? (
             <Link className="underline" href={`/signals/kr/${previousBasDd}`}>

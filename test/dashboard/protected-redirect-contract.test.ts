@@ -16,6 +16,18 @@ describe("보호 경로 리다이렉트 계약", () => {
     expect(protectedPage).toContain('redirect("/auth/login")');
   });
 
+  it("인증 확인이 첫 DB 조회보다 앞선다", () => {
+    const claimsAt = protectedPage.indexOf("getClaims");
+    const queryAt = protectedPage.indexOf('.from("signal_run")');
+    expect(claimsAt).not.toBe(-1);
+    expect(queryAt).not.toBe(-1);
+    expect(claimsAt).toBeLessThan(queryAt);
+  });
+
+  it("조회 오류와 실행 없음을 구분해 안내한다", () => {
+    expect(protectedPage).toContain("신호 결과를 불러오지 못했습니다. 잠시 후 다시 시도하세요.");
+  });
+
   it("실행이 하나도 없을 때의 안내를 유지한다", () => {
     expect(protectedPage).toContain("아직 생성된 국내 신호 실행이 없습니다.");
   });
