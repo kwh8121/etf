@@ -23,8 +23,10 @@
 
   (클라우드 루틴이 새 완전 거래일 후보를 발견하면 이 아래에 `- 기준일 / run id / 감지 시각`을 추가한다. 확정 후에는 위 확정 누적에 반영하고 이 목록에서 제거한다.)
 
-  - 기준일 2026-10-06 / run `37552295623`(https://github.com/kwh8121/etf/actions/runs/37552295623) / 감지 2026-10-07T00:46:36Z(클라우드 루틴) / catchup: completed=["20260922","20260923","20260928","20260929","20260930","20261001","20261002","20261006"] nonTrading=["20260924","20260925","20261005"] blocked=null / report: reported=true, reportRunId=181dab56-ac07-58d9-a04b-3925fcf1c82e
-  - 기준일 2026-10-07 / run `37708092789`(https://github.com/kwh8121/etf/actions/runs/37708092789) / 감지 2026-10-08T00:47:10Z(클라우드 루틴) / catchup: completed=["20260922","20260923","20260928","20260929","20260930","20261001","20261002","20261006","20261007"] nonTrading=["20260924","20260925","20261005"] blocked=null / report: reported=true, reportRunId=97182674-1702-594f-ad3c-bb20e4bc26ec
+  - 기준일 2026-10-06 / KR daily run `37552295623`(2026-10-07 09:30 KST) / `kr-verify` run `37552563962` 성공 / 로컬 `verify:kr-candidate` `ok:true`(80행, 고정 8유형 각 10건, `telegram_reported_at` 2026-10-07 09:33 KST) — **Telegram 실수신 사용자 확인 대기**
+  - 기준일 2026-10-07 / KR daily run `37708092789`(2026-10-08 09:30 KST) / `kr-verify` run `37708430380` 성공 / 로컬 `verify:kr-candidate` `ok:true`(81행, 고정 8유형 각 10건 + `new_listing:raw` 1건, `telegram_reported_at` 2026-10-08 09:33 KST) — **Telegram 실수신 사용자 확인 대기**
+  - 클라우드 루틴 감지: 2026-10-07T00:46:36Z·2026-10-08T00:47:10Z, `blocked=null`, `nonTrading=[20260924,20260925,20261005]`, 보고 runId는 위 DB 대조 run과 일치
+  - 상세: `docs/jobs/2026-10-08-etf-signal-mvp-kr-daily-관측.md`
 - [ ] `WAIT` Q-09 M5-A 순설정·환매 추정 설계·착수
   - 결정(2026-09-22): A안. M6의 완전 거래일 20일 관측 완료 뒤 근거를 모아 설계·착수
   - 해제: Q-08 완료 및 M6 관측 근거·수치 계약 확정
