@@ -77,8 +77,13 @@ vi.mock("../../lib/notifications/telegram.ts", () => ({
 vi.mock("../../lib/config/server-env.ts", () => ({
   getRequiredServerSecret: vi.fn(),
 }));
+vi.mock("../../lib/signals/us-etf-signal-repository.ts", () => ({
+  markUsTelegramReported: vi.fn(),
+  US_ETF_STRATEGY_VERSION: "m5-us-etf-movers-p1-v1",
+}));
 
-import { formatExperimentalTelegramReport } from "../../lib/notifications/telegram";
+import { formatExperimentalTelegramReport, sendTelegramMessages } from "../../lib/notifications/telegram";
+import { markUsTelegramReported } from "../../lib/signals/us-etf-signal-repository.ts";
 import { reportLatestUsEtfMovers } from "../../scripts/report-us-movers";
 
 describe("US P1 Telegram reporting", () => {
@@ -107,6 +112,60 @@ describe("US P1 Telegram reporting", () => {
       "m5-us-etf-movers-p1-v1",
     );
     expect(rowRequests).toHaveLength(4);
+  });
+
+  it("records the Telegram report marker only after a real send succeeds", async () => {
+    runQuery.maybeSingle.mockResolvedValue({
+      data: { id: "us-run", observed_at: "2026-09-21T14:00:00.000Z", status: "COMPLETED" },
+      error: null,
+    });
+    await reportLatestUsEtfMovers(false, "us-run");
+    expect(markUsTelegramReported).not.toHaveBeenCalled();
+
+    await reportLatestUsEtfMovers(true, "us-run");
+    expect(markUsTelegramReported).toHaveBeenCalledTimes(1);
+    expect(markUsTelegramReported).toHaveBeenCalledWith(expect.anything(), "us-run");
+  });
+
+  it("does not send again for a run that already has a report marker", async () => {
+    runQuery.maybeSingle.mockResolvedValue({
+      data: {
+        id: "us-run",
+        observed_at: "2026-09-21T14:00:00.000Z",
+        status: "COMPLETED",
+        notes: { telegram_reported_at: "2026-09-21T14:01:00.000Z" },
+      },
+      error: null,
+    });
+    await expect(reportLatestUsEtfMovers(true, "us-run")).resolves.toEqual({
+      runId: "us-run",
+      messageCount: 0,
+      alreadyReported: true,
+    });
+    expect(sendTelegramMessages).not.toHaveBeenCalled();
+    expect(markUsTelegramReported).not.toHaveBeenCalled();
+  });
+
+  it("reports a marker write failure after a successful send as a distinct error", async () => {
+    runQuery.maybeSingle.mockResolvedValue({
+      data: { id: "us-run", observed_at: "2026-09-21T14:00:00.000Z", status: "COMPLETED" },
+      error: null,
+    });
+    vi.mocked(markUsTelegramReported).mockRejectedValueOnce(new Error("db down"));
+    await expect(reportLatestUsEtfMovers(true, "us-run")).rejects.toThrow(
+      "US report sent but Telegram marker write failed for run us-run",
+    );
+    expect(sendTelegramMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not record the marker when sending fails", async () => {
+    runQuery.maybeSingle.mockResolvedValue({
+      data: { id: "us-run", observed_at: "2026-09-21T14:00:00.000Z", status: "COMPLETED" },
+      error: null,
+    });
+    vi.mocked(sendTelegramMessages).mockRejectedValueOnce(new Error("telegram down"));
+    await expect(reportLatestUsEtfMovers(true, "us-run")).rejects.toThrow("telegram down");
+    expect(markUsTelegramReported).not.toHaveBeenCalled();
   });
 
   it("uses the newly created run identity when the workflow supplies it", async () => {

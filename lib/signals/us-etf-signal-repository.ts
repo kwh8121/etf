@@ -8,7 +8,14 @@ import {
 } from "./us-etf-movers.ts";
 
 const SOURCE_SNAPSHOT_BUCKET = "market-data-source-snapshots";
-const STRATEGY_VERSION = "m5-us-etf-movers-p1-v1";
+export const US_ETF_STRATEGY_VERSION = "m5-us-etf-movers-p1-v1";
+const STRATEGY_VERSION = US_ETF_STRATEGY_VERSION;
+export const US_ETF_SIGNAL_TYPES = [
+  "daily_price_gain",
+  "daily_price_loss",
+  "five_day_price_gain",
+  "five_day_price_loss",
+] as const;
 const TRANSFORM_VERSION = "m5-2026-09-21";
 
 export interface UsEtfMoverRepository {
@@ -226,6 +233,30 @@ export class SupabaseUsEtfMoverRepository implements UsEtfMoverRepository {
     );
     throwIfError(error, "upsert US signals");
   }
+}
+
+// US 보고 완료 표식. 국내 P0 실행 경로를 import하지 않으려고 KR의 markTelegramReported와 같은 동작을 따로 둔다.
+export async function markUsTelegramReported(
+  client: SupabaseClient,
+  runId: string,
+): Promise<void> {
+  const { data, error } = await client
+    .from("signal_run")
+    .select("notes")
+    .eq("id", runId)
+    .single();
+  throwIfError(error, "read US signal run notes");
+  const notes: unknown = data?.notes;
+  const { error: updateError } = await client
+    .from("signal_run")
+    .update({
+      notes: {
+        ...(isRecord(notes) ? notes : {}),
+        telegram_reported_at: new Date().toISOString(),
+      },
+    })
+    .eq("id", runId);
+  throwIfError(updateError, "write US Telegram report marker");
 }
 
 function toSignalRows(

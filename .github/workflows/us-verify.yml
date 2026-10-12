@@ -1,0 +1,67 @@
+name: US ETF movers verification
+
+on:
+  # US ETF movers가 성공하면 직후에 운영 DB를 읽기 전용으로 대조한다.
+  # ENABLE_US_ETF_P1이 true가 아니면 US 실행은 DISABLED로 끝나므로 대조 단계를 건너뛴다.
+  workflow_run:
+    workflows: ["US ETF movers (P1 experimental)"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: us-verify-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # IP 제한이 있는 외부 API를 호출하지 않으므로 GitHub 호스팅 runner에서 실행한다.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # US 실행 workflow(us-etf-movers.yml)와 같은 environment여야 ENABLE_US_ETF_P1 값이 같다.
+    # Q-21 운영 전환 때 두 workflow를 함께 production으로 바꾼다. Supabase는 같은 운영 프로젝트를 공유한다.
+    environment: staging
+    env:
+      ENABLE_US_ETF_P1: ${{ vars.ENABLE_US_ETF_P1 }}
+      # 읽기 전용 대조에 필요한 자격 증명만 전달한다.
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: US P1 비활성 안내
+        if: env.ENABLE_US_ETF_P1 != 'true'
+        run: echo "## US 운영 DB 대조 건너뜀 (ENABLE_US_ETF_P1이 true 아님)" >> "$GITHUB_STEP_SUMMARY"
+      - if: env.ENABLE_US_ETF_P1 == 'true'
+        uses: actions/checkout@v4
+      - if: env.ENABLE_US_ETF_P1 == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - if: env.ENABLE_US_ETF_P1 == 'true'
+        run: npm ci
+      - name: 최근 US 실행 운영 DB 대조 (읽기 전용)
+        if: env.ENABLE_US_ETF_P1 == 'true'
+        run: |
+          set +e
+          npm run verify:us-candidate --silent -- latest > result.json
+          status=$?
+          set -e
+          {
+            echo "## US ETF movers 운영 DB 대조 (읽기 전용)"
+            if [ -s result.json ]; then
+              jq -r '
+                "- 판정: " + (if .ok then "**통과**" else "**실패**" end),
+                "- run: `\(.runId)` / 한국 관측일: `\(.observedKstDate)`",
+                "- signal_run 상태: `\(.status)`, Telegram 표식: `\(.telegramReportedAt)`",
+                "- 유형별 신호 수: `\(.typeCounts)`",
+                "- 같은 관측일 COMPLETED run \(.sameDayRunCount)건, Telegram 표식 \(.sameDayReportedMarkerCount)건",
+                "- 사유: " + (if (.reasons | length) == 0 then "없음" else (.reasons | join("; ")) end)
+              ' result.json
+            else
+              echo "- 결과 없음: 스크립트가 오류로 종료했습니다. 이 job의 로그를 확인하세요."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status

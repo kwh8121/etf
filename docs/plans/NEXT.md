@@ -10,11 +10,12 @@
   - 배경: US는 `ENABLE_US_ETF_P1=false`(staging)로 꺼져 있고 운영 DB 대조 수단이 없다. KR과 달리 시장일이 없어(`bas_dd`·`market_date`=null) 관측 단위는 `signal_run` 1건이다. Telegram 보고 표식(`notes.telegram_reported_at`)도 US에는 없다.
   - 구현 범위(코드만, 외부 부작용 없음): ① `report:us-movers`가 발송 성공 뒤 `notes.telegram_reported_at`을 기록(KR `markKrReportSent`와 같은 방식). ② `verify:us-candidate -- <runId|latest>` 읽기 전용 대조 스크립트(COMPLETED, 4유형 상위 10건 순위 1..10 연속, 표식, PENDING 잔존 감지). ③ `.github/workflows/us-verify.yml`(US 워크플로 성공 직후 자동 실행, 플래그가 `true`가 아니면 대조 단계를 건너뜀). ④ 계약 테스트.
   - 완료 조건: `npm test`·`tsc`·`lint`·`build` 통과, 변경은 커밋·푸시.
+  - 구현 결과(2026-10-12): 위 ①~④ 구현, 독립 리뷰 반영(us-verify environment를 US 실행과 같게 맞춤, 이미 보고한 run 재발송 가드, 표식 기록 실패 별도 오류, 순위는 양수 오름차순만 확인, 상수 공유). 알려진 한계: 표식 도입 전 run(2026-09-23 등)은 `telegram_reported_at`이 없어 대조가 실패한다(정상). 표식 기록만 실패해 남은 run은 자동 복구 경로가 없고 수동 확인이 필요하다. 같은 한국 날짜에 서로 다른 미국 거래일 보고가 두 번 나가면 중복 발송 의심으로 잡힌다(PC 장기 정지 뒤 따라잡기+수동 실행 시).
 - [ ] `DECIDE` Q-19 US 관측 기준·운영 전환 조건 결정
   - 결정 항목: ① "US 완전 관측일"의 정의(권장: 한국 시간 하루에 `COMPLETED`·보고 표식 있는 run 1건 이상이고 verify 통과), ② 누적 목표 일수(권장: KR과 같은 20일), ③ 운영 Telegram chat(권장: KR과 같은 production chat, 제목의 `P1 실험` 문구 유지), ④ 웹 열람 키(권장: run 기준 최신 + 한국 관측일 라우트 `/signals/us/<YYYY-MM-DD>`).
 - [ ] `AUTO` Q-20 US 신호 웹 열람 경로 사양서·구현 (Q-19 ④ 권장안을 가정하고 사양서부터, KR Q-15·Q-16과 같은 절차)
   - 절차: 사양서 `docs/plans/implementation/us-signal-web-view-design.md` 작성 → 사용자 검토가 필요한 항목은 `DECIDE`로 분리 → 구현 계획 → TDD 구현. 링크 활성화(운영 변수)는 Q-21에서 한다.
-- [ ] `APPROVE` Q-21 US 운영 전환 (승인 대상: GitHub `production` environment 변수·Secret 변경, `us-etf-movers.yml`의 `environment: staging`→`production`, 첫 운영 실행)
+- [ ] `APPROVE` Q-21 US 운영 전환 (승인 대상: GitHub `production` environment 변수·Secret 변경, `us-etf-movers.yml`과 `us-verify.yml`의 `environment: staging`→`production`(둘은 같은 environment여야 하며 계약 테스트가 강제), 첫 운영 실행)
   - 해제: Q-18·Q-19 완료. 전환 후 `ENABLE_US_ETF_P1=true`와 `ETF_WEB_BASE_URL`(링크는 Q-20 배포 뒤)을 설정하고 첫 timer 실행을 Q-18 방식으로 대조한다. staging 플래그는 `false` 유지.
 - [ ] `WAIT` Q-22 US 완전 관측일 누적 (Q-19 기준, 목표 일수 확정 후)
   - 해제: Q-21 완료. 누적은 `verify:us-candidate`와 사용자 Telegram 실수신 확인 후에만 확정으로 승격한다.

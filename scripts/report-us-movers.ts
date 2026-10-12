@@ -11,6 +11,10 @@ import {
   US_ETF_P1_DISCLOSURE,
   isUsEtfP1Enabled,
 } from "../lib/signals/us-etf-movers.ts";
+import {
+  US_ETF_STRATEGY_VERSION,
+  markUsTelegramReported,
+} from "../lib/signals/us-etf-signal-repository.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 const US_REPORT_LIMIT_PER_TYPE = 10;
@@ -25,9 +29,9 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
   const client = createServiceRoleClient();
   let query = client
     .from("signal_run")
-    .select("id,observed_at,status")
+    .select("id,observed_at,status,notes")
     .eq("market", "US")
-    .eq("strategy_version", "m5-us-etf-movers-p1-v1")
+    .eq("strategy_version", US_ETF_STRATEGY_VERSION)
     .eq("status", "COMPLETED");
   query = runId
     ? query.eq("id", runId)
@@ -41,6 +45,9 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
       `Supabase read latest US signal run failed: ${runError.message}`,
     );
   if (!run) return { runId: null, messageCount: 0 };
+  // 이미 발송한 run은 다시 보내지 않는다(수동 재실행·표식 복구 뒤 재호출 방지).
+  if (send && typeof run.notes?.telegram_reported_at === "string")
+    return { runId: run.id, messageCount: 0, alreadyReported: true };
 
   const sections = await Promise.all(
     US_REPORT_SECTIONS.map(
@@ -90,12 +97,21 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
     ),
     disclosure: US_ETF_P1_DISCLOSURE,
   });
-  if (send)
+  if (send) {
     await sendTelegramMessages({
       token: getRequiredServerSecret("TELEGRAM_BOT_TOKEN"),
       chatId: getRequiredServerSecret("TELEGRAM_CHAT_ID"),
       messages,
     });
+    try {
+      await markUsTelegramReported(client, run.id);
+    } catch (error) {
+      // Telegram 발송은 이미 성공했다. 표식만 실패한 경우를 발송 실패와 구분한다.
+      throw new Error(
+        `US report sent but Telegram marker write failed for run ${run.id}: ${error instanceof Error ? error.message : "Unknown failure"}`,
+      );
+    }
+  }
   return { runId: run.id, messageCount: messages.length };
 }
 
