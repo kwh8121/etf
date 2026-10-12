@@ -37,6 +37,27 @@ describe("Telegram reports", () => {
     expect(longReport.every((message) => message.length <= 4096)).toBe(true);
   });
 
+  it("adds the US detail link to every split message only when a web URL is given", () => {
+    const sections = [
+      { title: "일간 상승", lines: Array.from({ length: 10 }, (_, i) => `${i + 1}. ETF ${i} · 1.23%`) },
+    ];
+    const base = { title: "미국 ETF 등락 (P1 실험)", observedAt: "2026-10-12T01:00:00.000Z", runId: "us-run", sections, disclosure: "실험 항목" };
+    const without = formatExperimentalTelegramReport(base);
+    const withUrl = formatExperimentalTelegramReport({ ...base, webUrl: "https://etf.example.app/signals/us/2026-10-12" });
+
+    expect(without.join("\n")).not.toContain("상세:");
+    expect(withUrl).toHaveLength(1);
+    expect(withUrl[0].match(/상세: /g)).toHaveLength(1);
+    expect(withUrl[0]).toContain("상세: https://etf.example.app/signals/us/2026-10-12");
+    // 링크 줄을 빼면 기존 출력과 같다.
+    expect(withUrl[0].replace(/\n상세: [^\n]+/, "")).toBe(without[0]);
+
+    const longSections = sections.map((s) => ({ ...s, lines: s.lines.map((l) => `${l} ${"긴종목명".repeat(200)}`) }));
+    const split = formatExperimentalTelegramReport({ ...base, sections: longSections, webUrl: "https://etf.example.app/signals/us/2026-10-12" });
+    expect(split.length).toBeGreaterThan(1);
+    expect(split.every((m) => m.includes("상세: https://etf.example.app/signals/us/2026-10-12") && m.length <= 4096)).toBe(true);
+  });
+
   it("preserves market, date, source, run, and status metadata in every split message", () => {
     const messages = formatTelegramReport(
       {

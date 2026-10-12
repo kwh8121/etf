@@ -48,7 +48,7 @@ export function KrSignalBoard({ rows }: { rows: readonly DashboardSignalRow[] })
   );
 }
 
-function SegmentedGroup({
+export function SegmentedGroup({
   label,
   options,
   value,
@@ -80,12 +80,15 @@ function SegmentedGroup({
   );
 }
 
-function DirectionList({
+export function DirectionList({
   direction,
   rows,
+  totalCount,
 }: {
   direction: SignalDirection;
   rows: readonly DashboardSignalRow[];
+  /** 있으면 제목 옆에 "상위 N건 / 전체 M건"을 표시한다(US처럼 일부만 보여줄 때). */
+  totalCount?: number;
 }) {
   const isGain = direction === "gain";
   const tone = isGain ? "text-signal-gain" : "text-signal-loss";
@@ -95,6 +98,11 @@ function DirectionList({
       <h3 className={`mb-2 flex items-center gap-1.5 text-sm font-semibold ${tone}`}>
         <span aria-hidden="true">{isGain ? "▲" : "▼"}</span>
         {isGain ? "상승" : "하락"}
+        {totalCount !== undefined && (
+          <span className="text-xs font-normal text-muted-foreground">
+            상위 {rows.length}건 / 전체 {totalCount}건
+          </span>
+        )}
       </h3>
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">해당 조건의 신호가 없습니다.</p>

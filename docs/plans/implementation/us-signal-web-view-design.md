@@ -61,7 +61,7 @@ Telegram의 US 보고를 받은 뒤 링크를 눌러, 보고와 같은 상위 10
 
 `obsDate`는 `YYYY-MM-DD`를 정본으로 하고 `YYYYMMDD`도 정규화한다. 형식 오류·실재하지 않는 날짜는 `notFound()`. KR의 정규화 함수(`lib/dashboard/bas-dd.ts`)를 재사용할 수 있는지 구현 계획에서 확인한다.
 
-같은 관측일에 `COMPLETED` run이 여러 건이면 `completed_at` 내림차순, `id` 내림차순의 첫 건을 쓴다(KR과 같은 규칙). 이 경우 Telegram 링크는 같은 날짜를 가리키므로 화면은 마지막 run을 보여준다. 화면 헤더에 사용한 run의 관측 시각을 표시해 어떤 스냅샷인지 드러낸다.
+같은 관측일에 `COMPLETED` run이 여러 건이면 `observed_at` 내림차순, `id` 내림차순의 첫 건을 쓴다. 보고(`report-us-movers`)와 `latest`가 쓰는 기준과 같아야 Telegram 본문과 같은 run을 보여주므로 KR의 `completed_at` 규칙과 다르다(2026-10-12 리뷰 반영). 이 경우 Telegram 링크는 같은 날짜를 가리키므로 화면은 마지막 run을 보여준다. 화면 헤더에 사용한 run의 관측 시각을 표시해 어떤 스냅샷인지 드러낸다.
 
 ### 5.2 조회
 
@@ -71,7 +71,7 @@ Telegram의 US 보고를 받은 뒤 링크를 눌러, 보고와 같은 상위 10
 2. 4유형 각각 `signal_daily`를 `run_id`·`signal_type`으로 조회해 `rank, code` 순 상위 10건과 `count: 'exact'`를 가져온다. 전체 행을 가져오지 않는다.
 3. 전·후 관측일: `observed_at`이 구간보다 앞/뒤인 `COMPLETED` run 각 1건의 한국 날짜.
 
-RLS는 `authenticated` SELECT를 쓴다. 한 유형의 조회가 실패하면 그 유형만 오류 문구를 보이고 나머지는 유지한다.
+RLS는 `authenticated` SELECT를 쓴다. 한 유형의 조회가 실패하면 그 유형의 방향 블록만 오류 문구를 보이고 나머지는 유지한다. 전·후 관측일 조회 실패는 본문을 가리지 않고 링크만 비활성으로 둔다.
 
 ## 6. 화면 사양
 

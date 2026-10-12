@@ -2,20 +2,14 @@ import { createHash } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { US_ETF_STRATEGY_VERSION } from "./us-etf-constants.ts";
 import {
   US_ETF_P1_DISCLOSURE,
   type UsEtfMoverSignals,
 } from "./us-etf-movers.ts";
 
 const SOURCE_SNAPSHOT_BUCKET = "market-data-source-snapshots";
-export const US_ETF_STRATEGY_VERSION = "m5-us-etf-movers-p1-v1";
 const STRATEGY_VERSION = US_ETF_STRATEGY_VERSION;
-export const US_ETF_SIGNAL_TYPES = [
-  "daily_price_gain",
-  "daily_price_loss",
-  "five_day_price_gain",
-  "five_day_price_loss",
-] as const;
 const TRANSFORM_VERSION = "m5-2026-09-21";
 
 export interface UsEtfMoverRepository {

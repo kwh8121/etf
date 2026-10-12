@@ -50,10 +50,12 @@ export function formatExperimentalTelegramReport(
     runId: string;
     sections: readonly TelegramReportSection[];
     disclosure: string;
+    /** 한국 관측일 웹 열람 링크. 없으면 헤더에 줄을 추가하지 않는다. */
+    webUrl?: string;
   },
   maxLength = TELEGRAM_MAX_MESSAGE_LENGTH,
 ): string[] {
-  const header = `[ETF 신호][US][P1 실험] ${input.title}\n관측: ${input.observedAt}\n실행: ${input.runId}\n${input.disclosure}`;
+  const header = `[ETF 신호][US][P1 실험] ${input.title}\n관측: ${input.observedAt}\n실행: ${input.runId}\n${input.disclosure}${input.webUrl ? `\n상세: ${input.webUrl}` : ""}`;
   const blocks = input.sections.flatMap((section) =>
     section.lines.length
       ? [`${section.title}\n${section.lines.join("\n")}`]

@@ -24,6 +24,8 @@ jobs:
       ENABLE_US_ETF_P1: ${{ vars.ENABLE_US_ETF_P1 }}
       # Q-05 검증에서만 US를 설정한다. 기본값은 빈 값이며 PENDING 직후 실패한다.
       ETF_SIGNAL_TEST_FAIL_AFTER_PENDING: ${{ vars.ETF_SIGNAL_TEST_FAIL_AFTER_PENDING }}
+      # 비밀이 아닌 웹 base URL. 비어 있으면 Telegram 헤더에 링크 줄을 붙이지 않는다.
+      ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

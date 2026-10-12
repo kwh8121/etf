@@ -114,6 +114,28 @@ describe("US P1 Telegram reporting", () => {
     expect(rowRequests).toHaveLength(4);
   });
 
+  it("passes the observation-day detail link only when ETF_WEB_BASE_URL is set", async () => {
+    runQuery.maybeSingle.mockResolvedValue({
+      data: { id: "us-run", observed_at: "2026-10-11T16:00:00.000Z", status: "COMPLETED" },
+      error: null,
+    });
+    const previous = process.env.ETF_WEB_BASE_URL;
+    try {
+      delete process.env.ETF_WEB_BASE_URL;
+      await reportLatestUsEtfMovers(false, "us-run");
+      expect(vi.mocked(formatExperimentalTelegramReport).mock.calls.at(-1)?.[0]).not.toHaveProperty("webUrl");
+
+      process.env.ETF_WEB_BASE_URL = "https://etf.example.app/";
+      await reportLatestUsEtfMovers(false, "us-run");
+      expect(vi.mocked(formatExperimentalTelegramReport).mock.calls.at(-1)?.[0]).toMatchObject({
+        webUrl: "https://etf.example.app/signals/us/2026-10-12",
+      });
+    } finally {
+      if (previous === undefined) delete process.env.ETF_WEB_BASE_URL;
+      else process.env.ETF_WEB_BASE_URL = previous;
+    }
+  });
+
   it("records the Telegram report marker only after a real send succeeds", async () => {
     runQuery.maybeSingle.mockResolvedValue({
       data: { id: "us-run", observed_at: "2026-09-21T14:00:00.000Z", status: "COMPLETED" },

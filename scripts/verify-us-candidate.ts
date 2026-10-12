@@ -4,13 +4,13 @@ import { fileURLToPath } from "node:url";
 import {
   US_ETF_SIGNAL_TYPES,
   US_ETF_STRATEGY_VERSION,
-} from "../lib/signals/us-etf-signal-repository.ts";
+} from "../lib/signals/us-etf-constants.ts";
+import { kstDayBoundsUtc, toKstDate } from "../lib/dashboard/us-signal-view.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 const US_STRATEGY_VERSION = US_ETF_STRATEGY_VERSION;
 const US_SIGNAL_TYPES = US_ETF_SIGNAL_TYPES;
 const REPORT_LIMIT_PER_TYPE = 10;
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 interface SignalRunRow {
   id: string;
@@ -43,20 +43,6 @@ function throwIfError(error: unknown, context: string): void {
     );
 }
 
-/** US는 시장일이 없어 한국 시간 관측일이 하루 단위다. */
-export function toKstDate(observedAt: string): string {
-  return new Date(new Date(observedAt).getTime() + KST_OFFSET_MS)
-    .toISOString()
-    .slice(0, 10);
-}
-
-function kstDayBoundsUtc(kstDate: string): { from: string; to: string } {
-  const start = new Date(`${kstDate}T00:00:00.000Z`).getTime() - KST_OFFSET_MS;
-  return {
-    from: new Date(start).toISOString(),
-    to: new Date(start + 24 * 60 * 60 * 1000).toISOString(),
-  };
-}
 
 function hasReportMarker(row: SignalRunRow): boolean {
   return typeof row.notes?.telegram_reported_at === "string";

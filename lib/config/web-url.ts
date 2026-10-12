@@ -23,3 +23,12 @@ export function resolveKrSignalWebUrl(basDd: string, env: Environment = process.
   const baseUrl = resolveWebBaseUrl(env);
   return baseUrl === null ? undefined : buildKrSignalUrl(baseUrl, basDd);
 }
+
+export function buildUsSignalUrl(baseUrl: string, obsDate: string): string {
+  return `${stripTrailingSlashes(baseUrl)}/signals/us/${obsDate}`;
+}
+
+export function resolveUsSignalWebUrl(obsDate: string, env: Environment = process.env): string | undefined {
+  const baseUrl = resolveWebBaseUrl(env);
+  return baseUrl === null ? undefined : buildUsSignalUrl(baseUrl, obsDate);
+}

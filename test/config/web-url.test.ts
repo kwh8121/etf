@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildKrSignalUrl, resolveKrSignalWebUrl, resolveWebBaseUrl } from "../../lib/config/web-url";
+import { buildKrSignalUrl, buildUsSignalUrl, resolveKrSignalWebUrl, resolveUsSignalWebUrl, resolveWebBaseUrl } from "../../lib/config/web-url";
 
 describe("웹 base URL 해석", () => {
   it("설정된 값을 그대로 돌려준다", () => {
@@ -55,6 +55,21 @@ describe("기준일 링크 해석", () => {
   it("후행 슬래시를 정규화한다", () => {
     expect(resolveKrSignalWebUrl("2026-10-07", { ETF_WEB_BASE_URL: "https://etf.example.app//" })).toBe(
       "https://etf.example.app/signals/kr/2026-10-07",
+    );
+  });
+});
+
+describe("US 관측일 링크", () => {
+  it("관측일 링크를 조립한다", () => {
+    expect(buildUsSignalUrl("https://etf.example.app/", "2026-10-12")).toBe(
+      "https://etf.example.app/signals/us/2026-10-12",
+    );
+  });
+
+  it("base URL이 없으면 링크를 만들지 않는다", () => {
+    expect(resolveUsSignalWebUrl("2026-10-12", {})).toBeUndefined();
+    expect(resolveUsSignalWebUrl("2026-10-12", { ETF_WEB_BASE_URL: "https://etf.example.app" })).toBe(
+      "https://etf.example.app/signals/us/2026-10-12",
     );
   });
 });

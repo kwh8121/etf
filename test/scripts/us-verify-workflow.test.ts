@@ -51,3 +51,10 @@ describe("US ETF movers verification workflow", () => {
     expect(workflow).toContain("GITHUB_STEP_SUMMARY");
   });
 });
+
+describe("US ETF movers run workflow link mapping", () => {
+  it("passes the non-secret web base URL so the report can link to the observation day", () => {
+    const usRun = readFileSync(".github/workflows/us-etf-movers.yml", "utf8");
+    expect(usRun).toContain("ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}");
+  });
+});

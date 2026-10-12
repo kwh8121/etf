@@ -2,6 +2,8 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getRequiredServerSecret } from "../lib/config/server-env.ts";
+import { resolveWebBaseUrl, buildUsSignalUrl } from "../lib/config/web-url.ts";
+import { toKstDate } from "../lib/dashboard/us-signal-view.ts";
 import {
   formatExperimentalTelegramReport,
   sendTelegramMessages,
@@ -11,10 +13,8 @@ import {
   US_ETF_P1_DISCLOSURE,
   isUsEtfP1Enabled,
 } from "../lib/signals/us-etf-movers.ts";
-import {
-  US_ETF_STRATEGY_VERSION,
-  markUsTelegramReported,
-} from "../lib/signals/us-etf-signal-repository.ts";
+import { US_ETF_STRATEGY_VERSION } from "../lib/signals/us-etf-constants.ts";
+import { markUsTelegramReported } from "../lib/signals/us-etf-signal-repository.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 const US_REPORT_LIMIT_PER_TYPE = 10;
@@ -88,6 +88,11 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
       },
     ),
   );
+  // 링크를 쓰지 않을 때는 관측 시각 변환도 하지 않아 기존 보고 경로에 영향을 주지 않는다.
+  const webBaseUrl = resolveWebBaseUrl();
+  const webUrl = webBaseUrl
+    ? buildUsSignalUrl(webBaseUrl, toKstDate(run.observed_at))
+    : undefined;
   const messages = formatExperimentalTelegramReport({
     title: "미국 ETF 등락 (P1 실험)",
     observedAt: run.observed_at,
@@ -96,6 +101,7 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
       (section): section is TelegramReportSection => section !== null,
     ),
     disclosure: US_ETF_P1_DISCLOSURE,
+    ...(webUrl ? { webUrl } : {}),
   });
   if (send) {
     await sendTelegramMessages({
