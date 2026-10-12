@@ -26,7 +26,7 @@
   - 효과: 다음 US timer 실행부터 production Kiwoom·Supabase·Telegram chat을 쓰고, `production`의 `ETF_WEB_BASE_URL`로 Telegram 헤더에 `상세: …/signals/us/<한국 관측일>` 링크가 붙는다. 수동 dispatch는 하지 않았다(발송 없음).
   - 되돌리기: `gh variable set ENABLE_US_ETF_P1 --env production --body false`. 이후 US 실행은 `DISABLED`로 끝나고 발송·쓰기가 없다.
 - [ ] `WAIT` Q-23 첫 US 운영 실행 확인 (Q-21 이후)
-  - 해제: US timer(화~토 07:30 KST, 회사 PC 기동 시 `Persistent=true` 따라잡기)의 첫 실행. 가장 이른 기회는 2026-10-13(화) 근무시간 중 PC 기동 후이며, 정시 실행은 보장되지 않는다.
+  - 해제: US timer(설치본 기준 평일 09:40 KST, 회사 PC 기동 시 `Persistent=true` 따라잡기)의 첫 실행. 2026-10-12 09:40 실행은 전환 전이라 `DISABLED`였고, 가장 이른 기회는 2026-10-13(화) 09:40이며 정시 실행은 보장되지 않는다.
   - 확인 순서: ① `gh run list --workflow "US ETF movers (P1 experimental)"`로 run 시각·`status=COMPLETE`·`duplicate` 확인, ② 자동 `us-verify` run 결과(요약에 `통과`), ③ `nvm use` 후 `npm run verify:us-candidate -- latest` 읽기 전용 대조, ④ 사용자 Telegram 실수신: production chat에 `[ETF 신호][US][P1 실험]` 메시지 1통, 헤더 끝 `상세:` 링크가 한국 관측일과 일치, 링크가 `/signals/us/<날짜>` 화면을 열고 유형별 상위 10건·전체 건수·한국 시간 관측 표기가 보임(360px 무가로스크롤 포함).
   - 실패 시: 같은 원인 2회 실패 또는 의도치 않은 발송이면 위 되돌리기를 먼저 하고 보고한다. 링크가 없으면 `production` 변수 `ETF_WEB_BASE_URL`과 `us-etf-movers.yml` 매핑을 확인한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
