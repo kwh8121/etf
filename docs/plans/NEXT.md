@@ -6,6 +6,18 @@
 
 ## 큐 (위에서부터 실행)
 
+- [ ] `AUTO` Q-18 US 관측 검증 자동화 (KR Q-12·Q-14와 동일 방식, 사용자 요청 2026-10-12)
+  - 배경: US는 `ENABLE_US_ETF_P1=false`(staging)로 꺼져 있고 운영 DB 대조 수단이 없다. KR과 달리 시장일이 없어(`bas_dd`·`market_date`=null) 관측 단위는 `signal_run` 1건이다. Telegram 보고 표식(`notes.telegram_reported_at`)도 US에는 없다.
+  - 구현 범위(코드만, 외부 부작용 없음): ① `report:us-movers`가 발송 성공 뒤 `notes.telegram_reported_at`을 기록(KR `markKrReportSent`와 같은 방식). ② `verify:us-candidate -- <runId|latest>` 읽기 전용 대조 스크립트(COMPLETED, 4유형 상위 10건 순위 1..10 연속, 표식, PENDING 잔존 감지). ③ `.github/workflows/us-verify.yml`(US 워크플로 성공 직후 자동 실행, 플래그가 `true`가 아니면 대조 단계를 건너뜀). ④ 계약 테스트.
+  - 완료 조건: `npm test`·`tsc`·`lint`·`build` 통과, 변경은 커밋·푸시.
+- [ ] `DECIDE` Q-19 US 관측 기준·운영 전환 조건 결정
+  - 결정 항목: ① "US 완전 관측일"의 정의(권장: 한국 시간 하루에 `COMPLETED`·보고 표식 있는 run 1건 이상이고 verify 통과), ② 누적 목표 일수(권장: KR과 같은 20일), ③ 운영 Telegram chat(권장: KR과 같은 production chat, 제목의 `P1 실험` 문구 유지), ④ 웹 열람 키(권장: run 기준 최신 + 한국 관측일 라우트 `/signals/us/<YYYY-MM-DD>`).
+- [ ] `AUTO` Q-20 US 신호 웹 열람 경로 사양서·구현 (Q-19 ④ 권장안을 가정하고 사양서부터, KR Q-15·Q-16과 같은 절차)
+  - 절차: 사양서 `docs/plans/implementation/us-signal-web-view-design.md` 작성 → 사용자 검토가 필요한 항목은 `DECIDE`로 분리 → 구현 계획 → TDD 구현. 링크 활성화(운영 변수)는 Q-21에서 한다.
+- [ ] `APPROVE` Q-21 US 운영 전환 (승인 대상: GitHub `production` environment 변수·Secret 변경, `us-etf-movers.yml`의 `environment: staging`→`production`, 첫 운영 실행)
+  - 해제: Q-18·Q-19 완료. 전환 후 `ENABLE_US_ETF_P1=true`와 `ETF_WEB_BASE_URL`(링크는 Q-20 배포 뒤)을 설정하고 첫 timer 실행을 Q-18 방식으로 대조한다. staging 플래그는 `false` 유지.
+- [ ] `WAIT` Q-22 US 완전 관측일 누적 (Q-19 기준, 목표 일수 확정 후)
+  - 해제: Q-21 완료. 누적은 `verify:us-candidate`와 사용자 Telegram 실수신 확인 후에만 확정으로 승격한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 다음 미국 시장 완전 휴장일 2026-11-26(추수감사절, 가장 이른 기회) 또는 2026-12-25(크리스마스). 실행은 기능 플래그 전환을 포함한 외부 부작용이라 매번 사용자 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인
