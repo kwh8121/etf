@@ -21,10 +21,14 @@
   - 검증(2026-10-12, Node 22.23.2): `npm test` 41파일·207테스트, `tsc`, `lint`, `build` 통과. 로컬 `next start` 미인증 요청이 `/signals/us/<날짜>`·`latest` 모두 307 → `/auth/login`, 본문 데이터 0건.
   - 링크는 아직 꺼져 있다: `ETF_WEB_BASE_URL`은 `production` environment에만 있고 US는 `staging`에서 실행되므로 Q-21 전환 때 켜진다. 배포 후 인증된 브라우저 UI 확인은 사용자가 하며(US 데이터가 필요해 Q-21 첫 실행 뒤), 360px 무가로스크롤도 그때 본다.
   - 남은 한계: 라우트·컴포넌트는 문자열 계약 테스트와 빌드로만 검증. `YYYYMMDD` 요청은 정본 URL로 리다이렉트하지 않는다(KR과 같은 동작).
-- [ ] `APPROVE` Q-21 US 운영 전환 (승인 대상: GitHub `production` environment 변수·Secret 변경, `us-etf-movers.yml`과 `us-verify.yml`의 `environment: staging`→`production`(둘은 같은 environment여야 하며 계약 테스트가 강제), 첫 운영 실행)
-  - 해제: Q-18·Q-19 완료. 전환 후 `ENABLE_US_ETF_P1=true`와 `ETF_WEB_BASE_URL`(링크는 Q-20 배포 뒤)을 설정하고 첫 timer 실행을 Q-18 방식으로 대조한다. staging 플래그는 `false` 유지.
-- [ ] `WAIT` Q-22 US 완전 관측일 누적 (Q-19 기준, 목표 일수 확정 후)
-  - 해제: Q-21 완료. 누적은 `verify:us-candidate`와 사용자 Telegram 실수신 확인 후에만 확정으로 승격한다.
+- [x] `DONE` Q-21 US 운영 전환 (2026-10-12 사용자 승인: 권장안 일괄 승인 + 첫 실행은 timer 대기 선택)
+  - 변경: GitHub `production` environment에 `ENABLE_US_ETF_P1=true` 설정(변수 목록으로 확인), `us-etf-movers.yml`·`us-verify.yml`의 `environment: staging`→`production`. `staging`의 `ENABLE_US_ETF_P1=false`는 그대로다. `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 어느 environment에도 없다.
+  - 효과: 다음 US timer 실행부터 production Kiwoom·Supabase·Telegram chat을 쓰고, `production`의 `ETF_WEB_BASE_URL`로 Telegram 헤더에 `상세: …/signals/us/<한국 관측일>` 링크가 붙는다. 수동 dispatch는 하지 않았다(발송 없음).
+  - 되돌리기: `gh variable set ENABLE_US_ETF_P1 --env production --body false`. 이후 US 실행은 `DISABLED`로 끝나고 발송·쓰기가 없다.
+- [ ] `WAIT` Q-23 첫 US 운영 실행 확인 (Q-21 이후)
+  - 해제: US timer(화~토 07:30 KST, 회사 PC 기동 시 `Persistent=true` 따라잡기)의 첫 실행. 가장 이른 기회는 2026-10-13(화) 근무시간 중 PC 기동 후이며, 정시 실행은 보장되지 않는다.
+  - 확인 순서: ① `gh run list --workflow "US ETF movers (P1 experimental)"`로 run 시각·`status=COMPLETE`·`duplicate` 확인, ② 자동 `us-verify` run 결과(요약에 `통과`), ③ `nvm use` 후 `npm run verify:us-candidate -- latest` 읽기 전용 대조, ④ 사용자 Telegram 실수신: production chat에 `[ETF 신호][US][P1 실험]` 메시지 1통, 헤더 끝 `상세:` 링크가 한국 관측일과 일치, 링크가 `/signals/us/<날짜>` 화면을 열고 유형별 상위 10건·전체 건수·한국 시간 관측 표기가 보임(360px 무가로스크롤 포함).
+  - 실패 시: 같은 원인 2회 실패 또는 의도치 않은 발송이면 위 되돌리기를 먼저 하고 보고한다. 링크가 없으면 `production` 변수 `ETF_WEB_BASE_URL`과 `us-etf-movers.yml` 매핑을 확인한다.
 - [ ] `WAIT` Q-07 US 휴장 시간 동일 콘텐츠 중복 관측 실측 (KOR-56)
   - 해제: 다음 미국 시장 완전 휴장일 2026-11-26(추수감사절, 가장 이른 기회) 또는 2026-12-25(크리스마스). 실행은 기능 플래그 전환을 포함한 외부 부작용이라 매번 사용자 승인 필요
   - 완료 조건: 관측 행 2개·기준 콘텐츠 1개·중복 신호 없음 확인

@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # US 실행 workflow(us-etf-movers.yml)와 같은 environment여야 ENABLE_US_ETF_P1 값이 같다.
-    # Q-21 운영 전환 때 두 workflow를 함께 production으로 바꾼다. Supabase는 같은 운영 프로젝트를 공유한다.
-    environment: staging
+    # 2026-10-12 Q-21 운영 전환으로 두 workflow 모두 production이다.
+    environment: production
     env:
       ENABLE_US_ETF_P1: ${{ vars.ENABLE_US_ETF_P1 }}
       # 읽기 전용 대조에 필요한 자격 증명만 전달한다.

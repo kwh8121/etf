@@ -221,6 +221,8 @@ GitHub `schedule`은 2026-09-21 KR 19:15 예약이 6시간 늦게 실행되고 U
 
 ### 5.1 미국 ETF P1 staging E2E
 
+> 2026-10-12 갱신: US 운영 전환(Q-21)으로 `us-etf-movers.yml`·`us-verify.yml`은 `production` Environment를 쓰고 `production`의 `ENABLE_US_ETF_P1=true`다. 아래 staging 절차는 2026-09-21 E2E 당시의 기록이며 `staging`의 플래그는 `false`로 유지한다. 현재 운영 확인 절차는 `docs/plans/NEXT.md` Q-23을 따른다.
+
 미국 어댑터는 국내 P0와 별도 workflow다. 실제 실행 전 staging 환경에서만 `ENABLE_US_ETF_P1=true`로 설정하고, production은 관측 목적과 수신처가 승인된 뒤에만 같은 값을 설정한다. 이 플래그는 비밀이 아니지만 `true` 전환은 실제 Kiwoom·Supabase 쓰기·Telegram 전송을 발생시킨다.
 
 staging 경계(2026-09-21 결정): Supabase는 운영 프로젝트를 쓰고, Telegram만 별도 테스트 그룹으로 보낸다. KR 경로는 `market="KR"`·전략 버전으로 실행을 고른 뒤 `run_id`로만 읽으므로 US 행과 섞이지 않는다.
