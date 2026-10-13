@@ -16,7 +16,8 @@ jobs:
   ingest-and-report:
     # Kiwoom은 등록된 IP에서만 토큰을 발급하므로 등록 IP의 self-hosted runner에서 실행한다.
     runs-on: [self-hosted, linux, x64, kiwoom]
-    timeout-minutes: 15
+    # Kiwoom 4개 API 연속 조회(약 540페이지)가 13분 넘게 걸린다. 15분 제한에서는 보고 직후 run이 cancelled로 끝났다(2026-10-13).
+    timeout-minutes: 40
     environment: production
     env:
       # 한국→Telegram 왕복이 node 기본 연결 시도 제한(250ms)을 넘어 ETIMEDOUT이 난다.

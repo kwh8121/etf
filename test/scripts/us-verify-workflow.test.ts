@@ -58,3 +58,11 @@ describe("US ETF movers run workflow link mapping", () => {
     expect(usRun).toContain("ETF_WEB_BASE_URL: ${{ vars.ETF_WEB_BASE_URL }}");
   });
 });
+
+describe("US ETF movers run workflow time budget", () => {
+  it("leaves room beyond the observed 13+ minute Kiwoom collection so a successful run is not cancelled", () => {
+    const usRun = readFileSync(".github/workflows/us-etf-movers.yml", "utf8");
+    const minutes = Number(/timeout-minutes: (\d+)/.exec(usRun)?.[1]);
+    expect(minutes).toBeGreaterThanOrEqual(30);
+  });
+});
