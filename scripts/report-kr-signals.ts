@@ -8,6 +8,10 @@ import {
   sendTelegramMessages,
   type TelegramReportSection,
 } from "../lib/notifications/telegram.ts";
+import {
+  formatReportedRankChangeLines,
+} from "../lib/signals/report-rank-changes.ts";
+import { KR_PRICE_SIGNAL_STRATEGY_VERSION } from "../lib/signals/kr-signal-repository.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 interface SignalRunRow {
@@ -17,6 +21,7 @@ interface SignalRunRow {
 }
 
 interface SignalDailyRow {
+  code: string;
   signal_type: string;
   name: string;
   value: number | string | null;
@@ -34,7 +39,7 @@ export async function reportLatestKrxSignals(
     .from("signal_run")
     .select("id,bas_dd,status")
     .eq("market", "KR")
-    .eq("strategy_version", "m3-price-movers-v1");
+    .eq("strategy_version", KR_PRICE_SIGNAL_STRATEGY_VERSION);
   if (runId) runQuery = runQuery.eq("id", runId);
   const { data: run, error: runError } = await (runId
     ? runQuery.single()
@@ -46,14 +51,13 @@ export async function reportLatestKrxSignals(
         .single());
   throwIfError(runError, "read latest KR signal run");
   const latest = run as SignalRunRow;
-  const { data: rows, error: rowError } = await client
-    .from("signal_daily")
-    .select("signal_type,name,value,value_unit,rank,screen")
-    .eq("run_id", latest.id)
-    .order("signal_type")
-    .order("screen")
-    .order("rank");
-  throwIfError(rowError, "read latest KR signal results");
+  const [rows, previousRun] = await Promise.all([
+    readSignalRows(client, latest.id),
+    readPreviousKrRun(client, latest),
+  ]);
+  const previousRows = previousRun
+    ? await readSignalRows(client, previousRun.id)
+    : null;
 
   const messages = formatTelegramReport({
     market: "KR",
@@ -61,7 +65,7 @@ export async function reportLatestKrxSignals(
     status: latest.status,
     runId: latest.id,
     source: "KRX etf_bydd_trd, Kiwoom ka10099",
-    sections: createSections(rows ?? []),
+    sections: createSections(rows, previousRows),
     webUrl: resolveKrSignalWebUrl(latest.bas_dd),
   });
   if (send) {
@@ -76,20 +80,69 @@ export async function reportLatestKrxSignals(
 
 function createSections(
   rows: readonly SignalDailyRow[],
+  previousRows: readonly SignalDailyRow[] | null,
 ): TelegramReportSection[] {
   const groups = new Map<string, SignalDailyRow[]>();
+  const previousGroups = new Map<string, SignalDailyRow[]>();
   for (const row of rows) {
     const key = `${row.signal_type}:${row.screen}`;
     const group = groups.get(key) ?? [];
     group.push(row);
     groups.set(key, group);
   }
-  return [...groups.entries()].map(([key, entries]) => ({
-    title: sectionTitle(key),
-    lines: entries.map(
-      (entry) => `${entry.rank ?? "-"}. ${entry.name} ${formatValue(entry)}`,
-    ),
-  }));
+  for (const row of previousRows ?? []) {
+    const key = `${row.signal_type}:${row.screen}`;
+    const group = previousGroups.get(key) ?? [];
+    group.push(row);
+    previousGroups.set(key, group);
+  }
+  const keys = new Set([...groups.keys(), ...previousGroups.keys()]);
+  return [...keys].map((key) => {
+    const entries = groups.get(key) ?? [];
+    return {
+      title: sectionTitle(key),
+      lines: formatReportedRankChangeLines(
+        entries,
+        previousRows ? (previousGroups.get(key) ?? []) : null,
+        (entry) => `${entry.rank ?? "-"}. ${entry.name} ${formatValue(entry)}`,
+      ),
+    };
+  });
+}
+
+async function readSignalRows(
+  client: ReturnType<typeof createServiceRoleClient>,
+  runId: string,
+): Promise<SignalDailyRow[]> {
+  const { data, error } = await client
+    .from("signal_daily")
+    .select("code,signal_type,name,value,value_unit,rank,screen")
+    .eq("run_id", runId)
+    .order("signal_type")
+    .order("screen")
+    .order("rank");
+  throwIfError(error, "read KR signal results");
+  return (data ?? []) as SignalDailyRow[];
+}
+
+async function readPreviousKrRun(
+  client: ReturnType<typeof createServiceRoleClient>,
+  latest: SignalRunRow,
+): Promise<SignalRunRow | null> {
+  const { data, error } = await client
+    .from("signal_run")
+    .select("id,bas_dd,status")
+    .eq("market", "KR")
+    .eq("strategy_version", KR_PRICE_SIGNAL_STRATEGY_VERSION)
+    .eq("status", "COMPLETED")
+    .lt("bas_dd", latest.bas_dd)
+    .order("bas_dd", { ascending: false })
+    .order("completed_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  throwIfError(error, "read previous KR signal run");
+  return data as SignalRunRow | null;
 }
 
 function sectionTitle(key: string): string {

@@ -9,6 +9,7 @@ import {
   sendTelegramMessages,
   type TelegramReportSection,
 } from "../lib/notifications/telegram.ts";
+import { formatReportedRankChangeLines } from "../lib/signals/report-rank-changes.ts";
 import {
   US_ETF_P1_DISCLOSURE,
   isUsEtfP1Enabled,
@@ -24,6 +25,13 @@ const US_REPORT_SECTIONS = [
   ["five_day_price_gain", "5일 상승"],
   ["five_day_price_loss", "5일 하락"],
 ] as const;
+
+interface UsSignalRow {
+  code: string;
+  name: string;
+  value: number | string | null;
+  rank: number | null;
+}
 
 export async function reportLatestUsEtfMovers(send = true, runId?: string) {
   const client = createServiceRoleClient();
@@ -49,6 +57,8 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
   if (send && typeof run.notes?.telegram_reported_at === "string")
     return { runId: run.id, messageCount: 0, alreadyReported: true };
 
+  const previousRun = await readPreviousUsRun(client, run);
+
   const sections = await Promise.all(
     US_REPORT_SECTIONS.map(
       async ([signalType, title]): Promise<TelegramReportSection | null> => {
@@ -58,7 +68,7 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
           error,
         } = await client
           .from("signal_daily")
-          .select("name,value,rank", { count: "exact" })
+          .select("code,name,value,rank", { count: "exact" })
           .eq("run_id", run.id)
           .eq("market", "US")
           .eq("signal_type", signalType)
@@ -77,10 +87,16 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
           throw new Error(
             `Supabase read US ${signalType} signals returned an incomplete count`,
           );
-        if (count === 0) return null;
+        const previousRows = previousRun
+          ? await readUsSectionRows(client, previousRun.id, signalType)
+          : null;
+        if (count === 0 && (!previousRows || previousRows.length === 0))
+          return null;
         return {
           title: `${title} (상위 ${rows.length}건 / 전체 ${count}건)`,
-          lines: rows.map(
+          lines: formatReportedRankChangeLines(
+            rows as UsSignalRow[],
+            previousRows,
             (row) =>
               `${row.rank ?? "-"}. ${row.name} · ${Number(row.value).toFixed(2)}%`,
           ),
@@ -119,6 +135,50 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
     }
   }
   return { runId: run.id, messageCount: messages.length };
+}
+
+async function readPreviousUsRun(
+  client: ReturnType<typeof createServiceRoleClient>,
+  latest: { id: string; observed_at: string },
+): Promise<{ id: string } | null> {
+  const { data, error } = await client
+    .from("signal_run")
+    .select("id")
+    .eq("market", "US")
+    .eq("strategy_version", US_ETF_STRATEGY_VERSION)
+    .eq("status", "COMPLETED")
+    .lt("observed_at", latest.observed_at)
+    .order("observed_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error)
+    throw new Error(
+      `Supabase read previous US signal run failed: ${error.message}`,
+    );
+  if (data?.id === latest.id) return null;
+  return data as { id: string } | null;
+}
+
+async function readUsSectionRows(
+  client: ReturnType<typeof createServiceRoleClient>,
+  runId: string,
+  signalType: string,
+): Promise<UsSignalRow[]> {
+  const { data, error } = await client
+    .from("signal_daily")
+    .select("code,name,value,rank")
+    .eq("run_id", runId)
+    .eq("market", "US")
+    .eq("signal_type", signalType)
+    .order("rank")
+    .order("code")
+    .limit(US_REPORT_LIMIT_PER_TYPE);
+  if (error)
+    throw new Error(
+      `Supabase read previous US ${signalType} signals failed: ${error.message}`,
+    );
+  return (data ?? []) as UsSignalRow[];
 }
 
 async function main() {

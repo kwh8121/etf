@@ -6,6 +6,8 @@ const runQuery = {
   order: vi.fn(),
   limit: vi.fn(),
   single: vi.fn(),
+  lt: vi.fn(),
+  maybeSingle: vi.fn(),
 };
 const rowsQuery = {
   select: vi.fn(),
@@ -18,7 +20,9 @@ for (const query of [runQuery, rowsQuery]) {
   query.eq.mockReturnValue(query);
   query.order.mockReturnValue(query);
 }
+runQuery.lt.mockReturnValue(runQuery);
 runQuery.limit.mockReturnValue(runQuery);
+runQuery.maybeSingle.mockResolvedValue({ data: null, error: null });
 
 const from = vi.fn((table: string) =>
   table === "signal_run" ? runQuery : rowsQuery,
@@ -55,9 +59,6 @@ describe("KR signal reporting", () => {
 
     expect(result.runId).toBe("generated-run");
     expect(runQuery.eq).toHaveBeenCalledWith("id", "generated-run");
-    expect(runQuery.order).not.toHaveBeenCalledWith("bas_dd", {
-      ascending: false,
-    });
   });
 
   it("breaks same-date latest-run ties by completion time and id", async () => {

@@ -6,15 +6,18 @@ const runQuery = {
   order: vi.fn(),
   limit: vi.fn(),
   maybeSingle: vi.fn(),
+  lt: vi.fn(),
 };
 for (const query of [runQuery]) {
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   query.order.mockReturnValue(query);
 }
+runQuery.lt.mockReturnValue(runQuery);
 runQuery.limit.mockReturnValue(runQuery);
 const rowRequests: Array<{
   signalType: string;
+  runId: string;
   selectOptions: unknown;
   orders: string[];
   limit: number | null;
@@ -24,6 +27,7 @@ const rowResults = new Map<
   {
     data: Array<{
       signal_type: string;
+      code?: string;
       name: string;
       value: number;
       rank: number;
@@ -31,9 +35,16 @@ const rowResults = new Map<
     count: number;
   }
 >();
+const previousRowResults = new Map<
+  string,
+  {
+    data: Array<{ code: string; name: string; value: number; rank: number }>;
+  }
+>();
 function createRowsQuery() {
   const request = {
     signalType: "",
+    runId: "",
     selectOptions: null as unknown,
     orders: [] as string[],
     limit: null as number | null,
@@ -46,6 +57,7 @@ function createRowsQuery() {
     }),
     eq: vi.fn((column: string, value: string) => {
       if (column === "signal_type") request.signalType = value;
+      if (column === "run_id") request.runId = value;
       return query;
     }),
     order: vi.fn((column: string) => {
@@ -54,9 +66,13 @@ function createRowsQuery() {
     }),
     limit: vi.fn(async (limit: number) => {
       request.limit = limit;
+      const currentResult = rowResults.get(request.signalType);
+      const result = request.runId === "previous-run"
+        ? previousRowResults.get(request.signalType)
+        : currentResult;
       return {
-        data: rowResults.get(request.signalType)?.data ?? [],
-        count: rowResults.get(request.signalType)?.count ?? 0,
+        data: result?.data ?? [],
+        count: currentResult?.count ?? 0,
         error: null,
       };
     }),
@@ -91,6 +107,7 @@ describe("US P1 Telegram reporting", () => {
     vi.clearAllMocks();
     rowRequests.length = 0;
     rowResults.clear();
+    previousRowResults.clear();
   });
 
   it("reads only the dedicated US P1 run and can format without sending", async () => {
@@ -261,6 +278,68 @@ describe("US P1 Telegram reporting", () => {
     expect(sections.map((section) => section.lines.length)).toEqual([
       10, 10, 10,
     ]);
+  });
+
+  it("shows rank-ins and rank-outs against the previous completed US run", async () => {
+    runQuery.maybeSingle
+      .mockResolvedValueOnce({
+        data: {
+          id: "us-run",
+          observed_at: "2026-10-14T01:00:00.000Z",
+          status: "COMPLETED",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { id: "previous-run" }, error: null });
+    rowResults.set("daily_price_gain", {
+      count: 2,
+      data: [
+        { signal_type: "daily_price_gain", code: "NEW", name: "신규", value: 1.23, rank: 1 },
+        { signal_type: "daily_price_gain", code: "STAY", name: "유지", value: 0.5, rank: 2 },
+      ],
+    });
+    previousRowResults.set("daily_price_gain", {
+      data: [
+        { code: "STAY", name: "이전 유지", value: 1, rank: 1 },
+        { code: "OUT", name: "이탈", value: 0.1, rank: 2 },
+      ],
+    });
+
+    await reportLatestUsEtfMovers(false, "us-run");
+
+    const sections = vi.mocked(formatExperimentalTelegramReport).mock.calls.at(-1)?.[0].sections;
+    expect(sections?.[0]?.lines).toEqual([
+      "1. 신규 · 1.23% · 랭크인",
+      "2. 유지 · 0.50%",
+      "랭크아웃",
+      "2. 이탈",
+    ]);
+    expect(runQuery.lt).toHaveBeenCalledWith("observed_at", "2026-10-14T01:00:00.000Z");
+  });
+
+  it("keeps a section when every previously displayed US code ranks out", async () => {
+    runQuery.maybeSingle
+      .mockResolvedValueOnce({
+        data: {
+          id: "us-run",
+          observed_at: "2026-10-14T01:00:00.000Z",
+          status: "COMPLETED",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { id: "previous-run" }, error: null });
+    rowResults.set("daily_price_loss", { count: 0, data: [] });
+    previousRowResults.set("daily_price_loss", {
+      data: [{ code: "OUT", name: "이탈", value: -1, rank: 1 }],
+    });
+
+    await reportLatestUsEtfMovers(false, "us-run");
+
+    const sections = vi.mocked(formatExperimentalTelegramReport).mock.calls.at(-1)?.[0].sections;
+    expect(sections).toContainEqual({
+      title: "일간 하락 (상위 0건 / 전체 0건)",
+      lines: ["랭크아웃", "1. 이탈"],
+    });
   });
 
   it("does not format or send a report when a ranked query is incomplete", async () => {
