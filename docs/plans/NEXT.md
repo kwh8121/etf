@@ -19,21 +19,23 @@
   - false listing event·연결 false 신규 신호 각 214개 제거, master.first_seen 214개 보정. 분담 실행이 바꾼 master.source_snapshot_id 214개는 원본으로 복구해 현재 provenance를 보존했다. 절차 위반·중단·복구 근거를 당일 작업 기록에 남겼다.
   - 최근 기준일 2026-10-14 run은 80→93행, 2026-10-13 run은 false 신규 제거 후 84→99행으로 현재 정본 재계산 결과를 적용했다. KR 17 run의 전체 metadata·Telegram 표식, 기존 행 observed_at을 보존했고 추가 행은 원 run 시각을 썼다. 과거 Telegram 재발송·M6 자동 승격은 없다.
   - 검증: 52파일·296테스트, tsc·격리 전체 lint·production build·통합 독립 리뷰 APPROVE(지적 0). 웹 완료 상태 보호는 Production READY 확인 후 최근 두 run 교체에 사용했다. 최신 candidate는 `ok:true`, 전수 감사는 최근 KR 2·US 7 run 일치, 전역 listing 감사 통과다.
-  - **남은 한계:** 과거 KR 15 run은 signal_diff가 남아 전수 감사 전체 `ok:false`/종료 1이다. 이를 성공으로 숨기지 않으며 확대 정정은 Q-29에서 결정한다. 당시 전체 원본 입력 복원·잔존 9개 이벤트의 실제 신규 상장 사실을 보증하지 않는다.
+  - **남은 한계:** 과거 KR 15 run은 signal_diff가 남아 전수 감사 전체 `ok:false`/종료 1이다. 이를 성공으로 숨기지 않으며 Q-29에서 확정한 보존·미검증 명시 정책을 따른다. 당시 전체 원본 입력 복원·잔존 9개 이벤트의 실제 신규 상장 사실을 보증하지 않는다.
   - 정본 근거: `docs/references/2026-10-15-kr-data-correction-result.md`, 비공개 전체 백업·고정 plan/hash·최종 감사. 계획: `docs/plans/implementation/2026-10-15-approved-correction-plan.md`.
 
-- [ ] `DECIDE` Q-29 이전 KR 15 run의 정정·보존 정책
-  - 선택지 A: 기존 값을 보존하고 콘텐츠 미검증/현재 정본 불일치로 보류(권장). B: 확정 가능한 run의 확대 정정 계획을 만들고 운영 쓰기 범위를 별도 승인한다. 초기 seq·교체 source가 불확실한 사례는 B에서도 분리한다.
-  - 권장 근거: 승인된 최근 두 run은 완료됐고 최신 보고의 현재·직전 정확성 근거가 확보됐다. 과거 시점 전체 입력 복원이 불완전하므로 일괄 덮어쓰기로 M6 과거 누적을 정상화하지 않는다. A에서도 웹의 오래된 날짜와 과거 Telegram을 정확한 콘텐츠로 간주하지 않는다.
+- [x] `DONE` Q-29 이전 KR 15 run 보존·미검증 명시 정책 확정 (2026-10-15 사용자 권장안 선택)
+  - 사용자 `권장 사항대로 처리`로 A안을 확정했다. 기존 값을 보존하고 콘텐츠 정확성 미검증·현재 정본 불일치 상태로 보류한다. 추가 운영 정정·과거 Telegram 재발송은 수행하지 않는다.
+  - 과거 15 run의 signal_diff와 전수 감사 전체 `ok:false`는 유지한다. 웹의 오래된 날짜·과거 Telegram을 정확한 콘텐츠로 간주하거나 M6 과거 누적을 정상화하지 않는다.
+  - 확대 정정은 새로운 근거·대상·백업/복원 계획을 마련하고 별도 승인받은 경우에만 재개한다. 초기 seq·교체 source의 불확실성을 보존한다.
 
 - [x] `DONE` Q-28 US 5일 하락 요청 범위 제한 비교 (2026-10-15 사용자 승인, `6e3c14b`)
   - 승인된 한 차례 실행에서 조건별 20페이지·500개, 합계 40 ranking 요청으로 종료했다(18:01:37–18:02:26 KST). 양 조건 모두 continuation이 남아 부분 결과다. 오류·중복·자동 재시도·추가 호출은 없었다.
   - 상위 20개 코드 집합 차이 0개, 전체 관측 코드 집합 대칭 차이 6개. 시각 차이·절단 경계 영향이 있어 조건 효과와 전체 ETF 포괄성은 확정하지 않는다.
-  - 근거: `docs/references/2026-10-15-us-loss-scope-comparison.md`. 운영 저장·발송·현행 요청 변경 없음. 실제 계약은 Q-30에서 결정한다.
+  - 근거: `docs/references/2026-10-15-us-loss-scope-comparison.md`. 운영 저장·발송·현행 요청 변경 없음. Q-30에서 현행 계약·범위 제한 유지를 확정했다.
 
-- [ ] `DECIDE` Q-30 US 5일 하락 요청 계약의 후속 정책
-  - 선택지 A: 현행 `stk_cnd=1`을 유지하고 증100% 조건·전체 ETF 포괄성 미확인 제한을 유지(권장). B: `stk_cnd=0` 변경과 더 큰 비교의 범위를 새로 정한다.
-  - 권장 근거: Q-28은 양쪽 500개 제한 표본이고 상위 코드 차이가 없어, 이번 결과만으로 계약 변경의 포괄성 개선을 입증하지 못했다. B의 실호출·운영 계약 변경은 범위 확정 후 별도 승인 대상이다.
+- [x] `DONE` Q-30 US 현행 요청 조건·범위 제한 유지 확정 (2026-10-15 사용자 권장안 선택)
+  - 사용자 `권장 사항대로 처리`로 A안을 확정했다. 현행 `usa20931.stk_cnd=1`을 유지하고 증100% 조건·전체 ETF 포괄성 미확인 제한을 명시한다.
+  - Q-28의 조건별 500개 부분 표본은 전체 포괄성 개선을 입증하지 못했다. 추가 비교 호출·운영 수집/저장/보고 계약 변경은 수행하지 않는다.
+  - `stk_cnd=0` 변경이나 더 큰 비교는 새 범위·별도 승인 후에만 재개한다. 근거는 `docs/references/2026-10-15-us-loss-scope-comparison.md`를 따른다.
 
 - [x] `DONE` Q-25 KR·US 웹 랭크인·랭크아웃 표시 (2026-10-15 사용자 요청·진행 승인, 기능 커밋 `930fd00`)
   - 범위: `/signals/kr/<기준일>`·`/signals/us/<한국 관측일>`에 Telegram과 같은 종목 코드·직전 완료 run 비교를 연결한다. 진입은 현재 행에 `랭크인`, 이탈은 섹션 아래 `랭크아웃`과 직전 순위를 표시한다. KR 가변 신호와 현재 0건인 이탈 전용 섹션도 포함한다.
@@ -60,6 +62,12 @@
   - 변경: GitHub `production` environment에 `ENABLE_US_ETF_P1=true` 설정(변수 목록으로 확인), `us-etf-movers.yml`·`us-verify.yml`의 `environment: staging`→`production`. `staging`의 `ENABLE_US_ETF_P1=false`는 그대로다. `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 어느 environment에도 없다.
   - 효과: 다음 US timer 실행부터 production Kiwoom·Supabase·Telegram chat을 쓰고, `production`의 `ETF_WEB_BASE_URL`로 Telegram 헤더에 `상세: …/signals/us/<한국 관측일>` 링크가 붙는다. 수동 dispatch는 하지 않았다(발송 없음).
   - 되돌리기: `gh variable set ENABLE_US_ETF_P1 --env production --body false`. 이후 US 실행은 `DISABLED`로 끝나고 발송·쓰기가 없다.
+- [ ] `APPROVE` Q-31 Q-29·Q-30 결정의 OpenViking 외부 메모리 동기화
+  - 승인 대상: OpenViking `remember`에 아래 요약을 전송하는 한 차례 재시도. 운영 DB·API·발송 권한과는 별개다.
+  - 전송 요약: “ETF 신호 MVP: 사용자가 과거 KR 15 run 보존·콘텐츠 미검증/현재 정본 불일치 명시와 US 현행 `stk_cnd=1`·증100% 조건·전체 ETF 포괄성 미확인 제한 유지를 확정했다. 두 정책 결정은 완료이며 정확성 검증 완료를 뜻하지 않는다. 추가 운영 정정·API 비교·계약 변경은 새 범위와 별도 승인이 필요하다.” 비밀값·원천 응답·내부 파일 경로는 전송하지 않는다.
+  - 사유: 2026-10-15 자동 승인 검토가 외부 목적지 신뢰 여부와 운영 상태·내부 경로 payload의 구체적 전송 승인 미확인을 이유로 최초 저장을 거절했다. 우회·재시도하지 않았다.
+  - 선택지 A: 위 최소 요약의 외부 저장 승인(권장: 연속성 유지). B: 저장소 기록만 유지하고 외부 동기화 생략. 명시 선택 전에는 전송하지 않는다.
+
 - [ ] `WAIT` Q-23 첫 US 운영 실행 확인 (Q-21 이후)
   - 해제: US timer(설치본 기준 평일 09:40 KST, 회사 PC 기동 시 `Persistent=true` 따라잡기)의 첫 실행. 2026-10-12 09:40 실행은 전환 전이라 `DISABLED`였고, 가장 이른 기회는 2026-10-13(화) 09:40이며 정시 실행은 보장되지 않는다.
   - 첫 실행 결과(2026-10-13): run `38328413680`(09:40 dispatch)이 수집 13분 20초 뒤 09:55:32에 보고(`messageCount:1`)를 보냈으나 `timeout-minutes: 15`에 걸려 `cancelled`로 끝났다. 그래서 자동 `us-verify`는 실행되지 않았다. `verify:us-candidate`는 run `ee72ce74-…`에서 `ok:true`(4유형 2033·2876·5680·2578행, 표식 1건, 같은 날 run 1건). 원인 수정: `timeout-minutes`를 40으로 상향(계약 테스트 추가). 사용자가 2026-10-13 Telegram 1통 수신과 Vercel 링크 열림을 확인했다(링크 날짜 일치와 360px 무가로스크롤은 별도 언급 없음).
