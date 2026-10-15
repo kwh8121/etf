@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { KiwoomEtfMasterRecord } from "@/lib/market-data/kiwoom";
 import {
   persistKiwoomMasterSnapshot,
   persistKrxSnapshot,
   createKrxTradingSequenceUpdates,
+  SupabaseMarketDataRepository,
   type EtfDailyRow,
   type EtfMasterRow,
   type ExistingMaster,
@@ -45,6 +47,162 @@ const masterRecords: KiwoomEtfMasterRecord[] = [
     state: "NORMAL",
   },
 ];
+
+interface EtfMasterDatabaseRow {
+  code: string;
+  first_seen: string;
+}
+
+class FakeSupabaseRepositoryQuery {
+  private selected = "";
+  private rangeStart = 0;
+  private rangeEnd = 999;
+  private upsertPayload: unknown = null;
+
+  constructor(
+    private readonly table: string,
+    private readonly state: {
+      existingMasters: EtfMasterDatabaseRow[];
+      masterUpserts: unknown[];
+      listingEventUpserts: unknown[];
+      sourceSnapshotUpserts: unknown[];
+      uploadedPaths: string[];
+    },
+  ) {}
+
+  select(columns: string): this {
+    this.selected = columns;
+    return this;
+  }
+
+  eq(): this {
+    return this;
+  }
+
+  neq(): this {
+    return this;
+  }
+
+  is(): this {
+    return this;
+  }
+
+  limit(): this {
+    return this;
+  }
+
+  order(): this {
+    return this;
+  }
+
+  range(start: number, end: number): this {
+    this.rangeStart = start;
+    this.rangeEnd = end;
+    return this;
+  }
+
+  upsert(payload: unknown): this {
+    this.upsertPayload = payload;
+    if (this.table === "etf_master_kr") {
+      this.state.masterUpserts.push(payload);
+    } else if (this.table === "listing_event_kr") {
+      this.state.listingEventUpserts.push(payload);
+    } else if (this.table === "source_snapshot") {
+      this.state.sourceSnapshotUpserts.push(payload);
+    }
+    return this;
+  }
+
+  maybeSingle() {
+    return { data: null, error: null };
+  }
+
+  single() {
+    if (this.table === "source_snapshot" && this.upsertPayload) {
+      return {
+        data: {
+          id: "snapshot-kiwoom",
+          object_path: "kiwoom/ka10099/kiwoom-1.json",
+        },
+        error: null,
+      };
+    }
+    return { data: null, error: null };
+  }
+
+  then<TResult1 = unknown, TResult2 = never>(
+    onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    return Promise.resolve(this.resolve()).then(onfulfilled, onrejected);
+  }
+
+  private resolve() {
+    if (this.table === "etf_master_kr" && this.selected === "code,first_seen") {
+      return {
+        data: this.state.existingMasters.slice(
+          this.rangeStart,
+          this.rangeEnd + 1,
+        ),
+        error: null,
+        count: this.state.existingMasters.length,
+      };
+    }
+    if (
+      this.table === "etf_master_kr" ||
+      this.table === "listing_event_kr" ||
+      this.table === "source_snapshot"
+    ) {
+      return { error: null };
+    }
+    return { data: null, error: null, count: 0 };
+  }
+}
+
+function createSupabaseRepositoryFixture(existingMasters: EtfMasterDatabaseRow[]) {
+  const state = {
+    existingMasters,
+    masterUpserts: [] as unknown[],
+    listingEventUpserts: [] as unknown[],
+    sourceSnapshotUpserts: [] as unknown[],
+    uploadedPaths: [] as string[],
+  };
+  const client = {
+    from(table: string) {
+      return new FakeSupabaseRepositoryQuery(table, state);
+    },
+    storage: {
+      from() {
+        return {
+          upload(path: string) {
+            state.uploadedPaths.push(path);
+            return { error: null };
+          },
+        };
+      },
+    },
+  } as unknown as SupabaseClient;
+
+  return { repository: new SupabaseMarketDataRepository(client), state };
+}
+
+function makeExistingMasterRows(count: number): EtfMasterDatabaseRow[] {
+  return Array.from({ length: count }, (_, index) => ({
+    code: String(index + 1).padStart(6, "0"),
+    first_seen: "2026-01-01",
+  }));
+}
+
+function makeKiwoomMasterRecord(code: string): KiwoomEtfMasterRecord {
+  return {
+    code,
+    name: `ETF ${code}`,
+    regDay: "20261015",
+    marketCode: "8",
+    marketName: "ETF",
+    state: "NORMAL",
+  };
+}
 
 class FakeRepository implements MarketDataRepository {
   existingSnapshot: SourceSnapshotRecord | null = null;
@@ -193,6 +351,66 @@ describe("market data repository orchestration", () => {
     expect(repository.masterRows[1]).toMatchObject({ code: "123456", firstSeen: "2026-09-16" });
     expect(repository.eventRows).toEqual([
       expect.objectContaining({ eventKey: "KR:new_listing:654321:2026-09-17", newInSnapshot: true }),
+    ]);
+  });
+
+  it("uses the Supabase adapter to page all 1180 existing masters and avoids false new-listing events past row 1000", async () => {
+    const existingMasters = makeExistingMasterRows(1180);
+    const { repository, state } = createSupabaseRepositoryFixture(existingMasters);
+
+    const result = await persistKiwoomMasterSnapshot(repository, {
+      observationKey: "kiwoom-1",
+      observedDate: "20261015",
+      records: [
+        makeKiwoomMasterRecord("001176"),
+        makeKiwoomMasterRecord("001181"),
+      ],
+    });
+
+    expect(result.newListingCount).toBe(1);
+    expect(state.listingEventUpserts).toHaveLength(1);
+    expect(state.listingEventUpserts[0]).toEqual([
+      expect.objectContaining({
+        code: "001181",
+        event_key: "KR:new_listing:001181:2026-10-15",
+      }),
+    ]);
+    expect(state.masterUpserts[0]).toEqual([
+      expect.objectContaining({
+        code: "001176",
+        first_seen: "2026-01-01",
+      }),
+      expect.objectContaining({
+        code: "001181",
+        first_seen: "2026-10-15",
+      }),
+    ]);
+  });
+
+  it("preserves existing first_seen at the Supabase adapter write boundary even when caller input is stale", async () => {
+    const { repository, state } = createSupabaseRepositoryFixture([
+      { code: "001176", first_seen: "2026-01-01" },
+    ]);
+
+    await repository.upsertEtfMasters([
+      {
+        code: "001176",
+        name: "ETF 001176",
+        regDay: "2026-10-15",
+        marketCode: "8",
+        marketName: "ETF",
+        state: "NORMAL",
+        firstSeen: "2026-10-15",
+        lastSeen: "2026-10-15",
+        sourceSnapshotId: "snapshot-kiwoom",
+      },
+    ]);
+
+    expect(state.masterUpserts[0]).toEqual([
+      expect.objectContaining({
+        code: "001176",
+        first_seen: "2026-01-01",
+      }),
     ]);
   });
 });
