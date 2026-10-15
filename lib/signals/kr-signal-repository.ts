@@ -12,6 +12,7 @@ export interface PersistKrxPriceSignalsInput {
   additionalSnapshotIds?: readonly string[];
   signals: KrxPriceMoverSignals;
   transformVersion: string;
+  completeRun?: boolean;
 }
 
 export interface PersistKrxSignalRowsInput {
@@ -118,6 +119,10 @@ export async function persistKrxPriceSignals(
     }),
   ]);
 
+  if (input.completeRun === false) {
+    return runId;
+  }
+
   const { error: completeError } = await client
     .from("signal_run")
     .upsert(
@@ -127,6 +132,26 @@ export async function persistKrxPriceSignals(
   throwIfError(completeError, "complete signal run");
 
   return runId;
+}
+
+export async function completeKrxSignalRun(
+  client: SupabaseClient,
+  input: { runId: string; disclosure: string },
+): Promise<void> {
+  const reportedAt = await readTelegramReportedAt(client, input.runId);
+  const { error } = await client
+    .from("signal_run")
+    .update({
+      status: "COMPLETED",
+      completed_at: new Date().toISOString(),
+      notes: {
+        five_day_disclosure: input.disclosure,
+        kr_full_signal_complete: true,
+        ...(reportedAt ? { telegram_reported_at: reportedAt } : {}),
+      },
+    })
+    .eq("id", input.runId);
+  throwIfError(error, "complete KR signal run");
 }
 
 export async function persistKrxSignalRows(

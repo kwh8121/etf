@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { KRX_FIVE_DAY_RETURN_DISCLOSURE } from "@/lib/signals/kr-price-movers";
 import {
+  completeKrxSignalRun,
   createDeterministicSignalRunId,
   persistKrxPriceSignals,
   persistKrxSignalRows,
@@ -160,6 +161,78 @@ describe("KR signal persistence recovery", () => {
     await persistKrxPriceSignals(client, input);
     expect(runWrites.length).toBeGreaterThan(0);
     expect(runWrites.every((write) => write.notes.telegram_reported_at === "2026-09-24T00:35:00.000Z")).toBe(true);
+  });
+
+  it("can defer COMPLETED until the caller has persisted every KR signal family", async () => {
+    const runWrites: Array<{
+      id: string;
+      status?: string;
+      completed_at?: string | null;
+      notes: Record<string, unknown>;
+    }> = [];
+    const client = {
+      from(table: string) {
+        return {
+          select() {
+            return {
+              eq() {
+                return this;
+              },
+              async maybeSingle() {
+                return {
+                  data: {
+                    notes: {
+                      telegram_reported_at: "2026-09-24T00:35:00.000Z",
+                    },
+                  },
+                  error: null,
+                };
+              },
+            };
+          },
+          async upsert(value: unknown) {
+            if (table === "signal_run") runWrites.push(value as (typeof runWrites)[number]);
+            return { error: null };
+          },
+          update(value: unknown) {
+            if (table === "signal_run") runWrites.push(value as (typeof runWrites)[number]);
+            return {
+              eq() {
+                return { error: null };
+              },
+            };
+          },
+          delete() {
+            return { eq() { return this; }, then(resolve: (value: { error: null }) => void) { resolve({ error: null }); } };
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    const runId = await persistKrxPriceSignals(client, {
+      ...input,
+      completeRun: false,
+    });
+    expect(runWrites).toEqual([
+      expect.objectContaining({ status: "PENDING", completed_at: null }),
+    ]);
+
+    await completeKrxSignalRun(client, {
+      runId,
+      disclosure: KRX_FIVE_DAY_RETURN_DISCLOSURE,
+    });
+    expect(runWrites).toEqual([
+      expect.objectContaining({ status: "PENDING", completed_at: null }),
+      expect.objectContaining({
+        status: "COMPLETED",
+        notes: expect.objectContaining({
+          five_day_disclosure: KRX_FIVE_DAY_RETURN_DISCLOSURE,
+          kr_full_signal_complete: true,
+          telegram_reported_at: "2026-09-24T00:35:00.000Z",
+        }),
+      }),
+    ]);
+    expect(runWrites[1].completed_at).not.toBeNull();
   });
 });
 

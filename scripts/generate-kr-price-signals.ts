@@ -12,12 +12,13 @@ import {
   type KrxListingEventInput,
 } from "../lib/signals/kr-new-listings.ts";
 import {
+  completeKrxSignalRun,
   persistKrxPriceSignals,
   persistKrxSignalRows,
-  readTelegramReportedAt,
 } from "../lib/signals/kr-signal-repository.ts";
 import { createKrxTurnoverSurges } from "../lib/signals/kr-turnover-surge.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
+import { readAllRows } from "../lib/supabase/read-all-rows.ts";
 
 interface TradingCalendarRow {
   bas_dd: string;
@@ -26,6 +27,7 @@ interface TradingCalendarRow {
 }
 
 interface EtfDailyDatabaseRow {
+  bas_dd: string;
   isu_cd: string;
   isu_nm: string;
   close_prc: number | string;
@@ -42,6 +44,11 @@ interface ListingEventDatabaseRow {
   new_in_snapshot: boolean;
   first_alerted_at: string | null;
   source_snapshot_id: string | null;
+}
+
+interface SourceSnapshotRow {
+  id: string;
+  row_count: number | null;
 }
 
 export async function generateKrxPriceSignals(requestedDate?: string): Promise<{
@@ -85,8 +92,23 @@ export async function generateKrxPriceSignals(requestedDate?: string): Promise<{
   const start = (window ?? []).find((row) => row.seq === fiveDayStartSeq) as
     | TradingCalendarRow
     | undefined;
-  const currentRows = await readEtfDailyRows(client, current.bas_dd);
-  const startRows = start ? await readEtfDailyRows(client, start.bas_dd) : [];
+  const windowRows = (window ?? []) as TradingCalendarRow[];
+  const snapshotRowCounts = await readSourceSnapshotRowCounts(
+    client,
+    windowRows.map((row) => requireSourceSnapshotId(row)),
+  );
+  const currentRows = await readEtfDailyRows(
+    client,
+    current.bas_dd,
+    requireSnapshotRowCount(snapshotRowCounts, current),
+  );
+  const startRows = start
+    ? await readEtfDailyRows(
+        client,
+        start.bas_dd,
+        requireSnapshotRowCount(snapshotRowCounts, start),
+      )
+    : [];
   const signals = createKrxPriceMoverSignals(currentRows, {
     currentRows,
     startRows,
@@ -95,21 +117,35 @@ export async function generateKrxPriceSignals(requestedDate?: string): Promise<{
     availableSeqs: (window ?? []).map((row) => row.seq),
   });
   const newListings = await readNewListingSignals(client, current.bas_dd);
-  const runId = await persistKrxPriceSignals(client, {
-    basDd: current.bas_dd,
-    sourceSnapshotId,
-    additionalSnapshotIds: newListings.sourceSnapshotIds,
-    signals,
-    transformVersion: MARKET_DATA_TRANSFORM_VERSION,
-  });
-  const priorDates = (window ?? [])
+  const priorCalendarRows = windowRows
     .filter((row) => row.seq < current.seq)
-    .map((row) => row.bas_dd);
-  const priorRows = await readEtfDailyRowsForDates(client, priorDates);
+    .map((row) => ({
+      row,
+      expectedRowCount: requireSnapshotRowCount(snapshotRowCounts, row),
+    }));
+  const priorRows = (
+    await Promise.all(
+      priorCalendarRows.map(({ row, expectedRowCount }) =>
+        readEtfDailyRows(client, row.bas_dd, expectedRowCount),
+      ),
+    )
+  ).flat();
   const turnover = createKrxTurnoverSurges(
     currentRows,
     groupTurnoverRowsByCode(priorRows),
   );
+  const inputSnapshotIds = [
+    ...windowRows.map((row) => requireSourceSnapshotId(row)),
+    ...newListings.sourceSnapshotIds,
+  ];
+  const runId = await persistKrxPriceSignals(client, {
+    basDd: current.bas_dd,
+    sourceSnapshotId,
+    additionalSnapshotIds: inputSnapshotIds,
+    signals,
+    transformVersion: MARKET_DATA_TRANSFORM_VERSION,
+    completeRun: false,
+  });
   await persistKrxSignalRows(client, {
     runId,
     basDd: current.bas_dd,
@@ -133,17 +169,10 @@ export async function generateKrxPriceSignals(requestedDate?: string): Promise<{
     valueUnit: "event",
     metaByCode: newListings.metaByCode,
   });
-  const reportedAt = await readTelegramReportedAt(client, runId);
-  const { error: finishError } = await client.from("signal_run")
-    .update({
-      notes: {
-        five_day_disclosure: signals.disclosure,
-        kr_full_signal_complete: true,
-        ...(reportedAt ? { telegram_reported_at: reportedAt } : {}),
-      },
-    })
-    .eq("id", runId);
-  throwIfError(finishError, "mark complete KR signal rows");
+  await completeKrxSignalRun(client, {
+    runId,
+    disclosure: signals.disclosure,
+  });
 
   return {
     basDd: current.bas_dd,
@@ -161,26 +190,30 @@ export async function generateKrxPriceSignals(requestedDate?: string): Promise<{
 async function readEtfDailyRows(
   client: ReturnType<typeof createServiceRoleClient>,
   basDd: string,
+  expectedRowCount: number,
 ) {
-  const { data, error } = await client
-    .from("etf_daily_kr")
-    .select("isu_cd,isu_nm,close_prc,fluc_rt,acc_trdval,acc_trdvol")
-    .eq("bas_dd", basDd);
-  throwIfError(error, `read ETF daily rows for ${basDd}`);
-  return (data ?? []).map(toSignalInputRow);
-}
-
-async function readEtfDailyRowsForDates(
-  client: ReturnType<typeof createServiceRoleClient>,
-  basDds: string[],
-) {
-  if (basDds.length === 0) return [];
-  const { data, error } = await client
-    .from("etf_daily_kr")
-    .select("isu_cd,isu_nm,close_prc,fluc_rt,acc_trdval,acc_trdvol")
-    .in("bas_dd", basDds);
-  throwIfError(error, "read prior ETF daily rows");
-  return (data ?? []).map(toSignalInputRow);
+  const data = await readAllRows<EtfDailyDatabaseRow>({
+    operation: `read ETF daily rows for ${basDd}`,
+    createQuery: () =>
+      client
+        .from("etf_daily_kr")
+        .select(
+          "bas_dd,isu_cd,isu_nm,close_prc,fluc_rt,acc_trdval,acc_trdvol",
+          { count: "exact" },
+        )
+        .eq("bas_dd", basDd),
+    orderBy: [
+      { column: "bas_dd", ascending: true },
+      { column: "isu_cd", ascending: true },
+    ],
+    getKey: (row) => `${row.bas_dd}:${row.isu_cd}`,
+  });
+  if (data.length !== expectedRowCount) {
+    throw new Error(
+      `ETF daily rows for ${basDd} are incomplete: expected ${expectedRowCount} from source_snapshot.row_count, fetched ${data.length}`,
+    );
+  }
+  return data.map(toSignalInputRow);
 }
 
 function groupTurnoverRowsByCode(
@@ -199,28 +232,39 @@ async function readNewListingSignals(
   client: ReturnType<typeof createServiceRoleClient>,
   basDd: string,
 ) {
-  const { data: events, error: eventError } = await client
-    .from("listing_event_kr")
-    .select(
-      "event_key,code,reg_day,first_seen,new_in_snapshot,first_alerted_at,source_snapshot_id",
-    )
-    .eq("new_in_snapshot", true)
-    .lte("first_seen", basDd)
-    .is("first_alerted_at", null);
-  throwIfError(eventError, "read unalerted new listing events");
-  if (!events?.length) return createKrxNewListingSignals([]);
+  const events = await readAllRows<ListingEventDatabaseRow>({
+    operation: "read unalerted new listing events",
+    createQuery: () =>
+      client
+        .from("listing_event_kr")
+        .select(
+          "event_key,code,reg_day,first_seen,new_in_snapshot,first_alerted_at,source_snapshot_id",
+          { count: "exact" },
+        )
+        .eq("new_in_snapshot", true)
+        .lte("first_seen", basDd)
+        .is("first_alerted_at", null),
+    orderBy: [{ column: "event_key", ascending: true }],
+    getKey: (row) => row.event_key,
+  });
+  if (!events.length) return createKrxNewListingSignals([]);
 
-  const codes = events.map((event) => event.code);
-  const { data: masters, error: masterError } = await client
-    .from("etf_master_kr")
-    .select("code,name")
-    .in("code", codes);
-  throwIfError(masterError, "read new listing master names");
+  const codes = [...new Set(events.map((event) => event.code))];
+  const masters = await readAllRows<{ code: string; name: string }>({
+    operation: "read new listing master names",
+    createQuery: () =>
+      client
+        .from("etf_master_kr")
+        .select("code,name", { count: "exact" })
+        .in("code", codes),
+    orderBy: [{ column: "code", ascending: true }],
+    getKey: (row) => row.code,
+  });
   const names = new Map(
-    (masters ?? []).map((master) => [master.code, master.name]),
+    masters.map((master) => [master.code, master.name]),
   );
   return createKrxNewListingSignals(
-    (events as ListingEventDatabaseRow[]).flatMap((event) => {
+    events.flatMap((event) => {
       const name = names.get(event.code);
       return name
         ? [
@@ -238,6 +282,56 @@ async function readNewListingSignals(
         : [];
     }),
   );
+}
+
+async function readSourceSnapshotRowCounts(
+  client: ReturnType<typeof createServiceRoleClient>,
+  snapshotIds: readonly string[],
+): Promise<ReadonlyMap<string, number>> {
+  const uniqueSnapshotIds = [...new Set(snapshotIds)];
+  if (uniqueSnapshotIds.length === 0) return new Map();
+  const rows = await readAllRows<SourceSnapshotRow>({
+    operation: "read source snapshot row counts",
+    createQuery: () =>
+      client
+        .from("source_snapshot")
+        .select("id,row_count", { count: "exact" })
+        .in("id", uniqueSnapshotIds),
+    orderBy: [{ column: "id", ascending: true }],
+    getKey: (row) => row.id,
+  });
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    if (typeof row.row_count !== "number") {
+      throw new Error(`Source snapshot ${row.id} has no row_count`);
+    }
+    counts.set(row.id, row.row_count);
+  }
+  for (const snapshotId of uniqueSnapshotIds) {
+    if (!counts.has(snapshotId)) {
+      throw new Error(`Missing source snapshot row_count for ${snapshotId}`);
+    }
+  }
+  return counts;
+}
+
+function requireSourceSnapshotId(row: TradingCalendarRow): string {
+  if (!row.source_snapshot_id) {
+    throw new Error(`Trading day ${row.bas_dd} has no source snapshot`);
+  }
+  return row.source_snapshot_id;
+}
+
+function requireSnapshotRowCount(
+  rowCounts: ReadonlyMap<string, number>,
+  row: TradingCalendarRow,
+): number {
+  const snapshotId = requireSourceSnapshotId(row);
+  const rowCount = rowCounts.get(snapshotId);
+  if (rowCount === undefined) {
+    throw new Error(`Missing source snapshot row_count for ${snapshotId}`);
+  }
+  return rowCount;
 }
 
 function toSignalInputRow(row: EtfDailyDatabaseRow): KrxSignalInputRow {

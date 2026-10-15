@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { KiwoomEtfMasterRecord } from "./kiwoom.ts";
 import { parseKrxNumber, type KrxEtfRow, type KrxRawEtfRow } from "./krx.ts";
 import type { KrxSnapshotStatus } from "./krx-validation.ts";
+import { readAllRows } from "../supabase/read-all-rows.ts";
 
 export const MARKET_DATA_TRANSFORM_VERSION = "m2-2026-09-21";
 const SOURCE_SNAPSHOT_BUCKET = "market-data-source-snapshots";
@@ -495,13 +496,18 @@ export class SupabaseMarketDataRepository implements MarketDataRepository {
   }
 
   private async resequenceCompleteTradingDays(): Promise<void> {
-    const { data, error } = await this.client
-      .from("trading_calendar_kr")
-      .select("bas_dd")
-      .eq("status", "TRADING_COMPLETE");
-    throwIfError(error, "read complete KRX trading days for resequencing");
+    const data = await readAllRows<{ bas_dd: string }>({
+      operation: "read complete KRX trading days for resequencing",
+      createQuery: () =>
+        this.client
+          .from("trading_calendar_kr")
+          .select("bas_dd", { count: "exact" })
+          .eq("status", "TRADING_COMPLETE"),
+      orderBy: [{ column: "bas_dd", ascending: true }],
+      getKey: (row) => row.bas_dd,
+    });
     const updates = createKrxTradingSequenceUpdates(
-      (data ?? []).map((row) => ({ basDd: row.bas_dd })),
+      data.map((row) => ({ basDd: row.bas_dd })),
     );
 
     for (const update of updates) {
@@ -550,13 +556,26 @@ export class SupabaseMarketDataRepository implements MarketDataRepository {
   }
 
   async getExistingMasters(): Promise<ExistingMaster[]> {
-    const { data, error } = await this.client.from("etf_master_kr").select("code,first_seen");
-    throwIfError(error, "read existing ETF masters");
-    return (data ?? []).map((row) => ({ code: row.code, firstSeen: row.first_seen }));
+    const data = await readAllRows<{ code: string; first_seen: string }>({
+      operation: "read existing ETF masters",
+      createQuery: () =>
+        this.client
+          .from("etf_master_kr")
+          .select("code,first_seen", { count: "exact" }),
+      orderBy: [{ column: "code", ascending: true }],
+      getKey: (row) => row.code,
+    });
+    return data.map((row) => ({ code: row.code, firstSeen: row.first_seen }));
   }
 
   async upsertEtfMasters(rows: readonly EtfMasterRow[]): Promise<void> {
     if (rows.length === 0) return;
+    const existingByCode = new Map(
+      (await this.getExistingMasters()).map((master) => [
+        master.code,
+        master.firstSeen,
+      ]),
+    );
     const { error } = await this.client.from("etf_master_kr").upsert(
       rows.map((row) => ({
         code: row.code,
@@ -565,7 +584,7 @@ export class SupabaseMarketDataRepository implements MarketDataRepository {
         market_code: row.marketCode,
         market_name: row.marketName,
         state: row.state,
-        first_seen: row.firstSeen,
+        first_seen: existingByCode.get(row.code) ?? row.firstSeen,
         last_seen: row.lastSeen,
         source_snapshot_id: row.sourceSnapshotId,
       })),
