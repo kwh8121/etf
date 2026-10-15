@@ -62,6 +62,35 @@ interface RunSelection {
   reasons: string[];
 }
 
+export function summarizeVerifyDataAccuracyResult<
+  Result extends { ok: boolean },
+  Proposal extends { ok: boolean } | null,
+>(input: {
+  selectionReasons: readonly string[];
+  results: readonly Result[];
+  krListingCorrectionProposal: Proposal;
+}) {
+  const inaccurateRunCount = input.results.filter((result) => !result.ok).length;
+  const listingAccuracyOk = input.krListingCorrectionProposal?.ok ?? true;
+  const failedCheckCount =
+    input.selectionReasons.length +
+    inaccurateRunCount +
+    (listingAccuracyOk ? 0 : 1);
+  return {
+    ok:
+      input.selectionReasons.length === 0 &&
+      inaccurateRunCount === 0 &&
+      listingAccuracyOk,
+    selectionReasons: input.selectionReasons,
+    checkedRunCount: input.results.length,
+    inaccurateRunCount,
+    failedCheckCount,
+    listingAccuracyOk,
+    results: input.results,
+    krListingCorrectionProposal: input.krListingCorrectionProposal,
+  };
+}
+
 export async function runVerifyDataAccuracy(
   client: SupabaseClient,
   args: VerifyDataAccuracyArgs,
@@ -79,19 +108,11 @@ export async function runVerifyDataAccuracy(
     args.mode === "all"
       ? await auditKrListingCorrectionProposals(client, { store })
       : null;
-  return {
-    ok:
-      selection.reasons.length === 0 &&
-      results.every((result) => result.ok) &&
-      (krListingCorrectionProposal?.ok ?? true),
+  return summarizeVerifyDataAccuracyResult({
     selectionReasons: selection.reasons,
-    checkedRunCount: results.length,
-    inaccurateRunCount:
-      results.filter((result) => !result.ok).length +
-      (krListingCorrectionProposal && !krListingCorrectionProposal.ok ? 1 : 0),
     results,
     krListingCorrectionProposal,
-  };
+  });
 }
 
 async function readRunSelection(
@@ -168,6 +189,8 @@ async function main(): Promise<void> {
         ok: result.ok,
         checkedRunCount: result.checkedRunCount,
         inaccurateRunCount: result.inaccurateRunCount,
+        failedCheckCount: result.failedCheckCount,
+        listingAccuracyOk: result.listingAccuracyOk,
         outputPath,
       }),
     );

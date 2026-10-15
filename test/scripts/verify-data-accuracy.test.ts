@@ -8,6 +8,7 @@ import { auditKrListingCorrectionProposals } from "../../lib/signals/data-accura
 import {
   parseVerifyDataAccuracyArgs,
   runVerifyDataAccuracy,
+  summarizeVerifyDataAccuracyResult,
 } from "../../scripts/verify-data-accuracy.ts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -114,18 +115,21 @@ describe("parseVerifyDataAccuracyArgs", () => {
       runClient as never,
       { store },
     );
-    const result = composeVerifyResultForTest(
-      ["run-kr"],
-      [],
+    const result = summarizeVerifyDataAccuracyResult({
+      selectionReasons: [],
+      results: [{ ok: true }],
       krListingCorrectionProposal,
-    );
+    });
 
     expect(krListingCorrectionProposal).toMatchObject({
       ok: false,
       approvalReady: false,
     });
     expect(result.ok).toBe(false);
-    expect(result.inaccurateRunCount).toBe(1);
+    expect(result.checkedRunCount).toBe(1);
+    expect(result.inaccurateRunCount).toBe(0);
+    expect(result.listingAccuracyOk).toBe(false);
+    expect(result.failedCheckCount).toBe(1);
   });
 });
 
@@ -208,25 +212,4 @@ class FakeQuery {
     if (this.rangeEnd !== null) data = data.slice(this.rangeStart, this.rangeEnd + 1);
     return { data, error: null, count };
   }
-}
-
-function composeVerifyResultForTest(
-  runIds: readonly string[],
-  selectionReasons: readonly string[],
-  krListingCorrectionProposal: Awaited<ReturnType<typeof auditKrListingCorrectionProposals>>,
-) {
-  const results: Array<{ ok: boolean }> = [];
-  return {
-    ok:
-      selectionReasons.length === 0 &&
-      results.every((result) => result.ok) &&
-      krListingCorrectionProposal.ok,
-    selectionReasons,
-    checkedRunCount: runIds.length,
-    inaccurateRunCount:
-      results.filter((result) => !result.ok).length +
-      (!krListingCorrectionProposal.ok ? 1 : 0),
-    results,
-    krListingCorrectionProposal,
-  };
 }
