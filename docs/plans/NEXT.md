@@ -6,10 +6,11 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `AUTO` Q-25 KR·US 웹 랭크인·랭크아웃 표시 (2026-10-15 사용자 요청·진행 승인)
+- [x] `DONE` Q-25 KR·US 웹 랭크인·랭크아웃 표시 (2026-10-15 사용자 요청·진행 승인, 기능 커밋 `930fd00`)
   - 범위: `/signals/kr/<기준일>`·`/signals/us/<한국 관측일>`에 Telegram과 같은 종목 코드·직전 완료 run 비교를 연결한다. 진입은 현재 행에 `랭크인`, 이탈은 섹션 아래 `랭크아웃`과 직전 순위를 표시한다. KR 가변 신호와 현재 0건인 이탈 전용 섹션도 포함한다.
   - 경계: 비교할 이전 run이 없으면 변동을 생략한다. 이전 조회 오류 때 현재 신호는 유지하고 변동 생략 안내를 표시한다. US는 같은 한국 날짜의 직전 run도 비교하고 유형별 상위 10건만 조회한다.
-  - 완료 조건: 렌더링·페이지 통합 회귀 테스트, 전체 테스트·TypeScript·lint·production build·독립 리뷰, 커밋·푸시 및 Vercel Production 배포 확인.
+  - 검증: Node 22.23.2, `npm test` 44파일·223테스트, `npx tsc --noEmit`, 앱·도메인·스크립트·테스트 ESLint, production build, 독립 리뷰(Critical·Important·Minor 0건), `continuity:check` 통과. 전체 lint는 작업 전부터 있던 미추적 `.opencode/`의 `any` 오류 4개로 실패했다.
+  - 배포: `930fd00`을 main에 푸시했고 Vercel Production `dpl_DUrm2LfdbK1F3UwACvVtkGvde8Hr`가 `READY`, 대표 도메인 `etf-signal-azure.vercel.app`이 해당 배포를 가리킴을 API로 확인했다. KR·US 미인증 인터넷 smoke는 307 → `/auth/login`, 본문 랭크 데이터 없음. 인증 화면의 표시·조회는 실제 페이지 렌더링 통합 테스트로 검증했고, 운영 사용자 세션의 브라우저 시각 검증은 미실행이다.
 
 - [x] `DONE` Q-18 US 관측 검증 자동화 (커밋 `9173894`, 검증: `npm test` 183개·`tsc`·`lint`·`build` 통과) (KR Q-12·Q-14와 동일 방식, 사용자 요청 2026-10-12)
   - 배경: US는 `ENABLE_US_ETF_P1=false`(staging)로 꺼져 있고 운영 DB 대조 수단이 없다. KR과 달리 시장일이 없어(`bas_dd`·`market_date`=null) 관측 단위는 `signal_run` 1건이다. Telegram 보고 표식(`notes.telegram_reported_at`)도 US에는 없다.

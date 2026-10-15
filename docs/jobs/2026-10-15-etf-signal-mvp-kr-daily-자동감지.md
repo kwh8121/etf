@@ -21,7 +21,7 @@
 
 ## Q-25 KR·US 웹 랭크인·랭크아웃 추가
 
-> 상태: 구현·검증 완료, 커밋·배포 확인 진행 중
+> 상태: 구현·검증·커밋·Production 배포 완료
 
 - 사용자는 Telegram 실수신 및 랭크인·랭크아웃 정상 표시를 확인했고 Vercel에도 같은 기능 추가를 요청·진행 승인했다.
 - KR은 동일 전략의 직전 완료 거래일 run(`bas_dd`, `completed_at`, `id` 내림차순)을 비교한다. US는 동일 전략의 직전 완료 관측 run(`observed_at`, `id` 내림차순)을 비교하며 같은 한국 날짜의 앞선 run도 대상이다.
@@ -43,5 +43,9 @@
 
 - 원격 자동 감지 커밋 `ac0e368`을 fast-forward로 통합했다. 이 작업의 `NEXT.md` 수정만 일시 stash 후 복원했고, 자동 관측 후보·watermark·당일 작업 기록을 보존했다. 당일 기록은 이 파일에 통합했다.
 - 운영 데이터 쓰기·Telegram 재발송은 실행하지 않았다.
-- Vercel CLI 63.1.0에서 업데이트 조회 worker의 시간 초과가 출력됐지만 승인된 네트워크 환경의 본 조회는 최종 성공했다. API 읽기 전용 조회도 성공해 기존 Production `ac0e368`의 `READY`를 확인했다. 이번 변경의 배포 증거는 완료 후 덧붙인다.
+- Vercel CLI 63.1.0에서 업데이트 조회 worker의 시간 초과가 출력됐지만 승인된 네트워크 환경의 본 조회는 최종 성공했다. 이후 API 읽기 전용 조회를 사용했다.
+- 기능 커밋 `930fd00`을 main에 푸시했다. Vercel Production `dpl_DUrm2LfdbK1F3UwACvVtkGvde8Hr`의 `READY`와 커밋 SHA `930fd00081c7390df393b28183e9b513a22eb695`를 확인했고 대표 도메인 `etf-signal-azure.vercel.app`의 deployment ID도 일치했다.
+- 배포 후 인터넷 smoke: `/signals/kr/2026-10-14`·`/signals/us/2026-10-15` 모두 미인증 307 → `/auth/login`, 본문 랭크 데이터 없음.
+- Q-25 완료 후 큐: `AUTO 0 / APPROVE 0 / DECIDE 0 / WAIT 4`(Q-23·Q-07·Q-08·Q-09). 관측 run·사용자 시각 확인·누적 목표·휴장 실측 해제 조건은 `NEXT.md`를 따른다.
 - Linear 연결 도구는 현재 세션에서 제공되지 않아 동기화 불가. 저장소 Q-25와 이 기록을 근거로 다음 연결 가능 시 기존 프로젝트·이슈부터 조회한다.
+- OpenViking에 웹 기능 완료·배포 ID·검증 범위·남은 대기 항목을 저장했고 `Stored 2 message(s) and committed for memory extraction`을 확인했다. `continuity:check`는 필수 문서·당일 작업 기록·diff 검사 통과.
