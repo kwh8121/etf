@@ -241,7 +241,11 @@ export async function auditKrListingCorrectionProposals(
   const sourceOk = sourceIntegrityResults.every((result) => result.ok);
 
   return {
-    ok: sourceOk && falseListingEvents.length === 0 && masterFirstSeenCorrections.length === 0,
+    ok:
+      sourceOk &&
+      uniqueEvidenceFailures.length === 0 &&
+      falseListingEvents.length === 0 &&
+      masterFirstSeenCorrections.length === 0,
     approvalReady: sourceOk && uniqueEvidenceFailures.length === 0,
     sourceIntegrity: sourceIntegrityResults,
     falseListingEvents,
@@ -531,7 +535,9 @@ async function replayNewListings(
           reg_day: event.reg_day,
           first_seen: event.first_seen,
           new_in_snapshot: event.new_in_snapshot,
-          first_alerted_at: event.first_alerted_at,
+          first_alerted_at: storedEventKeys.has(event.event_key)
+            ? null
+            : event.first_alerted_at,
         },
       ]),
     ),

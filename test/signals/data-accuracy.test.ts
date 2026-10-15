@@ -575,8 +575,10 @@ describe("auditRunAccuracy", () => {
       value_unit: "event",
       meta: {
         event_key: "KR:new_listing:A777:20261001",
+        reg_day: "2026-10-01",
         first_seen: "2026-10-14",
-        first_alerted_at: "2026-10-14T02:00:00.000Z",
+        new_in_snapshot: true,
+        first_alerted_at: null,
       },
     });
     const client = createReadonlyClient({
@@ -629,6 +631,9 @@ describe("auditRunAccuracy", () => {
 
     expect(result.diffs.removed).not.toContainEqual(
       expect.objectContaining({ signal_type: "new_listing", code: "A777" }),
+    );
+    expect(result.diffs.changed).not.toContainEqual(
+      expect.objectContaining({ key: "new_listing:raw:A777" }),
     );
   });
 });
@@ -747,6 +752,7 @@ describe("auditKrListingCorrectionProposals", () => {
     await expect(
       auditKrListingCorrectionProposals({} as never, { store }),
     ).resolves.toMatchObject({
+      ok: false,
       approvalReady: false,
       caveats: expect.arrayContaining(["listing_event_source_evidence_missing"]),
     });

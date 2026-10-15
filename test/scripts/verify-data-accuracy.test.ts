@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { auditKrListingCorrectionProposals } from "../../lib/signals/data-accuracy.ts";
 import {
   parseVerifyDataAccuracyArgs,
   runVerifyDataAccuracy,
@@ -78,6 +79,53 @@ describe("parseVerifyDataAccuracyArgs", () => {
     expect(result.ok).toBe(false);
     expect(result.checkedRunCount).toBe(0);
     expect(result.selectionReasons).toEqual(["no_completed_runs"]);
+  });
+
+  it("fails all mode when the global KR listing proposal has evidence failures", async () => {
+    const runClient = createSignalRunClient([
+      { id: "run-kr", market: "KR", status: "COMPLETED", completed_at: "2026-10-14T00:00:00Z" },
+    ]);
+    const store = {
+      async readSignalRun() { return null; },
+      async readSignalRows() { return []; },
+      async readSourceSnapshots() { return []; },
+      async readKrTradingWindow() { return []; },
+      async readKrDailyRows() { return []; },
+      async readKrListingEvents() { return []; },
+      async readKrMasters() { return []; },
+      async readKrMasterSourceSnapshots() { return []; },
+      async readKrListingHistory() {
+        return [
+          {
+            event_key: "KR:new_listing:A001:20200101",
+            code: "A001",
+            reg_day: "2020-01-01",
+            first_seen: "2026-10-15",
+            new_in_snapshot: true,
+            first_alerted_at: null,
+            source_snapshot_id: "missing-source",
+          },
+        ];
+      },
+      async readKrMasterHistory() { return []; },
+      async downloadSourceSnapshot() { throw new Error("unexpected download"); },
+    };
+    const krListingCorrectionProposal = await auditKrListingCorrectionProposals(
+      runClient as never,
+      { store },
+    );
+    const result = composeVerifyResultForTest(
+      ["run-kr"],
+      [],
+      krListingCorrectionProposal,
+    );
+
+    expect(krListingCorrectionProposal).toMatchObject({
+      ok: false,
+      approvalReady: false,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.inaccurateRunCount).toBe(1);
   });
 });
 
@@ -160,4 +208,25 @@ class FakeQuery {
     if (this.rangeEnd !== null) data = data.slice(this.rangeStart, this.rangeEnd + 1);
     return { data, error: null, count };
   }
+}
+
+function composeVerifyResultForTest(
+  runIds: readonly string[],
+  selectionReasons: readonly string[],
+  krListingCorrectionProposal: Awaited<ReturnType<typeof auditKrListingCorrectionProposals>>,
+) {
+  const results: Array<{ ok: boolean }> = [];
+  return {
+    ok:
+      selectionReasons.length === 0 &&
+      results.every((result) => result.ok) &&
+      krListingCorrectionProposal.ok,
+    selectionReasons,
+    checkedRunCount: runIds.length,
+    inaccurateRunCount:
+      results.filter((result) => !result.ok).length +
+      (!krListingCorrectionProposal.ok ? 1 : 0),
+    results,
+    krListingCorrectionProposal,
+  };
 }
