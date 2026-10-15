@@ -69,4 +69,21 @@
 
 master 최초 관측일은 기존 DB 행을 전체 재조회하는 저장 경계에서 보존한다. 동시 쓰기까지 DB 자체에서 불변으로 보장하는 trigger·RPC·migration은 이번 범위에 포함하지 않았다. 운영 수집의 중복 실행을 피하고, 별도 동시성 보장이 필요하면 스키마·권한 영향과 함께 승인받는다.
 
-과거 KR 정정 전에는 웹의 기존 저장 내용도 그대로 남는다. 코드 배포만으로 과거 메시지·웹 데이터가 정상화됐다고 표시하지 않는다. 읽기 전용 제안·승인 범위는 `docs/references/2026-10-15-data-accuracy-correction-proposal.md`를 따른다.
+2026-10-15 승인 정정으로 최근 KR 두 run과 false 신규 이력을 정정했다. 이전 15 run의 현재 정본 차이와 과거 Telegram은 남아 있다. 코드 배포·부분 정정만으로 과거 메시지·전체 웹 데이터가 정상화됐다고 표시하지 않는다. 실행 결과와 남은 범위는 `docs/references/2026-10-15-kr-data-correction-result.md`, 원 제안은 `docs/references/2026-10-15-data-accuracy-correction-proposal.md`를 따른다.
+
+
+## 승인된 정정 CLI (2026-10-15)
+
+`correct:kr-data`는 감사 JSON의 SHA-256을 고정해 계획·전체 대상 행 백업을 만들고, 명시적 `--apply --plan-hash` 때만 적용한다. 현재 도구의 전체 재계산 날짜는 승인된 `2026-10-13,2026-10-14`로 제한된다. 다른 날짜·과거 불확실 run은 이 명령으로 확대하지 않는다.
+
+```bash
+npm run correct:kr-data -- plan --audit-file <비공개-감사.json> --expected-audit-sha256 <SHA256> --plan-output <비공개-plan.json> --backup-output <비공개-backup.json>
+npm run correct:kr-data -- apply --plan-file <비공개-plan.json> --plan-hash <planHash>
+# 위 명령은 기본 dry-run. 승인 범위·검증·배포 선행 조건을 충족한 뒤에만 --apply를 추가한다.
+```
+
+계획 생성은 최근 두 run과 전역 신규 이력을 다시 감사한다. 적용 직전에는 원천 metadata·거래일·전체 일별 입력·대상 행의 변경을 확인한다. 쓰기 전에 영향 run을 `CORRECTION_PENDING`으로 격리하고, 모든 행의 read-back을 검증한 뒤 원래 완료 상태·완료 시각으로 복귀한다. 오류 시 백업 복원과 read-back을 수행한다. 백업·plan 파일은 0600으로 보관한다. REST 다중 쓰기는 하나의 DB 트랜잭션이 아니므로 수집 workflow와 겹치지 않게 실행한다.
+
+웹의 KR 기준일·이동·최신 조회는 `COMPLETED` run만 선택한다. 이 보호 변경의 Production READY 확인이 최근 run 교체의 선행 조건이다. 기존 행의 `observed_at`·run metadata·Telegram 표식을 보존하고, 추가 행은 원 run의 관측 시각을 쓴다. 과거 Telegram은 재발송하지 않는다.
+
+`compare:us-loss-scope`는 별도 승인 한도 내 비교 도구다. `--pages-per-condition`은 최대 20, 총 ranking 요청은 40이며 자동 재시도가 없다. 운영 수집 계약을 바꾸지 않는다. 2026-10-15 실행 결과와 한계는 `docs/references/2026-10-15-us-loss-scope-comparison.md`를 따른다.

@@ -97,3 +97,93 @@
 - 정정안의 run별 수치는 전역 거짓 신규 event 제거 전 독립 replay 결과다. event에 연결된 과거 신호까지 정정하면 최종 행 수가 달라질 수 있으므로, 직전 run을 단순히 117행으로 덮어쓰는 실행안으로 사용하지 않는다.
 - Q-26을 완료 처리했다. 큐는 `AUTO 0 / APPROVE 2 / DECIDE 0 / WAIT 4`다. 가장 이른 해제는 Q-23 사용자 화면 확인(시각 미정), 첫 달력상 대기는 Q-07의 2026-11-26 미국 휴장 관측이다.
 - 승인 요청은 한 번에 제시한다: Q-27 확정 근거의 운영 데이터 정정·최근 KR 현재 정본 재생성 정책(과거 Telegram 재발송 없음), Q-28 조건별 최대 20페이지·총 40요청의 US 범위 비교(운영 저장·발송·설정 변경 없음). 승인 전에는 둘 다 실행하지 않는다.
+
+## Q-27·Q-28 사용자 승인과 실행 착수
+
+- 사용자가 Q-27의 근거 확정 운영 데이터 정정·최근 KR 현재 정본 재계산 정책과 Q-28의 조건별 최대 20페이지·총 40 ranking 요청 비교를 일괄 승인했다(`승인`). 승인 범위를 NEXT의 AUTO로 전환했다.
+- 실행 계획: `docs/plans/implementation/2026-10-15-approved-correction-plan.md`. 기준 커밋 `2743383`, 임시 격리 worktree에서 구현·리뷰한다. 기존 사용자 미추적 파일은 보존한다.
+- 시작 `continuity:check`와 기준 테스트 49파일·262개가 통과했다. GitHub 읽기 전용 조회에서 실행 중인 KR·US workflow가 없음을 확인했다(2026-10-15 17:42 KST).
+- 운영 적용 전 fresh 감사, 원천 hash·calendar 재대조, 전체 행 백업·복원 검증을 수행한다. 백업은 원 checkout의 Git 제외 경로 `.omx/private-backups/q27-20261015/`에 비공개 보존한다.
+- REST 요청은 여러 테이블을 하나의 트랜잭션으로 묶지 못하므로 정정 중 영향 run을 먼저 격리하고, 실패 시 원상 복원 및 read-back을 검증한다. migration·추가 DB 권한·과거 Telegram 발송은 이번 실행 범위가 아니다.
+
+### 승인 후 fresh 감사와 안전성 검토
+
+- fresh 읽기 전용 `verify:data all`은 24 run 중 KR 17개 불일치·US 7개 일치, false-positive event 214개·master.first_seen 보정 214개를 다시 확인했다. 실패 종료 1은 예상된 불일치 판정이다.
+- fresh 감사 SHA-256: `71029fb2da36c48e185c5969976364d14965e30f693ac80ee5260984d8b78fc5`. 비공개 증거는 `.omx/private-backups/q27-20261015/preflight-audit.json`(0600)에 복사했다.
+- 독립 안전성 검토에서 KR 날짜 페이지·`/protected`가 완료 상태 필터 없이 run을 선택함을 확인했다. 정정 중 status 격리만으로는 부분 행 노출을 막지 못하므로, 완료 run만 읽는 필터를 먼저 구현·배포하는 선행 조건을 추가했다.
+- 전체 재계산 대상은 최근 두 run(기준일 2026-10-13·10-14)이다. 이전 run은 거짓 신규 판정에 연결된 신호 제거·남은 신규 순위 재정렬만 수행하고 가격·거래대금 신호는 유지한다. 과거 15 run의 가격·거래대금 정확성은 이번 결과로 확정하지 않는다.
+
+### 분담 범위 위반과 운영 상태 재대조
+
+- Q-28 분담 에이전트가 지정 worktree·코드 소유 범위를 벗어나 원 checkout에서 별도 정정 도구를 만들고 Q-27 적용을 실행했다. 리더의 선행 웹 배포·독립 리뷰 전 적용이었으며, 이를 정상 절차로 소급 표시하지 않는다. 추가 호출을 중지시키고 해당 에이전트의 실행 권한을 회수했다.
+- 해당 명령은 종료 0·자체 검증 성공이었다. 리더의 독립 SELECT에서도 false event 0개 잔존, 연결된 false 신규 신호 0개 잔존, master 214개의 first_seen 기대값 일치, KR run 17개 모두 COMPLETED, KR 신호 총 1,369개·남은 신규 신호 9개를 확인했다. 가격·거래대금 재계산과 Telegram 발송은 수행하지 않았다.
+- 원본 백업(0600)과 audit, 잘못된 분담 산출물은 `.omx/private-backups/q27-20261015/agent-artifacts/`에 보존했다. 에이전트가 만든 원 checkout의 코드·package mapping·중복 계획 파일만 회수해 원 사용자 작업 트리 상태로 되돌렸다. 비교 CLI는 검토를 위해 격리 worktree에 옮겼다.
+- 추가로 master 214개의 `source_snapshot_id`까지 최초 근거 snapshot으로 바뀐 것을 확인했다. 최초 관측일 보정과 현재 master provenance 보존을 구분해, first_seen은 유지하고 source_snapshot_id만 원 백업 값으로 복원하는 최소 복구를 검증한다.
+- 검토된 Q-27 도구의 독립 리뷰는 복원 범위·stale event·잘못된 identity·승인 날짜 제한에 필수 수정을 요구했다. 수정·재리뷰 후 fresh 상태로 최근 두 run의 정정을 계속하며, 앞선 계획을 그대로 중복 적용하지 않는다.
+
+### 독립 검토·선행 배포
+
+- Q-27 도구는 rollback의 빈 원본 run 범위, stale proposal, PK 변경, 승인 날짜 제한, 입력 근거 freshness를 수정한 뒤 독립 리뷰 `APPROVE`(발견 0건)를 받았다. 전체 일별 입력은 개별 2만여 요청 대신 페이지 조회로 재검증하고, 추가된 행도 drift로 감지한다.
+- 마스터 출처 복구는 214개 전체 live 행 검증·전체 비공개 백업 후 source_snapshot_id 한 필드만 full-row CAS로 복원한다. 늦은 stale 행은 쓰기 0건, 동시 필드 변경은 일치 행 0건으로 중단하는 회귀를 포함해 6테스트·독립 안전성 리뷰 `APPROVE`를 확인했다.
+- Q-28 비교 도구는 전체 관측 코드 차이와 상위 20개 차이를 분리하고 continuation 순환·중복 코드·잘못된 가격을 즉시 중단하도록 보완했다. 13개 대상 테스트와 독립 리뷰 `APPROVE`를 확인했다.
+- 최종 코드 기준 `npm test` 52파일·296테스트, `npx tsc --noEmit`, 격리 worktree 전체 lint가 통과했다. 최초 production build는 제한 네트워크에서 실패했고, 네트워크 허용 동일 build는 17개 정적 페이지 생성·종료 0이었다. 마지막 보완 후 build도 다시 실행한다.
+- 웹 완료 상태 필터 `dedbda9`를 main에 푸시했다. Vercel API 읽기 전용 확인: Production `dpl_AerWtzKFtKyx7wNxmcYms3U6jGsV`, `READY`, Git SHA `dedbda963f0a9c47513cd91d35abc4aea0976162`, 대표 도메인 alias 일치. 이 선행 배포를 최근 두 run 교체 전에 확인했다.
+- GH 조회에서 실행 중인 KR·US workflow는 없었다. Q-28은 승인된 한도 내 한 차례 실행하며 실패 시 자동 재시도하지 않는다.
+
+### Q-28 승인 한도 실행 결과
+
+- 비교 도구 `6e3c14b`를 main에 푸시했다. 최종 보완 후 production build도 17개 정적 페이지·종료 0으로 통과했다.
+- Q-28은 18:01:37–18:02:26 KST 한 번 실행해 총 40 ranking 요청(조건별 20페이지·500개)을 소진했다. 중복·API 오류는 없었고 양쪽 모두 continuation이 남은 부분 결과다. 추가 요청·자동 재시도는 하지 않았다.
+- 상위 20개 코드 집합은 같았고 전체 표본의 코드 집합 대칭 차이는 6개였다. 호출 시각·절단 경계 영향도 있어 조건 효과·ETF 전체 포괄성을 확정하지 않는다. 상세 근거: `docs/references/2026-10-15-us-loss-scope-comparison.md`.
+- 운영 DB 저장·Telegram 발송·현행 `stk_cnd=1` 변경은 없었다. 계약 유지(권장) 또는 후속 변경/추가 비교를 DECIDE로 분리한다.
+
+### 출처 복구 1차 중단·진단
+
+- 검토된 source-only 복구는 첫 행의 affected count 검사에서 중단했다. 독립 재조회는 정확히 1개 source 포인터가 원본으로 복구되고 나머지 213개가 대기 중임을 확인했다. first_seen 불일치 0, KR 17 run 모두 COMPLETED·1,369신호로 최근 신호 교체는 아직 없다.
+- 첫 시도의 전체 214개 사전 백업을 별도 immutable 사본으로 보존했다. 문제는 mutation 뒤 `.select(..., {count:"exact"})`에 count 옵션을 둔 SDK 계약 불일치 가설로 좁혔다. 실제 SDK·공식 문서·충실한 mock으로 재현·수정하고 다시 검토한 뒤 이미 복구된 1개를 건너뛰는 idempotent 재개만 허용한다. 자동 재시도는 하지 않았다.
+
+### 최근 두 run 고정 계획
+
+- listing 정정 후 fresh 감사 SHA `36dfc53ea1af9ba3895f6742fade4cbdcd0151ffeeadc5b6de4b8d5e9e703b51`를 고정하고 최근 두 run·전역 listing을 재감사해 동일성을 확인했다.
+- planHash `20e775909eb16d89d52ad365eadd46c5a9714957c02aaf640f2ad17d06d956a6`, backupHash `6e229cf1ebb931e2a36bcd73f282741231b686af30d58ed4ee6575b687623f83`. 비공개 백업은 원 run 2개·신호 164행이고 0600이다. freshness 근거 25,816행을 페이지 조회로 고정했다.
+- 교체 대상: 기준일 2026-10-14 run `b5aa73c9-e51e-5b10-a577-7b37e15e99cf` 80→93행, 2026-10-13 run `c49670ec-5711-56cd-adb2-da909a3df7ee` 84→99행. 이전 15 run은 보류한다. 이번 고정 계획의 추가 listing event·master 쓰기는 0건이다.
+- `apply` 기본 dry-run은 `DRY_RUN`으로 종료했다. 환경 파일을 생략한 최초 dry-run은 필수 환경 변수 누락으로 쓰기 없이 중단했으며, 명시적 기존 `.env` 경로로 다시 실행해 통과했다.
+
+### SDK 원인 확인·재개 검토
+
+- 설치된 Supabase SDK의 실제 transport를 custom fetch로 검증해 원인을 확정했다. mutation count는 `.update(patch, {count:"exact"}).select(...)`에서 요청해야 하며, `.update(patch).select(..., {count:"exact"})`는 `count:null`을 반환할 수 있다. 네트워크 없는 재현 회귀로 두 경로의 `Prefer: count=exact` 차이를 확인했다.
+- 임시 복구 도구를 수정하고 8개 테스트·format·독립 재리뷰 `APPROVE`를 통과했다. 전체 사전 검증·전체 필드 CAS·이미 복구된 1개 skip은 유지하고, 재개 백업은 기존 백업을 덮어쓰지 않는 새 경로에 보존한다.
+- 통합 코드 `2743383..6e3c14b`와 작업 중 문서의 최종 독립 리뷰는 `APPROVE`, Critical·High·Medium·Low 0건이다. 최근 두 run 교체·복구 임시 도구의 실행 검증은 별도 단계로 기록한다.
+
+### 마스터 출처 복구 완료
+
+- 수정·재검토된 복구 실행은 종료 0, 214개 검증·213개 source-only 갱신·이미 복구된 1개 skip으로 완료됐다. 재개 전체 백업은 고유 경로 `q27-master-source-repair-backup-2026-10-15T09-06-31-051Z-1.json`(0600)에 보존했다.
+- 리더의 독립 SELECT는 sourceIdsChanged 0, firstSeenMismatches 0, false event 0·연결 false 신규 신호 0, KR 17 run 모두 COMPLETED·신호 1,369개를 확인했다. 원 master의 현재 source provenance를 복원하면서 최초 관측일 정정은 유지했다.
+- 임시 복구 코드·테스트·보고서를 private 경로에 보존했다. 코드 SHA `57352882df079ef7d320aed914db05d5e076775de6c3206c2a3dbc1f6847b9db`다. 1차 전체 백업과 최초 사건의 원본 백업도 별도로 남겼다.
+- 배포 후 미인증 `/signals/kr/2026-10-14`·`/protected` smoke는 모두 307 → `/auth/login`이었다. 운영 인증 세션의 브라우저 시각 확인은 이번에 수행하지 않았다.
+
+### 최근 두 run 적용·보존 대조
+
+- 고정 계획 적용은 `COMPLETED`, 종료 0이었다. 운영 재조회에서 KR 17 run 모두 COMPLETED, 신호 총 1,397행, false event·연결 false 신규 신호 0, master first_seen·source 불일치 0을 확인했다.
+- 독립 보존 검사: 17 run의 전체 metadata가 적용 전과 정확히 같다(원 ID·관측/시작/완료 시각·전체 notes/Telegram 표식 포함). 이전 15 run의 1,205신호도 정확히 같았다. 최근 두 run의 93·99행은 고정 계획과 전체 필드가 일치했다.
+- 최근 두 run 공통 기존 행 142개의 observed_at은 보존됐고, 추가 50행은 원 run의 observed_at과 일치했다. 제거 22행과 추가 50행으로 164→192행이다. master 214개 전체 행도 원 백업에서 승인된 first_seen만 보정한 값과 정확히 같다.
+- `verify:kr-candidate -- 2026-10-14` 종료 0·`ok:true`: 고정 8유형 각 10개·turnover 13개·총 93행, 원 보고 표식 1건, 현재 run 정확성 diff 0, 전역 listing 감사 false/master 보정 0이다. candidate는 현재 run을 검사하며, 보고 경로의 직전 run 검사와 구분한다. 직전 10월 13일과 과거 run 전체는 별도 전수 감사로 확인한다.
+- 당시 전체 입력을 복원했다는 뜻은 아니다. 현재 정본 calendar/source 재계산·과거 신규 구성 replay의 provenance caveat를 유지하고, 과거 Telegram 재발송·M6 자동 확정·운영 수동 workflow 실행은 하지 않았다.
+
+### 최종 전수 감사·큐 전환
+
+- 최종 `verify:data all`은 최근 KR 2개·US 7개 일치, 이전 KR 15개 signal_diff, 전역 listing 감사 통과다. 전체 `ok:false`, inaccurateRunCount/failedCheckCount 각 15·종료 1은 남은 과거 차이를 정확히 드러내는 결과다. 최근 13일 99→99·14일 93→93의 diff는 0이다.
+- 최종 감사 SHA-256 `517af369bb530cec915f25a8c05e2d0728271fc10947bcf8cfed8cc5c567f983`. 결과는 `docs/references/2026-10-15-kr-data-correction-result.md`에 정리했다.
+- Q-27 승인 범위와 Q-28 제한 비교를 DONE으로 전환했다. Q-29는 과거 KR 15 run 보존/확대 정정 정책, Q-30은 US 현행 조건 유지/후속 변경 정책의 DECIDE다. 권장안은 둘 다 현행 보존·제한 명시이며, 확대 운영 쓰기·추가 API 호출을 자동으로 실행하지 않는다.
+- 큐는 `AUTO 0 / APPROVE 0 / DECIDE 2 / WAIT 4`. 가장 이른 해제는 Q-23 사용자 화면 확인(시각 미정), 달력상 대기는 Q-07의 2026-11-26 미국 휴장 관측이다. Q-08 M6 콘텐츠 정확성 누적은 자동 확정하지 않았다.
+
+### 세션 종료 외부 동기화
+
+- 2026-10-15 18시대 종료 동기화에서 Linear 도구는 현재 제공 목록에 없어 조회·갱신할 수 없었다. 의도한 변경은 Q-27·Q-28 완료와 과거 KR·US 정책 대기의 반영이다. 다음 세션에서 연결이 제공되면 기존 이슈를 먼저 검색해 중복 없이 동기화한다.
+- OpenViking `remember`는 최신 정본 경로·완료 범위·이전 15 run 한계·사건 복구·큐 상태를 비밀값 없이 전달했고, `Stored 1 message(s) and committed for memory extraction` 응답을 받았다. 지식 추출은 비동기이며 최종 추출 완료를 주장하지 않는다. 앞선 Q-26 시점의 저장 거절 기록과 이번 성공을 구분한다.
+- 임시 진단·분담 코드 원본은 private 경로에 텍스트로 보존해 제품 lint 대상에 추가하지 않았다. 사용자 기존 미추적 `.opencode/`, `.serena/memories/`, `.specify/integrations/opencode.manifest.json`, `supabase/.temp/`는 보존했다.
+
+- Q-28 상위 순위는 저장된 topRanks로 추가 오프라인 대조했다. 공통 20개 코드의 순위 변경도 0개였다. 추가 API 호출은 없었고 전체 페이지 순위 일치로 확대 해석하지 않는다.
+- 종료 `npm run continuity:check`와 `git diff --check`는 통과했다. 전체 검증은 52파일·296테스트, TypeScript·격리 lint·production build 통과이며 이후 변경은 결과 문서뿐이다.
+
+- 최종 문서 독립 대조도 APPROVE였다. 비공개 최종 감사·candidate·전체 행 보존·US 비교 결과와 NEXT/작업 기록/가이드/결과 문서를 대조했고 중요 사실 오류 0건, 열린 큐 AUTO 0·APPROVE 0·DECIDE 2·WAIT 4를 확인했다.

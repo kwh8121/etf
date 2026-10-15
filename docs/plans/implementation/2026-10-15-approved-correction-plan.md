@@ -4,7 +4,7 @@
 **승인:** 2026-10-15 사용자 `승인` — 직전 응답의 Q-27 권장 정정과 Q-28 최대 40회 비교를 일괄 승인했다.
 **기준 커밋:** `2743383`. 격리 작업 경로 `/tmp/investment-approved-correction-20261015`.
 
-## Global Constraints
+## 공통 제약
 
 - 운영 정정은 fresh proposal·전체 백업·복원 검증·적용 직전 동일성 확인 뒤 수행한다. 백업은 저장소 밖 비공개 파일(0600)에 둔다.
 - false-positive event와 master.first_seen의 확정 근거만 적용한다. 연결된 과거 신규 신호를 함께 검토한다.
