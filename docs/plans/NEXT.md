@@ -62,11 +62,10 @@
   - 변경: GitHub `production` environment에 `ENABLE_US_ETF_P1=true` 설정(변수 목록으로 확인), `us-etf-movers.yml`·`us-verify.yml`의 `environment: staging`→`production`. `staging`의 `ENABLE_US_ETF_P1=false`는 그대로다. `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 어느 environment에도 없다.
   - 효과: 다음 US timer 실행부터 production Kiwoom·Supabase·Telegram chat을 쓰고, `production`의 `ETF_WEB_BASE_URL`로 Telegram 헤더에 `상세: …/signals/us/<한국 관측일>` 링크가 붙는다. 수동 dispatch는 하지 않았다(발송 없음).
   - 되돌리기: `gh variable set ENABLE_US_ETF_P1 --env production --body false`. 이후 US 실행은 `DISABLED`로 끝나고 발송·쓰기가 없다.
-- [ ] `APPROVE` Q-31 Q-29·Q-30 결정의 OpenViking 외부 메모리 동기화
-  - 승인 대상: OpenViking `remember`에 아래 요약을 전송하는 한 차례 재시도. 운영 DB·API·발송 권한과는 별개다.
-  - 전송 요약: “ETF 신호 MVP: 사용자가 과거 KR 15 run 보존·콘텐츠 미검증/현재 정본 불일치 명시와 US 현행 `stk_cnd=1`·증100% 조건·전체 ETF 포괄성 미확인 제한 유지를 확정했다. 두 정책 결정은 완료이며 정확성 검증 완료를 뜻하지 않는다. 추가 운영 정정·API 비교·계약 변경은 새 범위와 별도 승인이 필요하다.” 비밀값·원천 응답·내부 파일 경로는 전송하지 않는다.
-  - 사유: 2026-10-15 자동 승인 검토가 외부 목적지 신뢰 여부와 운영 상태·내부 경로 payload의 구체적 전송 승인 미확인을 이유로 최초 저장을 거절했다. 우회·재시도하지 않았다.
-  - 선택지 A: 위 최소 요약의 외부 저장 승인(권장: 연속성 유지). B: 저장소 기록만 유지하고 외부 동기화 생략. 명시 선택 전에는 전송하지 않는다.
+- [x] `DONE` Q-31 Q-29·Q-30 결정의 OpenViking 외부 메모리 동기화 (2026-10-16 사용자 저장 승인)
+  - 사용자 `저장 승인`으로 아래 최소 요약의 한 차례 전송을 승인했다. OpenViking `remember`는 `Stored 1 message(s) and committed for memory extraction.`을 반환했다. 저장·추출 접수 성공이며 비동기 장기 메모리 추출 완료를 뜻하지 않는다.
+  - 전송 요약: “ETF 신호 MVP: 사용자가 과거 KR 15 run 보존·콘텐츠 미검증/현재 정본 불일치 명시와 US 현행 `stk_cnd=1`·증100% 조건·전체 ETF 포괄성 미확인 제한 유지를 확정했다. 두 정책 결정은 완료이며 정확성 검증 완료를 뜻하지 않는다. 추가 운영 정정·API 비교·계약 변경은 새 범위와 별도 승인이 필요하다.” 비밀값·원천 응답·내부 파일 경로는 전송하지 않았다.
+  - 이력: 2026-10-15 자동 승인 검토는 외부 목적지 신뢰 여부와 구체적 payload 전송 승인 미확인으로 최초 저장을 거절했다. 이번 사용자 명시 승인 후 최소 요약만 한 차례 재시도했다. 운영 DB·API·발송·계약 변경은 없다.
 
 - [ ] `WAIT` Q-23 첫 US 운영 실행 확인 (Q-21 이후)
   - 해제: US timer(설치본 기준 평일 09:40 KST, 회사 PC 기동 시 `Persistent=true` 따라잡기)의 첫 실행. 2026-10-12 09:40 실행은 전환 전이라 `DISABLED`였고, 가장 이른 기회는 2026-10-13(화) 09:40이며 정시 실행은 보장되지 않는다.
