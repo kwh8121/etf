@@ -1,7 +1,15 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  auditKrListingCorrectionProposals,
+  auditRunAccuracy,
+  type AuditRunAccuracyResult,
+  type KrListingCorrectionProposal,
+} from "../lib/signals/data-accuracy.ts";
+import { SupabaseDataAccuracyStore } from "../lib/signals/data-accuracy-store.ts";
 import { KR_PRICE_SIGNAL_STRATEGY_VERSION } from "../lib/signals/kr-signal-repository.ts";
+import { readAllRows } from "../lib/supabase/read-all-rows.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 /**
@@ -30,6 +38,33 @@ interface SignalRunRow {
 interface SignalDailyRow {
   signal_type: string;
   screen: "raw" | "liquid";
+  code: string;
+  rank: number | null;
+}
+
+interface AccuracySummary {
+  ok: boolean;
+  reasons: string[];
+  sourceIntegrityOk: boolean;
+  sourceCount: number;
+  beforeCount: number;
+  afterCount: number;
+  addedCount: number;
+  removedCount: number;
+  changedCount: number;
+  provenanceCaveatCount: number;
+  sourceCoverageWarnings: string[];
+}
+
+interface ListingAccuracySummary {
+  ok: boolean;
+  approvalReady: boolean;
+  sourceIntegrityOk: boolean;
+  sourceCount: number;
+  falseListingEventCount: number;
+  masterFirstSeenCorrectionCount: number;
+  reasons: string[];
+  caveatCount: number;
 }
 
 export interface KrDailyVerification {
@@ -46,6 +81,8 @@ export interface KrDailyVerification {
   duplicateRunCount: number;
   reportedMarkerCount: number;
   tradingCalendarStatus: string | null;
+  accuracy: AccuracySummary | null;
+  listingAccuracy: ListingAccuracySummary | null;
   ok: boolean;
   reasons: string[];
 }
@@ -120,6 +157,8 @@ export async function verifyKrDailyCandidate(
       duplicateRunCount,
       reportedMarkerCount,
       tradingCalendarStatus: null,
+      accuracy: null,
+      listingAccuracy: null,
       ok: false,
       reasons: [...reasons, "대상 run을 찾을 수 없음"],
     };
@@ -129,15 +168,19 @@ export async function verifyKrDailyCandidate(
   const krFullSignalComplete = notes.kr_full_signal_complete === true;
   const telegramReportedAt = typeof notes.telegram_reported_at === "string" ? notes.telegram_reported_at : null;
 
-  const [dailyResult, calendarResult] = await Promise.all([
-    client.from("signal_daily").select("signal_type,screen").eq("run_id", target.id),
+  const store = new SupabaseDataAccuracyStore(client);
+  const [dailyRows, calendarResult, runAccuracyResult, listingAccuracyResult] = await Promise.all([
+    readSignalRows(client, target.id),
     client.from("trading_calendar_kr").select("status").eq("bas_dd", basDd).maybeSingle(),
+    auditRunAccuracy(client, target.id, { store }),
+    auditKrListingCorrectionProposals(client, { store }),
   ]);
-  throwIfError(dailyResult.error, "read signal_daily rows");
   throwIfError(calendarResult.error, "read trading_calendar_kr status");
+  const accuracy = summarizeRunAccuracy(runAccuracyResult);
+  const listingAccuracy = summarizeListingAccuracy(listingAccuracyResult);
 
   const counts = new Map<string, number>();
-  for (const row of (dailyResult.data ?? []) as SignalDailyRow[]) {
+  for (const row of dailyRows) {
     const key = `${row.signal_type}:${row.screen}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
@@ -163,6 +206,8 @@ export async function verifyKrDailyCandidate(
   if (!telegramReportedAt) reasons.push("notes.telegram_reported_at 없음");
   if (tradingCalendarStatus !== "TRADING_COMPLETE")
     reasons.push(`trading_calendar_kr 상태가 TRADING_COMPLETE 아님: ${tradingCalendarStatus ?? "없음"}`);
+  if (!accuracy.ok) reasons.push(`정확성 감사 실패: ${accuracy.reasons.join("; ") || "unknown"}`);
+  if (!listingAccuracy.ok) reasons.push(`KR 상장 이력 감사 실패: ${listingAccuracy.reasons.join("; ") || "unknown"}`);
 
   return {
     basDd,
@@ -178,8 +223,73 @@ export async function verifyKrDailyCandidate(
     duplicateRunCount,
     reportedMarkerCount,
     tradingCalendarStatus,
+    accuracy,
+    listingAccuracy,
     ok: reasons.length === 0,
     reasons,
+  };
+}
+
+async function readSignalRows(
+  client: ReturnType<typeof createServiceRoleClient>,
+  runId: string,
+): Promise<SignalDailyRow[]> {
+  return readAllRows<SignalDailyRow>({
+    operation: "read KR candidate signal rows",
+    createQuery: () =>
+      client
+        .from("signal_daily")
+        .select("signal_type,screen,code,rank", { count: "exact" })
+        .eq("run_id", runId),
+    orderBy: [
+      { column: "signal_type" },
+      { column: "screen" },
+      { column: "rank" },
+      { column: "code" },
+    ],
+    getKey: (row) =>
+      `${row.signal_type}:${row.screen}:${row.rank ?? "none"}:${row.code}`,
+  });
+}
+
+function summarizeRunAccuracy(result: AuditRunAccuracyResult): AccuracySummary {
+  return {
+    ok: result.ok,
+    reasons: result.reasons,
+    sourceIntegrityOk: result.sourceIntegrity.every((item) => item.ok),
+    sourceCount: result.sourceIds.length,
+    beforeCount: result.diffs.beforeCount,
+    afterCount: result.diffs.afterCount,
+    addedCount: result.diffs.added.length,
+    removedCount: result.diffs.removed.length,
+    changedCount: result.diffs.changed.length,
+    provenanceCaveatCount: result.provenanceCaveats.length,
+    sourceCoverageWarnings: result.provenanceCaveats,
+  };
+}
+
+function summarizeListingAccuracy(
+  result: KrListingCorrectionProposal,
+): ListingAccuracySummary {
+  const reasons = [
+    ...result.caveats.filter((caveat) => caveat.startsWith("source_") || caveat.includes("_missing")),
+    ...(result.falseListingEvents.length > 0
+      ? [`falseListingEvents=${result.falseListingEvents.length}`]
+      : []),
+    ...(result.masterFirstSeenCorrections.length > 0
+      ? [`masterFirstSeenCorrections=${result.masterFirstSeenCorrections.length}`]
+      : []),
+    ...(result.approvalReady ? [] : ["listingApprovalEvidenceNotReady"]),
+  ];
+  return {
+    ok: result.ok,
+    approvalReady: result.approvalReady,
+    sourceIntegrityOk: result.sourceIntegrity.every((item) => item.ok),
+    sourceCount: result.sourceIntegrity.length,
+    falseListingEventCount: result.falseListingEvents.length,
+    masterFirstSeenCorrectionCount: result.masterFirstSeenCorrections.length,
+    reasons,
+    caveatCount: result.caveats.length,
   };
 }
 

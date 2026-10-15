@@ -6,6 +6,10 @@ import {
   US_ETF_STRATEGY_VERSION,
 } from "../lib/signals/us-etf-constants.ts";
 import { kstDayBoundsUtc, toKstDate } from "../lib/dashboard/us-signal-view.ts";
+import {
+  auditRunAccuracy,
+  type AuditRunAccuracyResult,
+} from "../lib/signals/data-accuracy.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 const US_STRATEGY_VERSION = US_ETF_STRATEGY_VERSION;
@@ -20,6 +24,20 @@ interface SignalRunRow {
   notes: Record<string, unknown> | null;
 }
 
+interface AccuracySummary {
+  ok: boolean;
+  reasons: string[];
+  sourceIntegrityOk: boolean;
+  sourceCount: number;
+  beforeCount: number;
+  afterCount: number;
+  addedCount: number;
+  removedCount: number;
+  changedCount: number;
+  provenanceCaveatCount: number;
+  sourceCoverageWarnings: string[];
+}
+
 export interface UsCandidateVerification {
   runId: string | null;
   found: boolean;
@@ -32,6 +50,7 @@ export interface UsCandidateVerification {
   typeCounts: Record<string, number>;
   sameDayRunCount: number;
   sameDayReportedMarkerCount: number;
+  accuracy: AccuracySummary | null;
   ok: boolean;
   reasons: string[];
 }
@@ -84,6 +103,7 @@ export async function verifyUsCandidate(
       typeCounts: {},
       sameDayRunCount: 0,
       sameDayReportedMarkerCount: 0,
+      accuracy: null,
       ok: false,
       reasons: ["US signal_run을 찾을 수 없음 (market=US)"],
     };
@@ -93,7 +113,7 @@ export async function verifyUsCandidate(
   const observedKstDate = toKstDate(run.observed_at);
   const bounds = kstDayBoundsUtc(observedKstDate);
 
-  const [sameDay, ...typeResults] = await Promise.all([
+  const [sameDay, accuracyResult, ...typeResults] = await Promise.all([
     client
       .from("signal_run")
       .select("id,status,observed_at,completed_at,notes")
@@ -102,6 +122,7 @@ export async function verifyUsCandidate(
       .eq("status", "COMPLETED")
       .gte("observed_at", bounds.from)
       .lt("observed_at", bounds.to),
+    auditRunAccuracy(client, run.id),
     ...US_SIGNAL_TYPES.map((signalType) =>
       client
         .from("signal_daily")
@@ -114,6 +135,7 @@ export async function verifyUsCandidate(
     ),
   ]);
   throwIfError(sameDay.error, "read same-day US signal runs");
+  const accuracy = summarizeRunAccuracy(accuracyResult);
 
   const typeCounts: Record<string, number> = {};
   const shortTypes: string[] = [];
@@ -146,6 +168,7 @@ export async function verifyUsCandidate(
     reasons.push(`순위가 양수 오름차순이 아닌 유형: ${misrankedTypes.join(", ")}`);
   if (sameDayReportedMarkerCount > 1)
     reasons.push(`같은 한국 관측일에 telegram_reported_at 표식이 ${sameDayReportedMarkerCount}건 있음(중복 발송 의심)`);
+  if (!accuracy.ok) reasons.push(`정확성 감사 실패: ${accuracy.reasons.join("; ") || "unknown"}`);
 
   return {
     runId: run.id,
@@ -160,8 +183,25 @@ export async function verifyUsCandidate(
     typeCounts,
     sameDayRunCount,
     sameDayReportedMarkerCount,
+    accuracy,
     ok: reasons.length === 0,
     reasons,
+  };
+}
+
+function summarizeRunAccuracy(result: AuditRunAccuracyResult): AccuracySummary {
+  return {
+    ok: result.ok,
+    reasons: result.reasons,
+    sourceIntegrityOk: result.sourceIntegrity.every((item) => item.ok),
+    sourceCount: result.sourceIds.length,
+    beforeCount: result.diffs.beforeCount,
+    afterCount: result.diffs.afterCount,
+    addedCount: result.diffs.added.length,
+    removedCount: result.diffs.removed.length,
+    changedCount: result.diffs.changed.length,
+    provenanceCaveatCount: result.provenanceCaveats.length,
+    sourceCoverageWarnings: result.provenanceCaveats,
   };
 }
 

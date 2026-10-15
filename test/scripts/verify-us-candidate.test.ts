@@ -15,6 +15,14 @@ let runByIdResult: { data: RunRow | null; error: unknown };
 let sameDayRunsResult: { data: RunRow[]; error: unknown };
 let typeResults: Record<string, { count: number; ranks: number[]; error?: unknown }>;
 
+const accuracyMocks = vi.hoisted(() => ({
+  auditRunAccuracy: vi.fn(),
+}));
+
+vi.mock("../../lib/signals/data-accuracy.ts", () => ({
+  auditRunAccuracy: accuracyMocks.auditRunAccuracy,
+}));
+
 function createRunQuery() {
   const filters: Record<string, unknown> = {};
   let ranged = false;
@@ -108,6 +116,17 @@ function setCompleteTypes(counts: Record<string, number> = {}) {
   );
 }
 
+function okAccuracy() {
+  return {
+    ok: true,
+    reasons: [],
+    sourceIntegrity: [{ ok: true }],
+    diffs: { beforeCount: 480, afterCount: 480, added: [], removed: [], changed: [] },
+    provenanceCaveats: ["US source coverage is limited to stored mover snapshots"],
+    sourceIds: ["us-source-1"],
+  };
+}
+
 describe("verifyUsCandidate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -118,6 +137,7 @@ describe("verifyUsCandidate", () => {
     runByIdResult = { data: run, error: null };
     sameDayRunsResult = { data: [run], error: null };
     setCompleteTypes();
+    accuracyMocks.auditRunAccuracy.mockResolvedValue(okAccuracy());
   });
 
   it("passes a complete, reported US run and derives the KST observation date", async () => {
@@ -136,6 +156,12 @@ describe("verifyUsCandidate", () => {
     expect(result.telegramReportedAt).toBe("2026-10-12T01:01:00.000Z");
     expect(result.sameDayRunCount).toBe(1);
     expect(result.sameDayReportedMarkerCount).toBe(1);
+    expect(result.accuracy).toMatchObject({
+      ok: true,
+      beforeCount: 480,
+      afterCount: 480,
+      sourceCoverageWarnings: ["US source coverage is limited to stored mover snapshots"],
+    });
   });
 
   it("restricts every run lookup to the dedicated US P1 strategy and the KST day window", async () => {
@@ -173,7 +199,28 @@ describe("verifyUsCandidate", () => {
 
     expect(result.found).toBe(false);
     expect(result.ok).toBe(false);
+    expect(result.accuracy).toBeNull();
     expect(result.reasons[0]).toContain("찾을 수 없음");
+  });
+
+  it("fails closed when full stored source accuracy audit reports a source mismatch", async () => {
+    accuracyMocks.auditRunAccuracy.mockResolvedValueOnce({
+      ...okAccuracy(),
+      ok: false,
+      reasons: ["source_sha256_mismatch:source-1"],
+      sourceIntegrity: [{ ok: false, reason: "sha256_mismatch" }],
+      diffs: { beforeCount: 480, afterCount: 480, added: [], removed: [], changed: [] },
+    });
+
+    const result = await verifyUsCandidate("latest");
+
+    expect(result.ok).toBe(false);
+    expect(result.accuracy).toMatchObject({
+      ok: false,
+      reasons: ["source_sha256_mismatch:source-1"],
+      sourceIntegrityOk: false,
+    });
+    expect(result.reasons).toContain("정확성 감사 실패: source_sha256_mismatch:source-1");
   });
 
   it("fails when the latest run is still PENDING", async () => {

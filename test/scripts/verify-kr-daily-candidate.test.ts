@@ -1,16 +1,42 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 interface QueryResult {
   data: unknown;
   error: unknown;
+  count?: number | null;
 }
 
-function createQuery(getResult: () => QueryResult) {
+const accuracyMocks = vi.hoisted(() => ({
+  auditRunAccuracy: vi.fn(),
+  auditKrListingCorrectionProposals: vi.fn(),
+}));
+
+vi.mock("../../lib/signals/data-accuracy.ts", () => ({
+  SupabaseDataAccuracyStore: class SupabaseDataAccuracyStore {},
+  auditRunAccuracy: accuracyMocks.auditRunAccuracy,
+  auditKrListingCorrectionProposals:
+    accuracyMocks.auditKrListingCorrectionProposals,
+}));
+
+function createQuery(getResult: () => QueryResult, defaultCap = false) {
+  let rangeStart = 0;
+  let rangeEnd: number | null = defaultCap ? 999 : null;
+  const applyRange = (result: QueryResult): QueryResult => {
+    const data = Array.isArray(result.data) ? result.data : result.data;
+    const count = result.count ?? (Array.isArray(result.data) ? result.data.length : null);
+    if (!Array.isArray(data) || rangeEnd === null) return { ...result, count };
+    return {
+      ...result,
+      data: data.slice(rangeStart, rangeEnd + 1),
+      count,
+    };
+  };
   const query: {
     select: ReturnType<typeof vi.fn>;
     eq: ReturnType<typeof vi.fn>;
     order: ReturnType<typeof vi.fn>;
     limit: ReturnType<typeof vi.fn>;
+    range: ReturnType<typeof vi.fn>;
     maybeSingle: ReturnType<typeof vi.fn>;
     then: (
       resolve: (value: QueryResult) => unknown,
@@ -21,8 +47,13 @@ function createQuery(getResult: () => QueryResult) {
     eq: vi.fn(),
     order: vi.fn(),
     limit: vi.fn(),
+    range: vi.fn((start: number, end: number) => {
+      rangeStart = start;
+      rangeEnd = end;
+      return query;
+    }),
     maybeSingle: vi.fn(() => Promise.resolve(getResult())),
-    then: (resolve, reject) => Promise.resolve(getResult()).then(resolve, reject),
+    then: (resolve, reject) => Promise.resolve(applyRange(getResult())).then(resolve, reject),
   };
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
@@ -37,7 +68,7 @@ let calendarResult: QueryResult = { data: null, error: null };
 
 const from = vi.fn((table: string) => {
   if (table === "signal_run") return createQuery(() => signalRunResult);
-  if (table === "signal_daily") return createQuery(() => signalDailyResult);
+  if (table === "signal_daily") return createQuery(() => signalDailyResult, true);
   if (table === "trading_calendar_kr") return createQuery(() => calendarResult);
   throw new Error(`unexpected table: ${table}`);
 });
@@ -63,13 +94,41 @@ const FIXED_SECTION_KEYS = [
 ];
 
 function completeDailyRows(overrides: Record<string, number> = {}) {
-  const rows: { signal_type: string; screen: "raw" | "liquid" }[] = [];
+  const rows: { signal_type: string; screen: "raw" | "liquid"; code: string; rank: number }[] = [];
   for (const key of FIXED_SECTION_KEYS) {
     const [signalType, screen] = key.split(":") as [string, "raw" | "liquid"];
     const count = overrides[key] ?? 10;
-    for (let i = 0; i < count; i += 1) rows.push({ signal_type: signalType, screen });
+    for (let i = 0; i < count; i += 1)
+      rows.push({
+        signal_type: signalType,
+        screen,
+        code: `${signalType}-${screen}-${i}`,
+        rank: i + 1,
+      });
   }
   return rows;
+}
+
+function okRunAccuracy() {
+  return {
+    ok: true,
+    reasons: [],
+    sourceIntegrity: [{ ok: true }],
+    diffs: { beforeCount: 82, afterCount: 82, added: [], removed: [], changed: [] },
+    provenanceCaveats: [],
+    sourceIds: ["source-1"],
+  };
+}
+
+function okListingAccuracy() {
+  return {
+    ok: true,
+    approvalReady: true,
+    sourceIntegrity: [{ ok: true }],
+    falseListingEvents: [],
+    masterFirstSeenCorrections: [],
+    caveats: [],
+  };
 }
 
 describe("resolveLatestKrBasDd", () => {
@@ -93,6 +152,12 @@ describe("resolveLatestKrBasDd", () => {
 });
 
 describe("verifyKrDailyCandidate", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    accuracyMocks.auditRunAccuracy.mockResolvedValue(okRunAccuracy());
+    accuracyMocks.auditKrListingCorrectionProposals.mockResolvedValue(okListingAccuracy());
+  });
+
   it("완전한 KR 완전 거래일 후보를 통과 판정한다", async () => {
     signalRunResult = {
       data: [
@@ -106,8 +171,8 @@ describe("verifyKrDailyCandidate", () => {
     };
     const rows = [
       ...completeDailyRows(),
-      { signal_type: "new_listing", screen: "raw" as const },
-      { signal_type: "new_listing", screen: "raw" as const },
+      { signal_type: "new_listing", screen: "raw" as const, code: "NL1", rank: 1 },
+      { signal_type: "new_listing", screen: "raw" as const, code: "NL2", rank: 2 },
     ];
     signalDailyResult = { data: rows, error: null };
     calendarResult = { data: { status: "TRADING_COMPLETE" }, error: null };
@@ -122,6 +187,8 @@ describe("verifyKrDailyCandidate", () => {
     expect(result.variableTypeCounts).toEqual({ "new_listing:raw": 2 });
     expect(result.duplicateRunCount).toBe(1);
     expect(result.reportedMarkerCount).toBe(1);
+    expect(result.accuracy).toMatchObject({ ok: true, beforeCount: 82, afterCount: 82 });
+    expect(result.listingAccuracy).toMatchObject({ ok: true, falseListingEventCount: 0 });
   });
 
   it("signal_run을 찾을 수 없으면 실패 판정한다", async () => {
@@ -133,7 +200,114 @@ describe("verifyKrDailyCandidate", () => {
 
     expect(result.found).toBe(false);
     expect(result.ok).toBe(false);
+    expect(result.accuracy).toBeNull();
+    expect(result.listingAccuracy).toBeNull();
     expect(result.reasons.some((reason) => reason.includes("찾을 수 없음"))).toBe(true);
+  });
+
+  it("정확한 행 수라도 내용 감사가 실패하면 후보를 실패 판정한다", async () => {
+    accuracyMocks.auditRunAccuracy.mockResolvedValueOnce({
+      ...okRunAccuracy(),
+      ok: false,
+      reasons: ["signal_diff"],
+      diffs: {
+        beforeCount: 82,
+        afterCount: 82,
+        added: [],
+        removed: [],
+        changed: [{ key: "daily_price_gain:raw:BAD", fields: ["rank", "value"] }],
+      },
+    });
+    signalRunResult = {
+      data: [
+        {
+          id: "run-diff",
+          status: "COMPLETED",
+          notes: { kr_full_signal_complete: true, telegram_reported_at: "t" },
+        },
+      ],
+      error: null,
+    };
+    signalDailyResult = { data: completeDailyRows(), error: null };
+    calendarResult = { data: { status: "TRADING_COMPLETE" }, error: null };
+
+    const result = await verifyKrDailyCandidate("2026-09-29");
+
+    expect(result.ok).toBe(false);
+    expect(result.accuracy).toMatchObject({
+      ok: false,
+      reasons: ["signal_diff"],
+      changedCount: 1,
+    });
+    expect(result.reasons).toContain("정확성 감사 실패: signal_diff");
+  });
+
+  it("상장 이력 전역 감사가 실패하면 Q27 보정 전 운영 보고 후보를 차단한다", async () => {
+    accuracyMocks.auditKrListingCorrectionProposals.mockResolvedValueOnce({
+      ...okListingAccuracy(),
+      ok: false,
+      approvalReady: true,
+      falseListingEvents: Array.from({ length: 214 }, (_, index) => ({
+        eventKey: `event-${index}`,
+      })),
+      masterFirstSeenCorrections: Array.from({ length: 214 }, (_, index) => ({
+        code: `A${index}`,
+      })),
+      caveats: ["earlier ka10099 evidence exists"],
+    });
+    signalRunResult = {
+      data: [
+        {
+          id: "run-listing-drift",
+          status: "COMPLETED",
+          notes: { kr_full_signal_complete: true, telegram_reported_at: "t" },
+        },
+      ],
+      error: null,
+    };
+    signalDailyResult = { data: completeDailyRows(), error: null };
+    calendarResult = { data: { status: "TRADING_COMPLETE" }, error: null };
+
+    const result = await verifyKrDailyCandidate("2026-09-29");
+
+    expect(result.ok).toBe(false);
+    expect(result.listingAccuracy).toMatchObject({
+      ok: false,
+      falseListingEventCount: 214,
+      masterFirstSeenCorrectionCount: 214,
+    });
+    expect(result.reasons).toContain("KR 상장 이력 감사 실패: falseListingEvents=214; masterFirstSeenCorrections=214");
+  });
+
+  it("가변 신호가 1000행을 넘어도 전체 행을 페이지네이션해 집계한다", async () => {
+    signalRunResult = {
+      data: [
+        {
+          id: "run-large",
+          status: "COMPLETED",
+          notes: { kr_full_signal_complete: true, telegram_reported_at: "t" },
+        },
+      ],
+      error: null,
+    };
+    signalDailyResult = {
+      data: [
+        ...completeDailyRows(),
+        ...Array.from({ length: 1_001 }, (_, index) => ({
+          signal_type: "turnover_surge",
+          screen: "raw" as const,
+          code: `SURGE${String(index).padStart(4, "0")}`,
+          rank: index + 1,
+        })),
+      ],
+      error: null,
+    };
+    calendarResult = { data: { status: "TRADING_COMPLETE" }, error: null };
+
+    const result = await verifyKrDailyCandidate("2026-09-29");
+
+    expect(result.totalRows).toBe(1_081);
+    expect(result.variableTypeCounts["turnover_surge:raw"]).toBe(1_001);
   });
 
   it("고정 P0 유형 행 수가 부족하면 실패 판정한다", async () => {

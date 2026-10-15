@@ -11,7 +11,15 @@ import {
 import {
   formatReportedRankChangeLines,
 } from "../lib/signals/report-rank-changes.ts";
+import {
+  auditKrListingCorrectionProposals,
+  auditRunAccuracy,
+  type AuditRunAccuracyResult,
+  type KrListingCorrectionProposal,
+} from "../lib/signals/data-accuracy.ts";
+import { SupabaseDataAccuracyStore } from "../lib/signals/data-accuracy-store.ts";
 import { KR_PRICE_SIGNAL_STRATEGY_VERSION } from "../lib/signals/kr-signal-repository.ts";
+import { readAllRows } from "../lib/supabase/read-all-rows.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 
 interface SignalRunRow {
@@ -51,10 +59,12 @@ export async function reportLatestKrxSignals(
         .single());
   throwIfError(runError, "read latest KR signal run");
   const latest = run as SignalRunRow;
-  const [rows, previousRun] = await Promise.all([
-    readSignalRows(client, latest.id),
+  const [dryRunRows, previousRun] = await Promise.all([
+    send ? Promise.resolve(null) : readSignalRows(client, latest.id),
     readPreviousKrRun(client, latest),
   ]);
+  if (send) await assertKrAccuracyForSend(client, latest, previousRun);
+  const rows = send ? await readSignalRows(client, latest.id) : rowsOrNull(dryRunRows);
   const previousRows = previousRun
     ? await readSignalRows(client, previousRun.id)
     : null;
@@ -114,15 +124,95 @@ async function readSignalRows(
   client: ReturnType<typeof createServiceRoleClient>,
   runId: string,
 ): Promise<SignalDailyRow[]> {
-  const { data, error } = await client
-    .from("signal_daily")
-    .select("code,signal_type,name,value,value_unit,rank,screen")
-    .eq("run_id", runId)
-    .order("signal_type")
-    .order("screen")
-    .order("rank");
-  throwIfError(error, "read KR signal results");
-  return (data ?? []) as SignalDailyRow[];
+  return readAllRows<SignalDailyRow>({
+    operation: "read KR signal results",
+    createQuery: () =>
+      client
+        .from("signal_daily")
+        .select("code,signal_type,name,value,value_unit,rank,screen", {
+          count: "exact",
+        })
+        .eq("run_id", runId),
+    orderBy: [
+      { column: "signal_type" },
+      { column: "screen" },
+      { column: "rank" },
+      { column: "code" },
+    ],
+    getKey: (row) =>
+      `${row.signal_type}:${row.screen}:${row.rank ?? "none"}:${row.code}`,
+  });
+}
+
+function rowsOrNull(rows: SignalDailyRow[] | null): SignalDailyRow[] {
+  if (!rows) throw new Error("KR report rows were not loaded");
+  return rows;
+}
+
+async function assertKrAccuracyForSend(
+  client: ReturnType<typeof createServiceRoleClient>,
+  latest: SignalRunRow,
+  previousRun: SignalRunRow | null,
+): Promise<void> {
+  const store = new SupabaseDataAccuracyStore(client);
+  const currentAccuracy = await auditRunAccuracy(client, latest.id, { store });
+  throwIfRunAccuracyFailed("current", currentAccuracy);
+  if (previousRun) {
+    const previousAccuracy = await auditRunAccuracy(client, previousRun.id, {
+      store,
+    });
+    throwIfRunAccuracyFailed("previous", previousAccuracy);
+  }
+  const listingAccuracy = await auditKrListingCorrectionProposals(client, {
+    store,
+  });
+  throwIfListingAccuracyFailed(listingAccuracy);
+}
+
+function throwIfRunAccuracyFailed(
+  label: "current" | "previous",
+  result: AuditRunAccuracyResult,
+): void {
+  if (result.ok) return;
+  throw new Error(
+    `KR ${label} run accuracy audit failed: ${compactRunAccuracyReasons(result).join("; ")}`,
+  );
+}
+
+function throwIfListingAccuracyFailed(
+  result: KrListingCorrectionProposal,
+): void {
+  if (result.ok) return;
+  throw new Error(
+    `KR listing accuracy audit failed: ${compactListingAccuracyReasons(result).join("; ")}`,
+  );
+}
+
+function compactRunAccuracyReasons(result: AuditRunAccuracyResult): string[] {
+  return result.reasons.length > 0
+    ? result.reasons
+    : [
+        `added=${result.diffs.added.length}`,
+        `removed=${result.diffs.removed.length}`,
+        `changed=${result.diffs.changed.length}`,
+      ];
+}
+
+function compactListingAccuracyReasons(
+  result: KrListingCorrectionProposal,
+): string[] {
+  return [
+    ...(result.falseListingEvents.length > 0
+      ? [`falseListingEvents=${result.falseListingEvents.length}`]
+      : []),
+    ...(result.masterFirstSeenCorrections.length > 0
+      ? [`masterFirstSeenCorrections=${result.masterFirstSeenCorrections.length}`]
+      : []),
+    ...(result.sourceIntegrity.some((item) => !item.ok)
+      ? ["sourceIntegrityFailed"]
+      : []),
+    ...(result.approvalReady ? [] : ["listingApprovalEvidenceNotReady"]),
+  ];
 }
 
 async function readPreviousKrRun(
