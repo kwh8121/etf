@@ -67,3 +67,19 @@
 - 기존 `verify:kr-candidate -- latest`, `verify:us-candidate -- latest`는 모두 통과했으나 내용 재계산을 하지 않아 위 오류를 검출하지 못했다. KR 과거 snapshot·seq 변경 사례는 최신 정본 기준 불일치와 당시 재현 가능성을 구분한다.
 - 사용자가 권장 순서 진행을 승인했다. 작업 계획은 `docs/plans/implementation/2026-10-15-data-correctness-plan.md`, 운영 경계는 `docs/guides/etf-signal-mvp-data-correctness.md`에 기록했다. 수정은 별도 임시 worktree에서 수행하며 기존 미추적 사용자 파일은 보존한다.
 - `continuity:check` 시작 검사는 통과했다. 운영 정정은 Q-27 `APPROVE`로 분리하며 과거 Telegram 재발송은 기본 금지다.
+
+### Q-26 구현·검토 체크포인트
+
+- 계획 `42a08ac` → 전체 조회·최초 관측일 보존 `ded092d` → 대규모 실제 어댑터 회귀 `8e08025` 순서로 진행했다. master 1,180개와 21거래일×1,001개 입력 fixture로 1,000행 이후 종목의 계산·provenance·완료 순서를 확인했다. Task 1 독립 재리뷰는 `APPROVE`다.
+- 감사 구현 `d0f8c68`의 최초 리뷰에서 Node strip-only 실행 불가, 원천 대 등락률·날짜·행 집합 검증 부족, 현재 알림 상태로 과거 신규 종목이 사라지는 replay, 근거 누락·빈 실행의 성공 판정을 발견했다. 모두 필수 수정 대상으로 되돌렸으며 최초 테스트 통과만으로 완료 처리하지 않았다.
+- 제한 환경의 build 실패는 기존 `next/font/google` Geist 다운로드 실패였다. 네트워크를 허용한 동일 `npm run build`는 TypeScript·17개 정적 페이지 생성을 마치고 종료 코드 0이었다. 글꼴·UI·의존성 변경은 하지 않았다.
+- 실제 Node22 CLI 실행과 운영 최신 2 run의 읽기 전용 대조도 수행했다. 이 과정에서 replay가 저장 시 추가되는 KR/US `disclosure` metadata를 재현하지 못해 정상 행을 차이로 표시하는 문제를 발견해 수정 대상으로 추가했다. 이 중간 JSON은 확정 정정안이 아니다.
+- 위 과정에서 운영 DB 쓰기·수집 API 호출·Telegram 발송은 하지 않았다. 사용자 기존 미추적 파일은 보존했다.
+
+### 읽기 전용 최종 재검증
+
+- 감사 필수 수정은 `971545b`·`146cab8`로 기록했고 Task 2 최종 독립 재리뷰는 `APPROVE`였다. 정상 저장 `disclosure`와 생성 당시 `first_alerted_at:null`을 유지하며, 근거 누락은 전역 검사에서도 실패한다.
+- 최종 `verify:data all`: 24 run, KR 17 run·1,583행은 현재 정본 재계산과 차이, US 7 run·60,250행은 전부 일치. 사용한 고유 source ID 50개에서 hash·row/page count 실패 0. 전역 false-positive event 214개·master 최초 관측일 보정 후보 214개. 이전 전체 객체 감사와 이번 참조 source 검사를 구분한다.
+- 최신 KR은 80→93행(추가 27=가격 교체 14+turnover 13, 제거 14, 공통 변경 16). 과거 KR은 full original input provenance가 부족해 일괄 적용 가능으로 표시하지 않았다. 정정안·hash·보류 사례는 `docs/references/2026-10-15-data-accuracy-correction-proposal.md`에 기록했다.
+- 게이트 구현 `f6b1a57` 후 실제 Node22 candidate CLI를 운영 읽기 전용으로 실행했다. KR 최신은 `fixedTypesOk:true`·80행이지만 `accuracy.ok:false`·`listingAccuracy.ok:false`로 종료 1, US 최신 14,053행은 `accuracy.ok:true`·`ok:true`로 종료 0이었다. US 전체 포괄성 경고는 유지했다.
+- KR 발송·candidate의 신호 조회도 전체 페이지로 변경해 향후 가변 신호가 1,000행을 넘을 때 보고에서 다시 잘리는 경로를 막았다. 실발송은 테스트하지 않았고 실패 시 전송 호출 0건은 자동 테스트로 검증한다. 과거 데이터 정정 전 KR 실보고는 의도적으로 차단된다.
