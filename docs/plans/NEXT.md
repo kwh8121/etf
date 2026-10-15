@@ -1,10 +1,15 @@
 # ETF 신호 MVP 다음 작업 큐
 
-> 기준: 2026-10-14 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
+> 기준: 2026-10-15 KST. 실행 상태의 정본은 이 파일이며 제품·데이터 계약은 v2.2 계획서와 ROADMAP을 따른다.
 > 완료 항목은 검증 증거와 커밋을 기록한다. 새 사실을 확인하면 라벨·해제 조건을 갱신한다.
 > 웹 현황판(읽기 전용 보조 화면): `docs/guides/etf-signal-mvp-status-dashboard.md` 참조.
 
 ## 큐 (위에서부터 실행)
+
+- [ ] `AUTO` Q-25 KR·US 웹 랭크인·랭크아웃 표시 (2026-10-15 사용자 요청·진행 승인)
+  - 범위: `/signals/kr/<기준일>`·`/signals/us/<한국 관측일>`에 Telegram과 같은 종목 코드·직전 완료 run 비교를 연결한다. 진입은 현재 행에 `랭크인`, 이탈은 섹션 아래 `랭크아웃`과 직전 순위를 표시한다. KR 가변 신호와 현재 0건인 이탈 전용 섹션도 포함한다.
+  - 경계: 비교할 이전 run이 없으면 변동을 생략한다. 이전 조회 오류 때 현재 신호는 유지하고 변동 생략 안내를 표시한다. US는 같은 한국 날짜의 직전 run도 비교하고 유형별 상위 10건만 조회한다.
+  - 완료 조건: 렌더링·페이지 통합 회귀 테스트, 전체 테스트·TypeScript·lint·production build·독립 리뷰, 커밋·푸시 및 Vercel Production 배포 확인.
 
 - [x] `DONE` Q-18 US 관측 검증 자동화 (커밋 `9173894`, 검증: `npm test` 183개·`tsc`·`lint`·`build` 통과) (KR Q-12·Q-14와 동일 방식, 사용자 요청 2026-10-12)
   - 배경: US는 `ENABLE_US_ETF_P1=false`(staging)로 꺼져 있고 운영 DB 대조 수단이 없다. KR과 달리 시장일이 없어(`bas_dd`·`market_date`=null) 관측 단위는 `signal_run` 1건이다. Telegram 보고 표식(`notes.telegram_reported_at`)도 US에는 없다.

@@ -3,12 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { UsSignalBoard } from "@/components/us-signal-board";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type DashboardSignalRow } from "@/lib/dashboard/kr-signal-view";
 import {
   formatKstTime,
@@ -36,6 +31,7 @@ interface UsRunRow {
 }
 
 interface UsSignalDailyRow {
+  code: string;
   signal_type: string;
   name: string;
   value: number | string | null;
@@ -94,30 +90,70 @@ export default async function UsSignalDatePage({
     ? toKstDate((nextResult.data as UsRunRow).observed_at)
     : null;
 
+  // 같은 관측일의 앞선 run도 비교 대상이다. 날짜 이동과 랭크 비교 기준을 구분한다.
+  const previousRankRunResult = run
+    ? await runBase()
+        .lt("observed_at", run.observed_at)
+        .order("observed_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null, error: null };
+  const previousRankRun = previousRankRunResult.data as UsRunRow | null;
+
   // 유형별 전체 행은 수천 건이라 보고와 같은 상위 10건과 전체 건수만 읽는다.
-  const typeResults = run
-    ? await Promise.all(
-        US_ETF_SIGNAL_TYPES.map(async (signalType) => {
-          const { data, count, error } = await supabase
-            .from("signal_daily")
-            .select("signal_type,name,value,value_unit,rank", { count: "exact" })
-            .eq("run_id", run.id)
-            .eq("market", "US")
-            .eq("signal_type", signalType)
-            .order("rank")
-            .order("code")
-            .limit(ROWS_PER_TYPE);
-          return { signalType, data: (data ?? []) as UsSignalDailyRow[], count: count ?? 0, error };
-        }),
-      )
-    : [];
-  const errorTypes = typeResults.filter((result) => result.error).map((result) => result.signalType);
+  const readTypeResults = (runId: string) =>
+    Promise.all(
+      US_ETF_SIGNAL_TYPES.map(async (signalType) => {
+        const { data, count, error } = await supabase
+          .from("signal_daily")
+          .select("code,signal_type,name,value,value_unit,rank", {
+            count: "exact",
+          })
+          .eq("run_id", runId)
+          .eq("market", "US")
+          .eq("signal_type", signalType)
+          .order("rank")
+          .order("code")
+          .limit(ROWS_PER_TYPE);
+        const incomplete =
+          count === null ||
+          data === null ||
+          data.length !== Math.min(count, ROWS_PER_TYPE);
+        return {
+          signalType,
+          data: (data ?? []) as UsSignalDailyRow[],
+          count: count ?? 0,
+          error: error || incomplete,
+        };
+      }),
+    );
+  const [typeResults, previousTypeResults] = await Promise.all([
+    run ? readTypeResults(run.id) : Promise.resolve([]),
+    previousRankRun && !previousRankRunResult.error
+      ? readTypeResults(previousRankRun.id)
+      : Promise.resolve([]),
+  ]);
+  const errorTypes = typeResults
+    .filter((result) => result.error)
+    .map((result) => result.signalType);
   const rows: DashboardSignalRow[] = typeResults.flatMap((result) =>
     result.data.map(toDashboardSignalRow),
   );
   const totals = Object.fromEntries(
     typeResults.map((result) => [result.signalType, result.count]),
   );
+  const rankChangeErrors = previousRankRunResult.error
+    ? [...US_ETF_SIGNAL_TYPES]
+    : previousTypeResults
+        .filter((result) => result.error)
+        .map((result) => result.signalType);
+  const previousRows =
+    previousRankRun && !previousRankRunResult.error
+      ? previousTypeResults.flatMap((result) =>
+          result.data.map(toDashboardSignalRow),
+        )
+      : null;
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -138,20 +174,27 @@ export default async function UsSignalDatePage({
           Kiwoom 순위 기준이며 미국 거래일이 아닌 한국 시간 관측일입니다. 관측
           시점(장중·장후)에 따라 값이 달라질 수 있습니다.
         </p>
-        <nav aria-label="관측일 이동" className="flex items-center gap-4 text-sm">
+        <nav
+          aria-label="관측일 이동"
+          className="flex items-center gap-4 text-sm"
+        >
           {previousObsDate ? (
             <Link className="underline" href={`/signals/us/${previousObsDate}`}>
               ‹ 이전 관측일
             </Link>
           ) : (
-            <span aria-disabled="true" className="text-muted-foreground">‹ 이전 관측일</span>
+            <span aria-disabled="true" className="text-muted-foreground">
+              ‹ 이전 관측일
+            </span>
           )}
           {nextObsDate ? (
             <Link className="underline" href={`/signals/us/${nextObsDate}`}>
               다음 관측일 ›
             </Link>
           ) : (
-            <span aria-disabled="true" className="text-muted-foreground">다음 관측일 ›</span>
+            <span aria-disabled="true" className="text-muted-foreground">
+              다음 관측일 ›
+            </span>
           )}
         </nav>
         <p className="text-sm text-muted-foreground">
@@ -177,7 +220,13 @@ export default async function UsSignalDatePage({
             <CardTitle>미국 ETF 등락 · P1 실험</CardTitle>
           </CardHeader>
           <CardContent>
-            <UsSignalBoard rows={rows} totals={totals} errors={errorTypes} />
+            <UsSignalBoard
+              rows={rows}
+              totals={totals}
+              errors={errorTypes}
+              previousRows={previousRows}
+              rankChangeErrors={rankChangeErrors}
+            />
           </CardContent>
         </Card>
       )}
@@ -187,6 +236,7 @@ export default async function UsSignalDatePage({
 
 function toDashboardSignalRow(row: UsSignalDailyRow): DashboardSignalRow {
   return {
+    code: row.code,
     signalType: row.signal_type,
     screen: "raw",
     name: row.name,

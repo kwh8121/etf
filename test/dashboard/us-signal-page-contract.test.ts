@@ -55,7 +55,7 @@ describe("US 관측일 신호 라우트 계약", () => {
   });
 
   it("유형별 상위 10건과 전체 건수만 조회하고 전체 행을 가져오지 않는다", () => {
-    expect(page).toContain('{ count: "exact" }');
+    expect(page).toMatch(/count:\s*"exact"/);
     expect(page).toContain("const ROWS_PER_TYPE = 10;");
     expect(page).toContain(".limit(ROWS_PER_TYPE)");
     expect(page).toContain('.eq("signal_type", signalType)');

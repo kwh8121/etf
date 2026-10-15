@@ -1,4 +1,5 @@
 export interface DashboardSignalRow {
+  code: string;
   signalType: string;
   screen: "raw" | "liquid";
   name: string;
@@ -10,6 +11,7 @@ export interface DashboardSignalRow {
 export interface DashboardSignalSection {
   title: string;
   rows: DashboardSignalRow[];
+  previousRows?: DashboardSignalRow[] | null;
 }
 
 const SECTION_TITLES: Record<string, string> = {
@@ -25,7 +27,9 @@ const SECTION_TITLES: Record<string, string> = {
   "new_listing:raw": "신규 상장",
 };
 
-export function createDashboardSignalSections(rows: readonly DashboardSignalRow[]): DashboardSignalSection[] {
+export function createDashboardSignalSections(
+  rows: readonly DashboardSignalRow[],
+): DashboardSignalSection[] {
   const byKey = new Map<string, DashboardSignalRow[]>();
   for (const row of rows) {
     const key = `${row.signalType}:${row.screen}`;
@@ -35,13 +39,18 @@ export function createDashboardSignalSections(rows: readonly DashboardSignalRow[
   }
   return [...byKey.entries()].map(([key, sectionRows]) => ({
     title: SECTION_TITLES[key] ?? key,
-    rows: sectionRows.sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)),
+    rows: sectionRows.sort(
+      (left, right) =>
+        (left.rank ?? Number.MAX_SAFE_INTEGER) -
+        (right.rank ?? Number.MAX_SAFE_INTEGER),
+    ),
   }));
 }
 
 export function formatDashboardSignalValue(row: DashboardSignalRow): string {
   if (row.value === null) return "-";
-  if (row.valueUnit === "percent") return `${row.value >= 0 ? "+" : ""}${row.value.toFixed(2)}%`;
+  if (row.valueUnit === "percent")
+    return `${row.value >= 0 ? "+" : ""}${row.value.toFixed(2)}%`;
   if (row.valueUnit === "ratio") return `${row.value.toFixed(2)}배`;
   return row.valueUnit === "event" ? "신규" : String(row.value);
 }
@@ -61,7 +70,9 @@ const FIXED_SIGNAL_TYPES: Record<string, KrSignalClassification> = {
   five_day_price_loss: { period: "five_day", direction: "loss" },
 };
 
-export function classifyKrSignalType(signalType: string): KrSignalClassification | null {
+export function classifyKrSignalType(
+  signalType: string,
+): KrSignalClassification | null {
   return FIXED_SIGNAL_TYPES[signalType] ?? null;
 }
 
@@ -75,15 +86,36 @@ export function selectDirectionRows(
     .filter((row) => {
       if (row.screen !== screen) return false;
       const classification = classifyKrSignalType(row.signalType);
-      return classification?.period === period && classification.direction === direction;
+      return (
+        classification?.period === period &&
+        classification.direction === direction
+      );
     })
-    .sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER));
+    .sort(
+      (left, right) =>
+        (left.rank ?? Number.MAX_SAFE_INTEGER) -
+        (right.rank ?? Number.MAX_SAFE_INTEGER),
+    );
 }
 
 export function selectVariableSections(
   rows: readonly DashboardSignalRow[],
+  previousRows: readonly DashboardSignalRow[] | null = null,
 ): DashboardSignalSection[] {
-  return createDashboardSignalSections(
+  const current = createDashboardSignalSections(
     rows.filter((row) => classifyKrSignalType(row.signalType) === null),
   );
+  if (previousRows === null) return current;
+  const previous = createDashboardSignalSections(
+    previousRows.filter((row) => classifyKrSignalType(row.signalType) === null),
+  );
+  const titles = new Set(
+    [...current, ...previous].map((section) => section.title),
+  );
+  return [...titles].map((title) => ({
+    title,
+    rows: current.find((section) => section.title === title)?.rows ?? [],
+    previousRows:
+      previous.find((section) => section.title === title)?.rows ?? [],
+  }));
 }

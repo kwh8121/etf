@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
-import { KrSignalBoard } from "@/components/kr-signal-board";
+import { KrSignalBoard, SignalRankList } from "@/components/kr-signal-board";
 import {
   Card,
   CardContent,
@@ -33,6 +33,7 @@ interface SignalRunDatabaseRow {
 }
 
 interface SignalDailyDatabaseRow {
+  code: string;
   signal_type: string;
   screen: "raw" | "liquid";
   name: string;
@@ -42,6 +43,7 @@ interface SignalDailyDatabaseRow {
 }
 
 interface AdjacentRunRow {
+  id: string;
   bas_dd: string | null;
 }
 
@@ -74,7 +76,7 @@ export default async function KrSignalDatePage({
   const { data: signalRows, error: signalsError } = latestRun
     ? await supabase
         .from("signal_daily")
-        .select("signal_type,screen,name,value,value_unit,rank")
+        .select("code,signal_type,screen,name,value,value_unit,rank")
         .eq("run_id", latestRun.id)
         .order("signal_type")
         .order("screen")
@@ -85,7 +87,6 @@ export default async function KrSignalDatePage({
     toDashboardSignalRow,
   );
   const sections = createDashboardSignalSections(rows);
-  const variableSections = selectVariableSections(rows);
   const qualityMessage =
     latestRun?.status === "COMPLETED" && sections.length > 0
       ? "완료된 신호 실행입니다."
@@ -96,11 +97,14 @@ export default async function KrSignalDatePage({
   const [previousResult, nextResult] = await Promise.all([
     supabase
       .from("signal_run")
-      .select("bas_dd")
+      .select("id,bas_dd")
       .eq("market", "KR")
       .eq("strategy_version", "m3-price-movers-v1")
+      .eq("status", "COMPLETED")
       .lt("bas_dd", basDd)
       .order("bas_dd", { ascending: false })
+      .order("completed_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(1)
       .maybeSingle(),
     supabase
@@ -113,8 +117,28 @@ export default async function KrSignalDatePage({
       .limit(1)
       .maybeSingle(),
   ]);
-  const previousBasDd = (previousResult.data as AdjacentRunRow | null)?.bas_dd ?? null;
+  const previousBasDd =
+    (previousResult.data as AdjacentRunRow | null)?.bas_dd ?? null;
   const nextBasDd = (nextResult.data as AdjacentRunRow | null)?.bas_dd ?? null;
+  const previousRun = previousResult.data as AdjacentRunRow | null;
+  const previousRowsResult =
+    latestRun?.status === "COMPLETED" && previousRun && !previousResult.error
+      ? await supabase
+          .from("signal_daily")
+          .select("code,signal_type,screen,name,value,value_unit,rank")
+          .eq("run_id", previousRun.id)
+          .order("signal_type")
+          .order("screen")
+          .order("rank")
+      : { data: null, error: null };
+  const rankChangesError = previousResult.error || previousRowsResult.error;
+  const previousRows =
+    previousRowsResult.data && !rankChangesError
+      ? (previousRowsResult.data as SignalDailyDatabaseRow[]).map(
+          toDashboardSignalRow,
+        )
+      : null;
+  const variableSections = selectVariableSections(rows, previousRows);
 
   const usEnabled = isUsEtfP1Enabled();
   const { data: usRun, error: usRunError } = usEnabled
@@ -133,7 +157,7 @@ export default async function KrSignalDatePage({
   const { data: usRows, error: usRowsError } = latestUsRun
     ? await supabase
         .from("signal_daily")
-        .select("signal_type,screen,name,value,value_unit,rank")
+        .select("code,signal_type,screen,name,value,value_unit,rank")
         .eq("run_id", latestUsRun.id)
         .eq("market", "US")
         .order("signal_type")
@@ -146,7 +170,9 @@ export default async function KrSignalDatePage({
   return (
     <div className="flex w-full flex-col gap-6">
       <header className="space-y-2">
-        <p className="text-sm text-muted-foreground">ETF 신호 MVP · 국내 시장</p>
+        <p className="text-sm text-muted-foreground">
+          ETF 신호 MVP · 국내 시장
+        </p>
         <h1 className="text-3xl font-bold tracking-tight">
           {formatBasDdLabel(basDd)}
         </h1>
@@ -155,7 +181,9 @@ export default async function KrSignalDatePage({
           {latestRun?.completed_at ?? "미정"}
         </p>
         {latestRun && !runError && !signalsError && (
-          <p className="text-sm text-muted-foreground">데이터 품질: {qualityMessage}</p>
+          <p className="text-sm text-muted-foreground">
+            데이터 품질: {qualityMessage}
+          </p>
         )}
         <nav className="flex items-center gap-4 text-sm">
           {previousBasDd ? (
@@ -196,7 +224,12 @@ export default async function KrSignalDatePage({
         </Card>
       ) : (
         <>
-          <KrSignalBoard rows={rows} />
+          {rankChangesError && (
+            <p className="text-sm text-muted-foreground">
+              이전 순위를 불러오지 못해 랭크 변동을 표시하지 않습니다.
+            </p>
+          )}
+          <KrSignalBoard rows={rows} previousRows={previousRows} />
           {variableSections.length > 0 && (
             <div className="grid gap-4 md:grid-cols-2">
               {variableSections.map((section) => (
@@ -205,21 +238,10 @@ export default async function KrSignalDatePage({
                     <CardTitle>{section.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ol className="space-y-2 text-sm">
-                      {section.rows.map((row) => (
-                        <li
-                          key={`${row.name}-${row.rank}`}
-                          className="flex justify-between gap-3"
-                        >
-                          <span>
-                            {row.rank ?? "-"}. {row.name}
-                          </span>
-                          <span className="font-medium tabular-nums">
-                            {formatDashboardSignalValue(row)}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
+                    <SignalRankList
+                      rows={section.rows}
+                      previousRows={section.previousRows}
+                    />
                   </CardContent>
                 </Card>
               ))}
@@ -270,6 +292,7 @@ export default async function KrSignalDatePage({
 
 function toDashboardSignalRow(row: SignalDailyDatabaseRow): DashboardSignalRow {
   return {
+    code: row.code,
     signalType: row.signal_type,
     screen: row.screen,
     name: row.name,
