@@ -16,7 +16,8 @@
     "daily:kr": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/run-kr-daily.ts",
     "catchup:kr": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/run-kr-catchup.ts",
     "verify:kr-candidate": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/verify-kr-daily-candidate.ts",
-    "verify:us-candidate": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/verify-us-candidate.ts"
+    "verify:us-candidate": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/verify-us-candidate.ts",
+    "verify:data": "node --env-file-if-exists=.env --experimental-default-type=module --experimental-strip-types scripts/verify-data-accuracy.ts"
   },
   "engines": {
     "node": ">=22.23.2 <23"

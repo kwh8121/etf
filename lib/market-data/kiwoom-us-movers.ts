@@ -244,6 +244,94 @@ export class KiwoomUsEtfMoverClient {
   }
 }
 
+export function replayUsEtfMoverRawPayload(rawPayload: Record<string, unknown>): {
+  input: UsEtfMoverInput;
+  rowCount: number;
+  pageCount: number;
+} {
+  const universePages = requireStoredPages(rawPayload.usa10104, "usa10104", {
+    stex_tp: "%",
+  });
+  const dailyGainPages = requireStoredPages(
+    rawPayload.usa20911_daily_gain,
+    "usa20911_daily_gain",
+    { sort_tp: "1" },
+  );
+  const dailyLossPages = requireStoredPages(
+    rawPayload.usa20911_daily_loss,
+    "usa20911_daily_loss",
+    { sort_tp: "4" },
+  );
+  const fiveDayGainPages = requireStoredPages(
+    rawPayload.usa20511_five_day_gain,
+    "usa20511_five_day_gain",
+    { tm: "5" },
+  );
+  const fiveDayLossPages = requireStoredPages(
+    rawPayload.usa20931_five_day_loss,
+    "usa20931_five_day_loss",
+    { stk_cnd: "1", tm: "2" },
+  );
+  const fiveDayLossRows = flattenPages(fiveDayLossPages);
+  const input = {
+    universe: flattenPages(universePages).map(parseUniverseRow),
+    dailyGainers: flattenPages(dailyGainPages).map((record) =>
+      parseDailyRow(record, "usa20911"),
+    ),
+    dailyLosers: flattenPages(dailyLossPages).map((record) =>
+      parseDailyRow(record, "usa20911"),
+    ),
+    fiveDayGainers: flattenPages(fiveDayGainPages).map((record) =>
+      parseFiveDayGainRow(record, "usa20511"),
+    ),
+    fiveDayLosers: fiveDayLossRows.map((record, index) =>
+      parseFiveDayLossRow(record, "usa20931", index + 1),
+    ),
+  };
+  const allPages = [
+    ...universePages,
+    ...dailyGainPages,
+    ...dailyLossPages,
+    ...fiveDayGainPages,
+    ...fiveDayLossPages,
+  ];
+  return {
+    input,
+    rowCount: allPages.reduce((sum, page) => sum + page.length, 0),
+    pageCount: allPages.length,
+  };
+}
+
+function requireStoredPages(
+  value: unknown,
+  key: string,
+  requiredRequest: Record<string, string>,
+): RawRecord[][] {
+  if (!isRecord(value) || !Array.isArray(value.pages)) {
+    throw new KiwoomClientError(`Stored Kiwoom ${key} payload is missing pages`);
+  }
+  if (!isRecord(value.request)) {
+    throw new KiwoomClientError(`Stored Kiwoom ${key} request is malformed`);
+  }
+  for (const [field, expected] of Object.entries(requiredRequest)) {
+    if (value.request[field] !== expected) {
+      throw new KiwoomClientError(`Stored Kiwoom ${key} request is malformed`);
+    }
+  }
+  if (
+    !value.pages.every(
+      (page) => Array.isArray(page) && page.every(isRecord),
+    )
+  ) {
+    throw new KiwoomClientError(`Stored Kiwoom ${key} pages are malformed`);
+  }
+  return value.pages;
+}
+
+function flattenPages(pages: RawRecord[][]): RawRecord[] {
+  return pages.flatMap((page) => page);
+}
+
 function dailyBody(sortTp: "1" | "4"): Record<string, string> {
   return {
     stex_tp: "0",
