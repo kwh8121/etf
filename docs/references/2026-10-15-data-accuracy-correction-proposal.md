@@ -33,6 +33,8 @@ npm run verify:data -- all --output /tmp/investment-data-accuracy-final-20261015
 
 최신 추가 27개는 고정 가격 신호 교체 14개와 turnover 13개다. 제거 14개는 잘못 선택된 가격 신호이며 공통 코드 16개의 순위가 바뀐다. US의 일치는 저장 원천 범위 내 재현 결과이지 전체 미국 ETF 포괄성의 증명이 아니다(`usa20931.stk_cnd=1` 경고 유지).
 
+이 표는 전역 false-positive event를 제거하기 전의 독립 run replay다. 과거 신규 종목의 저장 구성을 우선 재현했으므로, event 정정과 결합한 최종 신호 수는 달라질 수 있다. 예컨대 직전 run의 거짓 신규 행을 그대로 둔 채 117행으로 덮어쓰는 적용안이 아니다. 실제 적용안은 event 참조를 함께 대조한 뒤 다시 고정한다.
+
 ## 확정 근거와 보류 구분
 
 - 전역 event/master 후보는 이른 snapshot·코드·관측일이 확인돼 `approvalReady:true`다. 이것은 운영 쓰기 승인 또는 적용 성공을 뜻하지 않는다. 나머지 9개를 실제 IPO로 확정하지 않았다.

@@ -6,11 +6,14 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `AUTO` Q-26 데이터 정확성 보강 (2026-10-15 사용자 권장 순서 진행 승인)
+- [x] `DONE` Q-26 데이터 정확성 보강 (2026-10-15 사용자 권장 순서 진행 승인)
   - 순서: 전체 페이지 조회·입력 완전성 → master 최초 관측일 보존 → 저장 내용 재계산 감사 → 발송·후속 검증 게이트 → 운영 읽기 전용 정정안·US 범위 검토.
   - 계획: `docs/plans/implementation/2026-10-15-data-correctness-plan.md`. 과거 운영 DB 수정·migration·과거 Telegram 재발송은 포함하지 않는다.
   - 감사 근거: 기본 조회 제한 때문에 KR 기준일 2026-10-14 현재 1,176개·시작일 1,171개·직전 20일 23,427개가 각 1,000개만 계산에 사용됐다. 전체 재계산 시 고정 신호 코드 14개 교체·공통 종목 순위 16개 차이, turnover 13개(저장 0개). listing event 223개 중 214개는 더 이른 snapshot에 코드가 존재했다. US 7 run·60,250개 저장 신호는 원천 replay와 일치했지만 usa20931의 범위 제한은 별도 확인이 필요하다.
   - 주의: 기존 candidate 검증 성공·과거 M6 누적은 콘텐츠 정확성 증명이 아니었다. 정정·검증 결과 없이 과거 누적을 정확한 데이터 관측으로 확정하지 않는다.
+  - 구현: `ded092d`·`8e08025` 전체 조회·최초 관측일 보존, `d0f8c68`·`971545b`·`146cab8` 읽기 전용 재계산 감사, `f6b1a57` candidate·KR 실발송 전 게이트, `1dc1087` run 실패와 전역 검사 집계 분리. 운영 정정안은 아래 Q-27로 분리했다.
+  - 검증: Node 22.23.2, 49파일·262테스트, `tsc --noEmit`, 격리 worktree 전체 lint, production build(17개 정적 페이지), `continuity:check` 통과. 최종 전체 브랜치 독립 리뷰 `APPROVE`, Critical·Important·Minor 0건. 원 checkout의 기존 미추적 `.opencode/` lint 오류 4개는 수정하지 않았다.
+  - 운영 읽기 전용 대조: KR 17 run은 현재 정본과 차이가 있어 차단, US 7 run은 저장 원천 replay와 일치. 운영 DB·수집 API·Telegram·timer는 변경하지 않았다. 웹의 과거 데이터가 정정된 것은 아니다.
 
 - [ ] `APPROVE` Q-27 과거 운영 데이터 정정 (Q-26 정정안 확보 후)
   - 승인 대상: 확정 가능한 KR run 신호 교체, 잘못된 listing event 및 master.first_seen 보정. DB 쓰기 전에 대상·전후 diff·백업/복원·보고 표식 보존을 제시한다.

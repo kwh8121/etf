@@ -83,3 +83,17 @@
 - 최신 KR은 80→93행(추가 27=가격 교체 14+turnover 13, 제거 14, 공통 변경 16). 과거 KR은 full original input provenance가 부족해 일괄 적용 가능으로 표시하지 않았다. 정정안·hash·보류 사례는 `docs/references/2026-10-15-data-accuracy-correction-proposal.md`에 기록했다.
 - 게이트 구현 `f6b1a57` 후 실제 Node22 candidate CLI를 운영 읽기 전용으로 실행했다. KR 최신은 `fixedTypesOk:true`·80행이지만 `accuracy.ok:false`·`listingAccuracy.ok:false`로 종료 1, US 최신 14,053행은 `accuracy.ok:true`·`ok:true`로 종료 0이었다. US 전체 포괄성 경고는 유지했다.
 - KR 발송·candidate의 신호 조회도 전체 페이지로 변경해 향후 가변 신호가 1,000행을 넘을 때 보고에서 다시 잘리는 경로를 막았다. 실발송은 테스트하지 않았고 실패 시 전송 호출 0건은 자동 테스트로 검증한다. 과거 데이터 정정 전 KR 실보고는 의도적으로 차단된다.
+
+### 전체 검증·외부 동기화 경계
+
+- 코드 체크포인트: 전체 조회·보존 `ded092d`/`8e08025`, 감사 `d0f8c68`/`971545b`/`146cab8`, 발송·candidate 게이트 `f6b1a57`, 감사 집계 구분 `1dc1087`. Task 3 독립 리뷰는 `APPROVE`(이슈 0)였다.
+- Node 22.23.2에서 순서대로 `npm test` 49파일·262테스트, `npx tsc --noEmit`, 전체 격리 worktree `npm run lint`, 네트워크 허용 `npm run build`(17개 정적 페이지), `git diff --check`, `npm run continuity:check`가 모두 통과했다. 원래 checkout의 사용자 미추적 `.opencode/` lint 오류 4개는 변경하지 않았으며 격리 환경 결과와 구분한다.
+- 세션 종료 시 Linear 도구는 현재 제공 목록에 없어 동기화할 수 없다. OpenViking 외부 저장은 이번 세션의 자동 권한 검토에서 허용되지 않아 재시도·우회하지 않았다. 저장소의 작업 기록·정본 NEXT·커밋을 현재 근거로 유지한다.
+- 운영 DB 쓰기·삭제·migration·수집 API 호출·timer 변경·Telegram 발송은 수행하지 않았다. `main` 원자적 통합·푸시는 저장소 상시 승인 범위이며, 운영 정정과 US 범위 비교는 각각 Q-27·Q-28 승인 대상으로 남긴다.
+
+### Q-26 최종 리뷰·종료 경계
+
+- 최종 전체 브랜치 리뷰 `c5da247..aabc525`는 `APPROVE`, Critical·Important·Minor 0건이다. 리뷰는 통합·정확성·보안 경로를 독립 검사했으며 위 전체 검증 증거를 확인했다. 이후 변경은 완료 기록과 정정안의 적용 경계 설명뿐이다.
+- 정정안의 run별 수치는 전역 거짓 신규 event 제거 전 독립 replay 결과다. event에 연결된 과거 신호까지 정정하면 최종 행 수가 달라질 수 있으므로, 직전 run을 단순히 117행으로 덮어쓰는 실행안으로 사용하지 않는다.
+- Q-26을 완료 처리했다. 큐는 `AUTO 0 / APPROVE 2 / DECIDE 0 / WAIT 4`다. 가장 이른 해제는 Q-23 사용자 화면 확인(시각 미정), 첫 달력상 대기는 Q-07의 2026-11-26 미국 휴장 관측이다.
+- 승인 요청은 한 번에 제시한다: Q-27 확정 근거의 운영 데이터 정정·최근 KR 현재 정본 재생성 정책(과거 Telegram 재발송 없음), Q-28 조건별 최대 20페이지·총 40요청의 US 범위 비교(운영 저장·발송·설정 변경 없음). 승인 전에는 둘 다 실행하지 않는다.
