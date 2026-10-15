@@ -8,6 +8,7 @@ import {
   auditKrListingCorrectionProposals,
   auditRunAccuracy,
 } from "../lib/signals/data-accuracy.ts";
+import { SupabaseDataAccuracyStore } from "../lib/signals/data-accuracy-store.ts";
 import { createServiceRoleClient } from "../lib/supabase/service-role-core.ts";
 import { readAllRows } from "../lib/supabase/read-all-rows.ts";
 
@@ -56,26 +57,34 @@ export function parseVerifyDataAccuracyArgs(
   return { mode, runId, outputPath };
 }
 
-async function runVerifyDataAccuracy(
+interface RunSelection {
+  runIds: string[];
+  reasons: string[];
+}
+
+export async function runVerifyDataAccuracy(
   client: SupabaseClient,
   args: VerifyDataAccuracyArgs,
 ) {
-  const runIds =
+  const selection =
     args.mode === "run" && args.runId
-      ? [args.runId]
-      : await readRunIds(client, args.mode === "all" ? "all" : "latest");
+      ? { runIds: [args.runId], reasons: [] }
+      : await readRunSelection(client, args.mode === "all" ? "all" : "latest");
+  const store = new SupabaseDataAccuracyStore(client);
   const results = [];
-  for (const runId of runIds) {
-    results.push(await auditRunAccuracy(client, runId));
+  for (const runId of selection.runIds) {
+    results.push(await auditRunAccuracy(client, runId, { store }));
   }
   const krListingCorrectionProposal =
     args.mode === "all"
-      ? await auditKrListingCorrectionProposals(client)
+      ? await auditKrListingCorrectionProposals(client, { store })
       : null;
   return {
     ok:
+      selection.reasons.length === 0 &&
       results.every((result) => result.ok) &&
       (krListingCorrectionProposal?.ok ?? true),
+    selectionReasons: selection.reasons,
     checkedRunCount: results.length,
     inaccurateRunCount:
       results.filter((result) => !result.ok).length +
@@ -85,16 +94,19 @@ async function runVerifyDataAccuracy(
   };
 }
 
-async function readRunIds(
+async function readRunSelection(
   client: SupabaseClient,
   mode: "latest" | "all",
-): Promise<string[]> {
+): Promise<RunSelection> {
   if (mode === "latest") {
-    const ids = await Promise.all([
-      readLatestCompletedRunId(client, "KR"),
-      readLatestCompletedRunId(client, "US"),
-    ]);
-    return ids.flatMap((id) => (id ? [id] : []));
+    const markets = ["KR", "US"] as const;
+    const ids = await Promise.all(markets.map((market) => readLatestCompletedRunId(client, market)));
+    return {
+      runIds: ids.flatMap((id) => (id ? [id] : [])),
+      reasons: ids.flatMap((id, index) =>
+        id ? [] : [`missing_latest_run:${markets[index]}`],
+      ),
+    };
   }
   const rows = await readAllRows<RunIdRow>({
     operation: "read completed signal runs for data accuracy",
@@ -110,7 +122,10 @@ async function readRunIds(
     ],
     getKey: (row) => row.id,
   });
-  return rows.map((row) => row.id);
+  return {
+    runIds: rows.map((row) => row.id),
+    reasons: rows.length === 0 ? ["no_completed_runs"] : [],
+  };
 }
 
 async function readLatestCompletedRunId(

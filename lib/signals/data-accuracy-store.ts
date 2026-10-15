@@ -91,7 +91,10 @@ export interface DataAccuracyStore {
   downloadSourceSnapshot(objectPath: string): Promise<Uint8Array>;
   readKrTradingWindow(basDd: string): Promise<TradingCalendarAuditRow[]>;
   readKrDailyRows(basDd: string): Promise<EtfDailyAuditRow[]>;
-  readKrListingEvents(basDd: string): Promise<ListingEventAuditRow[]>;
+  readKrListingEvents(
+    basDd: string,
+    eventKeys?: readonly string[],
+  ): Promise<ListingEventAuditRow[]>;
   readKrMasters(codes: readonly string[]): Promise<EtfMasterAuditRow[]>;
   readKrListingHistory?(): Promise<ListingEventAuditRow[]>;
   readKrMasterHistory?(): Promise<EtfMasterAuditRow[]>;
@@ -99,7 +102,12 @@ export interface DataAccuracyStore {
 }
 
 export class SupabaseDataAccuracyStore implements DataAccuracyStore {
-  constructor(private readonly client: SupabaseClient) {}
+  private readonly client: SupabaseClient;
+  private readonly objectByteCache = new Map<string, Uint8Array>();
+
+  constructor(client: SupabaseClient) {
+    this.client = client;
+  }
 
   async readSignalRun(runId: string): Promise<SignalRunAuditRow | null> {
     const { data, error } = await this.client
@@ -152,12 +160,16 @@ export class SupabaseDataAccuracyStore implements DataAccuracyStore {
   }
 
   async downloadSourceSnapshot(objectPath: string): Promise<Uint8Array> {
+    const cached = this.objectByteCache.get(objectPath);
+    if (cached) return cached;
     const { data, error } = await this.client.storage
       .from(SOURCE_SNAPSHOT_BUCKET)
       .download(objectPath);
     throwIfError(error, "download source snapshot");
     if (!data) throw new Error("Supabase source snapshot download returned no data");
-    return new Uint8Array(await data.arrayBuffer());
+    const bytes = new Uint8Array(await data.arrayBuffer());
+    this.objectByteCache.set(objectPath, bytes);
+    return bytes;
   }
 
   async readKrTradingWindow(basDd: string): Promise<TradingCalendarAuditRow[]> {
@@ -201,8 +213,11 @@ export class SupabaseDataAccuracyStore implements DataAccuracyStore {
     });
   }
 
-  async readKrListingEvents(basDd: string): Promise<ListingEventAuditRow[]> {
-    return readAllRows<ListingEventAuditRow>({
+  async readKrListingEvents(
+    basDd: string,
+    eventKeys: readonly string[] = [],
+  ): Promise<ListingEventAuditRow[]> {
+    const rows = await readAllRows<ListingEventAuditRow>({
       operation: "read KR listing events",
       createQuery: () =>
         this.client
@@ -217,6 +232,24 @@ export class SupabaseDataAccuracyStore implements DataAccuracyStore {
       orderBy: [{ column: "event_key", ascending: true }],
       getKey: (row) => row.event_key,
     });
+    const requestedKeys = [...new Set(eventKeys.filter((key) => key.trim()))];
+    if (requestedKeys.length === 0) return rows;
+    const historicalRows = await readAllRows<ListingEventAuditRow>({
+      operation: "read KR listing historical events for replay",
+      createQuery: () =>
+        this.client
+          .from("listing_event_kr")
+          .select(
+            "event_key,code,reg_day,first_seen,new_in_snapshot,first_alerted_at,source_snapshot_id",
+            { count: "exact" },
+          )
+          .in("event_key", requestedKeys)
+          .eq("new_in_snapshot", true)
+          .lte("first_seen", basDd),
+      orderBy: [{ column: "event_key", ascending: true }],
+      getKey: (row) => row.event_key,
+    });
+    return [...new Map([...rows, ...historicalRows].map((row) => [row.event_key, row])).values()];
   }
 
   async readKrMasters(codes: readonly string[]): Promise<EtfMasterAuditRow[]> {

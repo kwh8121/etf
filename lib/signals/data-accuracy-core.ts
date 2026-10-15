@@ -123,7 +123,7 @@ function changedFields(
   if (before.rank !== after.rank) fields.push("rank");
   if (!signalValuesEqual(before.value, after.value)) fields.push("value");
   if (before.value_unit !== after.value_unit) fields.push("value_unit");
-  if (JSON.stringify(before.meta) !== JSON.stringify(after.meta)) fields.push("meta");
+  if (!deepJsonEqual(before.meta, after.meta)) fields.push("meta");
   if (before.source_snapshot_id !== after.source_snapshot_id) {
     fields.push("source_snapshot_id");
   }
@@ -152,6 +152,25 @@ function finiteSignalNumber(value: number | string | null): number | null {
 function numbersEqual(left: number, right: number): boolean {
   const scale = Math.max(1, Math.abs(left), Math.abs(right));
   return Math.abs(left - right) <= VALUE_TOLERANCE * scale;
+}
+
+function deepJsonEqual(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    return left.every((value, index) => deepJsonEqual(value, right[index]));
+  }
+  if (isRecord(left) || isRecord(right)) {
+    if (!isRecord(left) || !isRecord(right)) return false;
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    if (leftKeys.length !== rightKeys.length) return false;
+    return leftKeys.every(
+      (key, index) => key === rightKeys[index] && deepJsonEqual(left[key], right[key]),
+    );
+  }
+  return false;
 }
 
 function signalKey(row: Pick<AccuracySignalRow, "signal_type" | "screen" | "code">): string {
