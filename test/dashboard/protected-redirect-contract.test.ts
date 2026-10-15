@@ -7,6 +7,7 @@ const protectedPage = readFileSync("app/protected/page.tsx", "utf8");
 describe("보호 경로 리다이렉트 계약", () => {
   it("최신 KR 기준일을 조회해 신호 라우트로 보낸다", () => {
     expect(protectedPage).toContain('.eq("strategy_version", "m3-price-movers-v1")');
+    expect(protectedPage).toContain('.eq("status", "COMPLETED")');
     expect(protectedPage).toContain('.order("bas_dd", { ascending: false })');
     expect(protectedPage).toContain("/signals/kr/");
     expect(protectedPage).toContain("redirect(");

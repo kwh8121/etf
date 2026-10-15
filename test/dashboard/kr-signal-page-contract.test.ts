@@ -23,6 +23,17 @@ describe("기준일 신호 라우트 계약", () => {
     expect(signalPage).toContain('.eq("bas_dd", basDd)');
   });
 
+  it("현재·이동 기준일 조회를 완료 실행으로만 제한한다", () => {
+    expect(signalPage).toContain('.eq("status", "COMPLETED")');
+    const nextQueryAt = signalPage.indexOf('.gt("bas_dd", basDd)');
+    const completedAfterNextAt = signalPage.indexOf(
+      '.eq("status", "COMPLETED")',
+      nextQueryAt,
+    );
+    expect(nextQueryAt).not.toBe(-1);
+    expect(completedAfterNextAt).not.toBe(-1);
+  });
+
   it("잘못된 기준일은 404로 처리하고 미인증은 로그인으로 보낸다", () => {
     expect(signalPage).toContain("normalizeBasDd");
     expect(signalPage).toContain("notFound()");

@@ -1,10 +1,23 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const navigation = vi.hoisted(() => ({
+  redirect: vi.fn((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+  redirect: navigation.redirect,
+}));
 vi.mock("next/server", () => ({ connection: async () => {} }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => client }));
 
 import KrPage from "../../app/signals/kr/[basDd]/page";
+import ProtectedPage from "../../app/protected/page";
 import UsPage from "../../app/signals/us/[obsDate]/page";
 
 type DbRow = Record<string, string | number | null>;
@@ -53,6 +66,12 @@ function query(table: string) {
     eq(field: string, value: string) {
       if (field === "run_id") runId = value;
       filters.push((row) => row[field] === value);
+      return builder;
+    },
+    not(field: string, operator: string, value: string | null) {
+      if (operator === "is" && value === null) {
+        filters.push((row) => row[field] !== null);
+      }
       return builder;
     },
     lt(field: string, value: string) {
@@ -139,9 +158,27 @@ beforeEach(() => {
   signals = [];
   failedRunId = null;
   vi.stubEnv("ENABLE_US_ETF_P1", "false");
+  navigation.redirect.mockClear();
 });
 
 describe("신호 페이지의 이전 완료 run 비교", () => {
+  it("KR 기준일 직접 조회는 같은 기준일의 정정 대기 실행을 건너뛰고 완료 실행만 보여준다", async () => {
+    runs = [
+      run("completed", "KR", "2026-10-15T01:00:00Z"),
+      run("correction", "KR", "2026-10-15T02:00:00Z", "CORRECTION_PENDING"),
+    ];
+    signals = [
+      signal("completed", "KR", "DONE", "완료 확정 종목"),
+      signal("correction", "KR", "WAIT", "정정 대기 종목"),
+    ];
+    const html = renderToStaticMarkup(
+      await KrPage({ params: Promise.resolve({ basDd: "2026-10-15" }) }),
+    );
+    expect(html).toContain("완료 확정 종목");
+    expect(html).not.toContain("정정 대기 종목");
+    expect(html).toContain("상태 COMPLETED");
+  });
+
   it("KR은 직전 완료 거래일만 비교하고 그보다 최근의 PENDING 실행은 건너뛴다", async () => {
     runs = [
       run("current", "KR", "2026-10-15"),
@@ -159,6 +196,20 @@ describe("신호 페이지의 이전 완료 run 비교", () => {
     expect(html).toContain("랭크인");
     expect(html).toMatch(/랭크아웃[\s\S]*7[\s\S]*직전 이탈/);
     expect(html).not.toContain("미완료 종목");
+  });
+
+  it("KR 다음 거래일 이동은 완료 실행이 있는 날로만 이어진다", async () => {
+    runs = [
+      run("current", "KR", "2026-10-15"),
+      run("pending-next", "KR", "2026-10-16", "CORRECTION_PENDING"),
+      run("completed-next", "KR", "2026-10-17"),
+    ];
+    signals = [signal("current", "KR", "NOW", "현재 신호")];
+    const html = renderToStaticMarkup(
+      await KrPage({ params: Promise.resolve({ basDd: "2026-10-15" }) }),
+    );
+    expect(html).toContain("/signals/kr/2026-10-17");
+    expect(html).not.toContain("/signals/kr/2026-10-16");
   });
 
   it("US는 같은 한국 날짜의 직전 run을 비교하고 표시 상위 10건 밖의 행은 제외한다", async () => {
@@ -205,4 +256,17 @@ describe("신호 페이지의 이전 완료 run 비교", () => {
       expect(html).not.toContain("랭크아웃");
     },
   );
+});
+
+describe("보호 경로의 최신 KR 실행 선택", () => {
+  it("COMPLETED가 아닌 최신 기준일을 건너뛰고 최신 완료 기준일로 보낸다", async () => {
+    runs = [
+      run("completed", "KR", "2026-10-14"),
+      run("correction", "KR", "2026-10-15", "CORRECTION_PENDING"),
+    ];
+    await expect(ProtectedPage()).rejects.toThrow(
+      "NEXT_REDIRECT:/signals/kr/2026-10-14",
+    );
+    expect(navigation.redirect).toHaveBeenCalledWith("/signals/kr/2026-10-14");
+  });
 });

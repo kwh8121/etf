@@ -17,6 +17,7 @@ export default async function ProtectedPage() {
     .select("bas_dd")
     .eq("market", "KR")
     .eq("strategy_version", "m3-price-movers-v1")
+    .eq("status", "COMPLETED")
     .not("bas_dd", "is", null)
     .order("bas_dd", { ascending: false })
     .order("completed_at", { ascending: false })
