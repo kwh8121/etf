@@ -191,6 +191,17 @@ function row(index: number, overrides: Partial<SignalRow> = {}): SignalRow {
 }
 
 describe("KR signal reporting", () => {
+  it("links both current and ranked-out ETF names and sends HTML", async () => {
+    signalRowsByRunId.set("generated-run", [row(1, { code: "069500", name: "KODEX S&P" })]);
+    signalRowsByRunId.set("previous-run", [row(2, { code: "360750", name: "TIGER <ETF>" })]);
+    await reportLatestKrxSignals(true, "generated-run");
+    expect(telegramMocks.formatTelegramReport).toHaveBeenCalledWith(expect.objectContaining({ html: true }));
+    const lines = telegramMocks.formatTelegramReport.mock.results[0].value.join("\n");
+    expect(lines).toContain('<a href="https://m.stock.naver.com/domestic/stock/069500/total">KODEX S&amp;P</a>');
+    expect(lines).toContain('<a href="https://m.stock.naver.com/domestic/stock/360750/total">TIGER &lt;ETF&gt;</a>');
+    expect(sendTelegramMessages).toHaveBeenCalledWith(expect.objectContaining({ parseMode: "HTML" }));
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     signalRuns = [

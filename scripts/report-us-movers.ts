@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { getRequiredServerSecret } from "../lib/config/server-env.ts";
 import { resolveWebBaseUrl, buildUsSignalUrl } from "../lib/config/web-url.ts";
+import { formatEtfDetailLink } from "../lib/notifications/etf-detail-link.ts";
 import { toKstDate } from "../lib/dashboard/us-signal-view.ts";
 import {
   formatExperimentalTelegramReport,
@@ -98,7 +99,9 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
             rows as UsSignalRow[],
             previousRows,
             (row) =>
-              `${row.rank ?? "-"}. ${row.name} · ${Number(row.value).toFixed(2)}%`,
+              `${row.rank ?? "-"}. ${formatEtfDetailLink("US", row.code, row.name)} · ${Number(row.value).toFixed(2)}%`,
+            (row) =>
+              `${row.rank ?? "-"}. ${formatEtfDetailLink("US", row.code, row.name)}`,
           ),
         };
       },
@@ -117,6 +120,7 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
       (section): section is TelegramReportSection => section !== null,
     ),
     disclosure: US_ETF_P1_DISCLOSURE,
+    html: true,
     ...(webUrl ? { webUrl } : {}),
   });
   if (send) {
@@ -124,6 +128,7 @@ export async function reportLatestUsEtfMovers(send = true, runId?: string) {
       token: getRequiredServerSecret("TELEGRAM_BOT_TOKEN"),
       chatId: getRequiredServerSecret("TELEGRAM_CHAT_ID"),
       messages,
+      parseMode: "HTML",
     });
     try {
       await markUsTelegramReported(client, run.id);

@@ -3,14 +3,13 @@ import { fileURLToPath } from "node:url";
 
 import { getRequiredServerSecret } from "../lib/config/server-env.ts";
 import { resolveKrSignalWebUrl } from "../lib/config/web-url.ts";
+import { formatEtfDetailLink } from "../lib/notifications/etf-detail-link.ts";
 import {
   formatTelegramReport,
   sendTelegramMessages,
   type TelegramReportSection,
 } from "../lib/notifications/telegram.ts";
-import {
-  formatReportedRankChangeLines,
-} from "../lib/signals/report-rank-changes.ts";
+import { formatReportedRankChangeLines } from "../lib/signals/report-rank-changes.ts";
 import {
   auditKrListingCorrectionProposals,
   auditRunAccuracy,
@@ -77,12 +76,14 @@ export async function reportLatestKrxSignals(
     source: "KRX etf_bydd_trd, Kiwoom ka10099",
     sections: createSections(rows, previousRows),
     webUrl: resolveKrSignalWebUrl(latest.bas_dd),
+    html: true,
   });
   if (send) {
     await sendTelegramMessages({
       token: getRequiredServerSecret("TELEGRAM_BOT_TOKEN"),
       chatId: getRequiredServerSecret("TELEGRAM_CHAT_ID"),
       messages,
+      parseMode: "HTML",
     });
   }
   return { runId: latest.id, messageCount: messages.length, sent: send };
@@ -114,7 +115,10 @@ function createSections(
       lines: formatReportedRankChangeLines(
         entries,
         previousRows ? (previousGroups.get(key) ?? []) : null,
-        (entry) => `${entry.rank ?? "-"}. ${entry.name} ${formatValue(entry)}`,
+        (entry) =>
+          `${entry.rank ?? "-"}. ${formatEtfDetailLink("KR", entry.code, entry.name)} ${formatValue(entry)}`,
+        (entry) =>
+          `${entry.rank ?? "-"}. ${formatEtfDetailLink("KR", entry.code, entry.name)}`,
       ),
     };
   });

@@ -103,6 +103,25 @@ import { markUsTelegramReported } from "../../lib/signals/us-etf-signal-reposito
 import { reportLatestUsEtfMovers } from "../../scripts/report-us-movers";
 
 describe("US P1 Telegram reporting", () => {
+  it("links current and ranked-out US names without collecting extra data and sends HTML", async () => {
+    runQuery.maybeSingle
+      .mockResolvedValueOnce({ data: { id: "us-run", observed_at: "2026-10-16T01:00:00.000Z", status: "COMPLETED" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "previous-run" }, error: null });
+    rowResults.set("daily_price_gain", {
+      count: 1,
+      data: [{ signal_type: "daily_price_gain", code: "VOO", name: "Vanguard S&P", value: 1, rank: 1 }],
+    });
+    previousRowResults.set("daily_price_gain", {
+      data: [{ code: "QQQ", name: "Invesco <QQQ>", value: 1, rank: 2 }],
+    });
+    await reportLatestUsEtfMovers(true, "us-run");
+    expect(formatExperimentalTelegramReport).toHaveBeenCalledWith(expect.objectContaining({ html: true }));
+    const lines = vi.mocked(formatExperimentalTelegramReport).mock.calls.at(-1)?.[0].sections[0].lines.join("\n");
+    expect(lines).toContain('<a href="https://finance.yahoo.com/quote/VOO/">Vanguard S&amp;P</a>');
+    expect(lines).toContain('<a href="https://finance.yahoo.com/quote/QQQ/">Invesco &lt;QQQ&gt;</a>');
+    expect(sendTelegramMessages).toHaveBeenCalledWith(expect.objectContaining({ parseMode: "HTML" }));
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     rowRequests.length = 0;
@@ -309,10 +328,10 @@ describe("US P1 Telegram reporting", () => {
 
     const sections = vi.mocked(formatExperimentalTelegramReport).mock.calls.at(-1)?.[0].sections;
     expect(sections?.[0]?.lines).toEqual([
-      "1. 신규 · 1.23% · 랭크인",
-      "2. 유지 · 0.50%",
+      '1. <a href="https://finance.yahoo.com/quote/NEW/">신규</a> · 1.23% · 랭크인',
+      '2. <a href="https://finance.yahoo.com/quote/STAY/">유지</a> · 0.50%',
       "랭크아웃",
-      "2. 이탈",
+      '2. <a href="https://finance.yahoo.com/quote/OUT/">이탈</a>',
     ]);
     expect(runQuery.lt).toHaveBeenCalledWith("observed_at", "2026-10-14T01:00:00.000Z");
   });
@@ -338,7 +357,7 @@ describe("US P1 Telegram reporting", () => {
     const sections = vi.mocked(formatExperimentalTelegramReport).mock.calls.at(-1)?.[0].sections;
     expect(sections).toContainEqual({
       title: "일간 하락 (상위 0건 / 전체 0건)",
-      lines: ["랭크아웃", "1. 이탈"],
+      lines: ["랭크아웃", '1. <a href="https://finance.yahoo.com/quote/OUT/">이탈</a>'],
     });
   });
 

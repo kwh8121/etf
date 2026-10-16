@@ -7,6 +7,55 @@ import {
 } from "../../lib/notifications/telegram";
 
 describe("Telegram reports", () => {
+  it("escapes report metadata in opt-in HTML mode and preserves complete row links across chunks", () => {
+    const anchor = '<a href="https://m.stock.naver.com/domestic/stock/069500/total">S&amp;P ETF</a>';
+    const messages = formatTelegramReport({
+      market: "KR", basDd: "2026-10-16", status: "COMPLETED",
+      source: "KRX & Kiwoom", runId: "run<test>", html: true,
+      webUrl: "https://example.com/?a=1&b=2",
+      sections: [{ title: "상승 <전체>", lines: Array.from({ length: 70 }, (_, i) => `${i + 1}. ${anchor} +1.00%`) }],
+    });
+    expect(messages.length).toBeGreaterThan(1);
+    expect(messages.every((message) => message.length <= 4096)).toBe(true);
+    expect(messages.every((message) => message.includes("KRX &amp; Kiwoom") && message.includes("run&lt;test&gt;"))).toBe(true);
+    expect(messages.join("\n")).toContain("상승 &lt;전체&gt;");
+    expect(messages[0]).toContain("?a=1&amp;b=2");
+    expect(messages.join("\n").match(/<a href=/g)).toHaveLength(70);
+    for (const message of messages) {
+      expect(message.match(/<a href=/g)?.length ?? 0).toBe(message.match(/<\/a>/g)?.length ?? 0);
+    }
+  });
+
+  it("escapes US metadata when HTML links are enabled", () => {
+    const messages = formatExperimentalTelegramReport({
+      title: "US <ETF>", observedAt: "today", runId: "run&1",
+      disclosure: "A & B", html: true,
+      sections: [{ title: "상승 <10>", lines: ['1. <a href="https://finance.yahoo.com/quote/VOO/">S&amp;P</a>'] }],
+    });
+    expect(messages[0]).toContain("US &lt;ETF&gt;");
+    expect(messages[0]).toContain("run&amp;1");
+    expect(messages[0]).toContain("A &amp; B");
+    expect(messages[0]).toContain("상승 &lt;10&gt;");
+    expect(messages[0]).toContain('<a href="https://finance.yahoo.com/quote/VOO/">S&amp;P</a>');
+  });
+
+  it("rejects an oversized HTML row before sending rather than breaking its anchor", () => {
+    expect(() => formatExperimentalTelegramReport({
+      title: "US", observedAt: "today", runId: "run", disclosure: "info", html: true,
+      sections: [{ title: "ETF", lines: [`<a href="https://example.com/">${"X".repeat(4100)}</a>`] }],
+    })).toThrow("Telegram message");
+  });
+
+  it("opts into HTML only for linked reports and disables link previews", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    await sendTelegramMessages({ token: "test-token", chatId: "test-chat", messages: ["S&P <status>"], fetchFn });
+    await sendTelegramMessages({ token: "test-token", chatId: "test-chat", messages: ['<a href="https://example.com/">ETF</a>'], parseMode: "HTML", fetchFn });
+    const bodies = fetchFn.mock.calls.map((call) => JSON.parse(call[1].body));
+    expect(bodies[0]).not.toHaveProperty("parse_mode");
+    expect(bodies[0].text).toBe("S&P <status>");
+    expect(bodies[1]).toMatchObject({ parse_mode: "HTML", link_preview_options: { is_disabled: true } });
+  });
+
   it("fits a typical four-category US top-ten report in one message and still splits long names", () => {
     const sections = ["일간 상승", "일간 하락", "5일 상승", "5일 하락"].map(
       (title) => ({

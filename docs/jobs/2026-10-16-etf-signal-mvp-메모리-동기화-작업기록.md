@@ -46,3 +46,13 @@
 - Q-32를 WAIT로 정정했다. 해제 조건은 다음 Codex 연결에서 60초 설정 반영·도구 노출·실제 브라우저 호출 성공이다. 큐는 `AUTO 0 / APPROVE 0 / DECIDE 0 / WAIT 5`이며 Q-32·Q-23 해제 시각은 미정, 고정 달력 대기는 Q-07의 2026-11-26이다.
 - 제품 코드·운영 데이터·다른 MCP 인증은 변경하지 않았다. 이 로컬 설정 기록은 Q-31 최소 정책 요약 1회 저장 승인 범위에 포함되지 않아 OpenViking 추가 전송은 하지 않는다. 제품 이슈의 외부 상태 변경도 수행하지 않는다.
 - 이번 문서 변경 검증: Node 22.23.2 `npm run lint`·`npm run build`(TypeScript 포함)·`git diff --check`·`npm run continuity:check` 통과. 제품 코드 변경이 없어 단위 테스트는 재실행하지 않았다. 앞선 전체 검증 결과와 이번 진단 검증을 구분한다. 문서 2개를 직접 대조하고 main 원자적 커밋·푸시로 기록한다.
+
+## Telegram ETF별 웹 상세 링크 구현
+
+- 사용자 `키움증권에서는 찾지 못하겠습니다. 아까 제시했던 네이버쪽을 처리하는것이 좋을것 같습니다.`로 조회 대상 방침을 바꿨다. 국내 네이버·미국 Yahoo 조합 적용 여부를 선택 질문으로 제시하고, 답변 전에도 이 조합을 기본 가정으로 명시해 가역적인 구현을 진행했다. 미국 네이버의 거래소 구분 주소를 기존 티커만으로 확정하지 못했으며 추가 매핑 수집·임의 접미사는 도입하지 않았다.
+- 변경: 새 순수 함수 `lib/notifications/etf-detail-link.ts`로 URL 구성·HTML escape·유효 코드 검사. KR·US 보고의 현재·랭크아웃 이름에 링크를 붙이고 해당 보고만 HTML 모드를 명시한다. Telegram 미리보기는 현재 공식 `link_preview_options`로 비활성화한다. 일반 상태 알림은 기본 텍스트 전송이다. 단일 HTML 행 초과는 발송 전에 오류로 끝내고 나머지는 완전한 행 단위로 분할한다.
+- TDD: URL/특수문자·메타데이터·HTML 옵션·랭크아웃·초과 행·보고 통합 테스트의 실패를 확인한 뒤 구현했다. 전체 검증(Node 22.23.2): 53파일·313테스트, `npx tsc --noEmit`, `.opencode/**` 제외 lint, production build(17개 정적 페이지) 통과. 기본 `npm run lint`는 기존 사용자 미추적 `.opencode/skills/mem0-mem0/scripts/mem0_doc_search.ts`의 `no-explicit-any` 4건으로 실패했고 해당 파일은 보존했다. 독립 code-reviewer 리뷰 APPROVE·지적 0건이다.
+- 공식 Telegram 문서는 Context7로 HTML 링크·escape·길이 제한·미리보기 옵션을 확인했다. Chromium 실측: 네이버 069500은 360×800·1440×900에서 종목 일치·문서 폭 360·1440px. Yahoo VOO도 양쪽에서 종목 일치·문서 폭 364·1440px. Yahoo 작은 화면에는 4px 넘침이 있다. 실기기나 Telegram 내장 브라우저 검증 완료로 간주하지 않는다.
+- 데이터 수집·운영 DB 쓰기·환경 변수·timer·수동 dispatch·시험 Telegram 발송을 추가하지 않았다. 다음 새 보고에 적용되며 이미 받은 메시지는 그대로다. 사용 안내 `docs/guides/etf-signal-mvp-etf-detail-links.md`와 NEXT Q-33을 갱신했고 키움 조사 문서는 이전 판단 이력으로 남겼다. Spec Kit constitution은 아직 템플릿이며 이번 기존 보고 포맷 변경에 새 운영 흐름을 적용하지 않았다.
+- Linear KOR-68을 실제 구현·검증에 맞게 Done으로 동기화하고 read-back한다. Q-31의 메모리 저장 승인은 최소 정책 요약 한 차례로 소진됐으므로 이 작업을 OpenViking에 추가 전송하지 않는다. 다음 세션은 NEXT와 이 기록을 정본으로 사용한다.
+- 종료 검증: `git diff --check`·`continuity:check` 통과. 브라우저를 닫고 이번 작업에서 만든 snapshot·console 로그만 정리했다. Q-32는 다음 시작 시 60초 설정 반영·재발 여부를 확인해야 하므로 WAIT를 유지한다. 최종 큐 `AUTO 0 / APPROVE 0 / DECIDE 0 / WAIT 5`; 고정 달력 대기는 2026-11-26이고 나머지 해제 시각은 미정이다. 변경 코드·테스트·문서를 원자적 main 커밋·푸시로 반영한다.

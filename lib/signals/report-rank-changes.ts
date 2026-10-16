@@ -28,6 +28,8 @@ export function formatReportedRankChangeLines<T extends ReportedRankRow>(
   current: readonly T[],
   previous: readonly ReportedRankRow[] | null,
   formatCurrent: (row: T) => string,
+  formatRankOut: (row: ReportedRankRow) => string = (row) =>
+    `${row.rank ?? "-"}. ${row.name}`,
 ): string[] {
   const changes = compareReportedRanks(current, previous);
   const currentLines = current.map((row) =>
@@ -37,6 +39,6 @@ export function formatReportedRankChangeLines<T extends ReportedRankRow>(
   return [
     ...currentLines,
     "랭크아웃",
-    ...changes.rankOut.map((row) => `${row.rank ?? "-"}. ${row.name}`),
+    ...changes.rankOut.map(formatRankOut),
   ];
 }

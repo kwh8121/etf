@@ -6,6 +6,17 @@ import {
 } from "../../lib/signals/report-rank-changes";
 
 describe("reported rank changes", () => {
+  it("uses the supplied name formatter for rank-outs as well as current rows", () => {
+    const lines = formatReportedRankChangeLines(
+      [{ code: "CURRENT", name: "현재", rank: 1 }],
+      [{ code: "OUT", name: "이탈", rank: 2 }],
+      (row) => `${row.rank}. <a href="/${row.code}">${row.name}</a>`,
+      (row) => `${row.rank}. <a href="/${row.code}">${row.name}</a>`,
+    );
+    expect(lines).toEqual([
+      '1. <a href="/CURRENT">현재</a> · 랭크인', "랭크아웃", '2. <a href="/OUT">이탈</a>',
+    ]);
+  });
   it("marks only codes newly visible in the current section as rank-ins", () => {
     const result = compareReportedRanks(
       [
