@@ -1,5 +1,16 @@
 # ETF 신호 MVP 메모리 동기화 작업 기록 (2026-10-16)
 
+## ETF별 키움 기본 상세 링크 검토
+
+- 사용자 `키움을 기본으로 해서 진행`에 따라 기본 조회 대상을 키움으로 확정했다. 국내·미국 알림의 종목코드는 이미 있으므로 추가 상세 데이터 수집이 필요한 작업은 아니다.
+- 공식 CLI 가이드·Telegram 문서·키움 WTS와 공개 JS를 확인했다. 로컬 CLI의 딥링크·URL spec 검색은 결과가 없었다. 공식 종목별 주소 규칙을 확보하지 못했으며 미지원으로 단정하지 않는다.
+- 현재 세션에서 Playwright MCP 도구가 노출됐고 실제 `browser_navigate`와 `browser_evaluate`로 WTS 로그인 화면·공개 JS HTTP 200을 확인했다. 앞선 Q-32의 미노출 기록은 당시 사실이다. 다만 다음 시작 시 60초 설정 반영과 재발 여부는 이번 조사로 보증하지 않아 Q-32를 임의 완료하지 않았다.
+- 상세 검토는 `docs/references/2026-10-16-kiwoom-etf-detail-links.md`, 실행 대기는 NEXT Q-33에 기록했다. 실제 키움 공유 URL 또는 공식 규칙을 확보하면 종목·기기 검증 뒤 구현한다. 사용자에게 공유 기능이 있다면 국내·미국 각 1개 URL을 요청했다.
+- 제품 코드·환경 변수·운영 데이터·발송은 변경하지 않았다. 구현 완료·모바일/PC 호환 검증 완료를 주장하지 않는다. 메모리 최소 요약 1회 저장 승인을 이번 조사 전송으로 확대하지 않았다.
+- Linear에서 관련 기존 이슈를 조회한 뒤 Q-33 전용 KOR-68을 Todo로 생성하고 read-back 조회로 제목·상태를 확인했다. 기존 완료 이슈나 M6 관측 누적은 변경하지 않았다.
+- 검증(Node 22.23.2): production build·TypeScript 검사·17개 정적 페이지 생성 통과. 일반 `npm run lint`는 작업 전부터 있던 미추적 `.opencode/skills/mem0-mem0/scripts/mem0_doc_search.ts`의 `no-explicit-any` 4건으로 실패했다. 해당 사용자 파일은 수정하지 않았다. `npm run lint -- --ignore-pattern '.opencode/**'`는 통과했다. 제품 코드 변경이 없어 단위 테스트는 재실행하지 않았다. 문서 3개를 직접 대조해 요구사항·차단 조건·미구현 표기가 일치함을 확인했고 `git diff --check`·종료 `continuity:check`도 통과했다.
+- 브라우저를 닫고 이번 조사가 만든 `.playwright-mcp/` snapshot·console 파일을 정리했다. 큐는 `AUTO 0 / APPROVE 0 / DECIDE 0 / WAIT 6`; Q-33 해제 시각은 미정이다.
+
 ## 승인 범위와 실행 결과
 
 - 사용자 `저장 승인`은 NEXT Q-31의 내부 경로·비밀값을 제외한 최소 요약을 OpenViking에 한 차례 저장하는 승인이다. 운영 데이터 정정·Kiwoom API 호출·Telegram 발송·수집 계약 변경은 포함하지 않았다.
