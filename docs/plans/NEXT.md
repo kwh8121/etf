@@ -62,6 +62,11 @@
   - 변경: GitHub `production` environment에 `ENABLE_US_ETF_P1=true` 설정(변수 목록으로 확인), `us-etf-movers.yml`·`us-verify.yml`의 `environment: staging`→`production`. `staging`의 `ENABLE_US_ETF_P1=false`는 그대로다. `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 어느 environment에도 없다.
   - 효과: 다음 US timer 실행부터 production Kiwoom·Supabase·Telegram chat을 쓰고, `production`의 `ETF_WEB_BASE_URL`로 Telegram 헤더에 `상세: …/signals/us/<한국 관측일>` 링크가 붙는다. 수동 dispatch는 하지 않았다(발송 없음).
   - 되돌리기: `gh variable set ENABLE_US_ETF_P1 --env production --body false`. 이후 US 실행은 `DISABLED`로 끝나고 발송·쓰기가 없다.
+- [x] `DONE` Q-32 Codex Playwright MCP 로컬 실행 복구 (2026-10-16 사용자 요청)
+  - 기본 Chrome 미설치 오류를 재현하고 기존 Chromium 실행 경로 지정·`--isolated`로 전역 MCP 설정의 args만 수정했다. 다른 MCP·운영 계약 변경은 없다.
+  - 실제 저장 설정으로 초기화 3.01초·도구 25개 조회·`about:blank` 브라우저 열기/닫기 성공. 기존 대화의 도구 카탈로그 재연결은 Codex 세션 재시작 후 확인이 필요하다.
+  - 제약: Chromium 캐시 경로가 사라지면 재설정이 필요하며 isolated 세션은 로그인 상태를 실행 간 보존하지 않는다. 근거는 당일 작업 기록의 “Codex Playwright MCP 복구”다.
+
 - [x] `DONE` Q-31 Q-29·Q-30 결정의 OpenViking 외부 메모리 동기화 (2026-10-16 사용자 저장 승인)
   - 사용자 `저장 승인`으로 아래 최소 요약의 한 차례 전송을 승인했다. OpenViking `remember`는 `Stored 1 message(s) and committed for memory extraction.`을 반환했다. 저장·추출 접수 성공이며 비동기 장기 메모리 추출 완료를 뜻하지 않는다.
   - 전송 요약: “ETF 신호 MVP: 사용자가 과거 KR 15 run 보존·콘텐츠 미검증/현재 정본 불일치 명시와 US 현행 `stk_cnd=1`·증100% 조건·전체 ETF 포괄성 미확인 제한 유지를 확정했다. 두 정책 결정은 완료이며 정확성 검증 완료를 뜻하지 않는다. 추가 운영 정정·API 비교·계약 변경은 새 범위와 별도 승인이 필요하다.” 비밀값·원천 응답·내부 파일 경로는 전송하지 않았다.
