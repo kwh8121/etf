@@ -12,6 +12,7 @@
   - 검증(Node 22.23.2): TDD RED/GREEN, 전체 53파일·313테스트, `tsc --noEmit`, `.opencode/**` 제외 lint, production build(17개 정적 페이지), 독립 리뷰 APPROVE·지적 0건. 전체 lint는 기존 사용자 미추적 `.opencode/` 파일의 `no-explicit-any` 4건으로 실패했다.
   - 브라우저: 네이버 069500·Yahoo VOO는 360px·1440px에서 상세 종목 식별 성공. 네이버 가로 넘침 없음, Yahoo 360px은 4px 넘침. 실제 iOS·Android·Telegram 클릭은 미검증이다. 시험 발송·운영 수동 실행·과거 메시지 수정은 수행하지 않았다.
   - 사용 안내: `docs/guides/etf-signal-mvp-etf-detail-links.md`. 이전 키움 검토는 `docs/references/2026-10-16-kiwoom-etf-detail-links.md`에 이력으로 보존한다. 이 항목의 코드·테스트·문서는 동일 원자적 기능 커밋으로 main에 반영한다.
+  - 후속 시험 발송(사용자 명시 요청, 2026-10-16 12:29:57–12:30:00 KST): 오늘 보고된 KR(기준일 10-15) 4개·US(오늘 관측) 2개를 기존 채팅으로 전송했다. API 성공 6건·`text_link` 213개 확인, 운영 run notes 해시 전후 일치. 실제 수신·클릭은 사용자 확인 전이며 임의 추가 발송은 하지 않는다.
 
 - [x] `DONE` Q-26 데이터 정확성 보강 (2026-10-15 사용자 권장 순서 진행 승인)
   - 순서: 전체 페이지 조회·입력 완전성 → master 최초 관측일 보존 → 저장 내용 재계산 감사 → 발송·후속 검증 게이트 → 운영 읽기 전용 정정안·US 범위 검토.
