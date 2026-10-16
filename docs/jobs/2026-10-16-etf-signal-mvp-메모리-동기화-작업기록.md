@@ -65,3 +65,16 @@
 - 실제 발송: 2026-10-16 12:29:57–12:30:00 KST, Telegram `ok:true` 총 6건. 메시지 ID 87–92, 응답 `text_link` 합계 213개로 전부 링크 entity로 처리됐다. 재시도는 없었고 발송 결과를 임시 ledger에 건별 기록했다. API 접수를 실수신·클릭 검증 완료로 표현하지 않는다.
 - 두 운영 run의 전체 notes를 정렬한 JSON의 SHA-256은 발송 전후 동일했다. 운영 보고 표식·운영 DB를 바꾸지 않았으며 추가 시세 수집·workflow dispatch·timer 변경도 없다. 비밀값·채팅 ID·메시지 원문·환경 파일은 기록하지 않는다.
 - 시작·종료 `continuity:check`, `git diff --check`로 문서 변경을 검증한다. 제품 코드가 바뀌지 않아 직전 구현의 313테스트·tsc·build 결과를 이번에 재실행한 것으로 기록하지 않는다. Experience 조회는 자동 승인 검토 기한 만료로 결과가 없어 적용하지 않았고, 메모리 저장 승인을 확대하지 않았다. NEXT Q-33·Linear KOR-68에 시험 결과를 추가하며 큐는 `AUTO 0 / APPROVE 0 / DECIDE 0 / WAIT 5`다.
+
+## M6 정확성·관측 근거의 현재 확인 가능 범위 점검
+
+- 사용자 `확인가능한 부분 확인해줘.`에 따라 현재 저장 신호·보관 원천·기존 workflow·runner journal을 읽기 전용으로 대조했다. 오늘 링크 시험 뒤의 사용자 `성공적으로 수신했습니다.`는 시험 재전송 수신 확인으로 기록한다. 자체 웹의 날짜·360px 표시나 과거 정규 원문 정확성까지 확인한 것으로 확대하지 않는다.
+- 첫 임시 감사 실행 요청은 자동 승인 검토 기한 초과로 실행되지 않았다. 외부 부작용 승인이 필요한 것으로 해석하지 않고 기존 읽기 전용 `npm run verify:data -- all --output <비공개 결과 파일>`로 한 차례 다시 요청해 실행했다. Experience 검색도 직전 요청에서 검토 시간 만료로 결과가 없어 이전 메모리에 의존하지 않았다.
+- 전수 감사: 총 26 run(KR 18·US 8), KR 최근 3개와 US 8개 일치, 과거 KR 15개 `signal_diff`, 전체 `ok:false`·종료 1. `selectionReasons=[]`, 전역 상장 이력 감사 통과·false listing/master 정정 후보 각각 0건. 과거 보존 Q-29·미국 범위 제한 Q-30은 그대로다. 원천 hash 통과를 원천 사실 정확성이나 계산기 독립 검증으로 표현하지 않는다.
+- 최근 KR 후보는 기존 `verify:kr-candidate`로 10-13·10-14·10-15를 각각 실행해 모두 종료 0·`ok:true`를 확인했다. 순서대로 99·93·95행이며 고정 8유형 각 10행, 가변은 신규 4+거래대금 급증 15 / 급증 13 / 급증 15다. 추가·제거·변경 모두 0, 중복 run 없음·보고 표식 1건씩, 거래일 상태 `TRADING_COMPLETE`, 완전성 표식 true다. 원천 검사는 각각 22·21·21개로 모두 통과했다.
+- 10-13·10-14는 사후 정정된 현재 DB 검증일이다. 신규 10-15에는 21일 원천이 run 입력에 모두 기록돼 현재 달력 원천 대체 경고가 없다. 과거 상장 이력 상태 복원 한계 경고는 남으며 당일 신규 상장 신호는 0건이다. 이 제한을 제거했다고 표현하지 않는다.
+- 오늘 자동 운영: journal의 09:30:47 서비스 시작·09:30:49 KR dispatch와 GitHub `38829898321`(코드 `727d26c`, success)을 연결했다. Actions 로그 zip의 `report.reported=true`, 기준일 `20261015`, run `be5bb10a-…`, `kiwoomStatus=COMPLETE`, `blocked=null`을 확인했다. 자동 `kr-verify` `38830359178`도 success다. `gh run view --log`는 빈 출력이어서 근거로 쓰지 않고 공식 Actions 로그 endpoint zip을 읽었다.
+- 판정: 최근 3일의 현재 DB 재계산 일치, 그중 사후 정정 2일과 신규 정상 운영 기술 후보 1일을 분리한다. 과거 운영 기록 9/20을 정확성 확인 9일로 사용하지 않는다. 최종 M6 관측일 승격·종료·Q-09 착수는 보류하며 이전 예상 종료일(10-27 기준일·10-28 처리일)을 더는 확정 일정으로 쓰지 않는다. 실제 거래일의 운영 관측과 아직 없는 원문/자체 웹 확인 증거가 남는다.
+- 감사 보고: `docs/references/2026-10-16-m6-readonly-verification.md`. 비공개 증거는 Git 제외 `.omx/private-backups/m6-20261016-readonly/`에 0700 디렉터리·0600 파일로 보존했다. 전수 JSON SHA-256은 `347f294139d47dff89c2d63cd9132609f6c324aa0773e3bca74513f593f3f2c6`다. 운영 DB 수정·새 시세 API·Telegram 발송·timer/dispatch 실행·비밀값 기록은 없다.
+- NEXT Q-08에 실제 검증 결과를 추가했다. Linear KOR-58의 오래된 7/20 설명보다 최신 감사·최종 승격 보류가 우선임을 명시해 동기화한다. OpenViking 저장은 기존 한 차례 승인 범위를 확대하지 않아 수행하지 않는다. 최종 큐는 `AUTO 0 / APPROVE 0 / DECIDE 0 / WAIT 5`이며 고정 달력 대기는 2026-11-26이다.
+- 최종 검증(Node 22.23.2): 전체 53파일·313테스트, `npx tsc --noEmit`, `.opencode/**` 제외 lint, production build(17개 정적 페이지) 통과. 기본 lint는 기존 사용자 미추적 `.opencode/skills/mem0-mem0/scripts/mem0_doc_search.ts`의 `no-explicit-any` 4건으로 실패했고 수정하지 않았다. 독립 verifier가 NEXT의 정정 전 수치 표시 1건을 지적해 당시 102행과 현재 99행을 명시 구분했고 재검토 PASS·추가 지적 0건을 받았다. 감사 JSON·후보 JSON의 수치/무결성·큐 라벨 assertion, `git diff --check`, 종료 `continuity:check`도 통과했다. 문서 3개를 main 원자적 커밋·푸시로 기록한다.
