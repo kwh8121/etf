@@ -62,10 +62,12 @@
   - 변경: GitHub `production` environment에 `ENABLE_US_ETF_P1=true` 설정(변수 목록으로 확인), `us-etf-movers.yml`·`us-verify.yml`의 `environment: staging`→`production`. `staging`의 `ENABLE_US_ETF_P1=false`는 그대로다. `ETF_SIGNAL_TEST_FAIL_AFTER_PENDING`은 어느 environment에도 없다.
   - 효과: 다음 US timer 실행부터 production Kiwoom·Supabase·Telegram chat을 쓰고, `production`의 `ETF_WEB_BASE_URL`로 Telegram 헤더에 `상세: …/signals/us/<한국 관측일>` 링크가 붙는다. 수동 dispatch는 하지 않았다(발송 없음).
   - 되돌리기: `gh variable set ENABLE_US_ETF_P1 --env production --body false`. 이후 US 실행은 `DISABLED`로 끝나고 발송·쓰기가 없다.
-- [x] `DONE` Q-32 Codex Playwright MCP 로컬 실행 복구 (2026-10-16 사용자 요청)
-  - 기본 Chrome 미설치 오류를 재현하고 기존 Chromium 실행 경로 지정·`--isolated`로 전역 MCP 설정의 args만 수정했다. 다른 MCP·운영 계약 변경은 없다.
-  - 실제 저장 설정으로 초기화 3.01초·도구 25개 조회·`about:blank` 브라우저 열기/닫기 성공. 기존 대화의 도구 카탈로그 재연결은 Codex 세션 재시작 후 확인이 필요하다.
-  - 제약: Chromium 캐시 경로가 사라지면 재설정이 필요하며 isolated 세션은 로그인 상태를 실행 간 보존하지 않는다. 근거는 당일 작업 기록의 “Codex Playwright MCP 복구”다.
+- [ ] `WAIT` Q-32 Codex Playwright MCP 재연결 확인 (2026-10-16 사용자 failed 재보고)
+  - 기존 기본 Chrome 부재·프로필 충돌은 기존 Chromium 실행 경로 지정·`--isolated`로 우회했고 독립 실행을 검증했다.
+  - 후속 직접 원인: 2026-10-16 09:22 KST Codex 시작 로그에서 `timed out handshaking with MCP server after 14.9999986s` 확인. 전역 `mcp_servers.playwright.startup_timeout_sec`만 15→60초로 변경했다. 초기화 지연의 근본 원인은 확정하지 않았다.
+  - 저장 설정으로 독립 초기화 5.05초·도구 25개 조회·`about:blank` 열기/닫기 성공. 현재 Codex 세션의 Playwright 도구는 미노출이며 연결 복구 완료로 보지 않는다.
+  - 해제: 다음 Codex 연결에서 60초 설정 반영·Playwright 도구 노출·실제 브라우저 호출 성공 확인. 현재 세션 재연결 시각은 미정이다.
+  - 제약: Chromium 캐시 경로가 사라지면 재설정이 필요하며 isolated 세션은 로그인 상태를 실행 간 보존하지 않는다. 근거는 당일 작업 기록이다.
 
 - [x] `DONE` Q-31 Q-29·Q-30 결정의 OpenViking 외부 메모리 동기화 (2026-10-16 사용자 저장 승인)
   - 사용자 `저장 승인`으로 아래 최소 요약의 한 차례 전송을 승인했다. OpenViking `remember`는 `Stored 1 message(s) and committed for memory extraction.`을 반환했다. 저장·추출 접수 성공이며 비동기 장기 메모리 추출 완료를 뜻하지 않는다.

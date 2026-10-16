@@ -25,3 +25,13 @@
 - 현재 대화의 MCP 카탈로그에는 Playwright가 여전히 노출되지 않는다. 서버 수정·독립 MCP 호출 검증은 완료했으나 기존 Codex 세션의 도구 재연결은 재시작 후 확인해야 한다. 현재 세션에서 도구를 호출했다고 기록하지 않는다.
 - 연속성: 시작 `continuity:check` 통과. 제품의 KR/US 데이터 계약·WAIT 4건·Q-29/Q-30 정책은 그대로다. Q-31 저장 승인은 정책 요약 1회에 한정되므로 이번 로컬 설정 진단을 OpenViking에 추가 전송하지 않았다.
 - 복구 기록 검증: Node 22.23.2에서 `npm test` 52파일·296테스트, `npx tsc --noEmit`, 격리 `npm run lint`, `npm run build`, `git diff --check`, NEXT 큐 검사, 종료 `continuity:check`가 통과했다. 문서 2개를 직접 대조한 뒤 원자적 main 커밋·푸시로 기록한다. 전역 Codex 설정은 저장소 Git에 포함하지 않는다.
+
+## Playwright failed 후속 진단
+
+- 사용자 `playwright mcp 가 failed 로 표시되는데 어떤 문제인가요 ?`에 따라 이번 Codex 시작 로그를 확인했다. 2026-10-16 00:22:04 UTC(09:22 KST)와 00:22:21 UTC에 Playwright 초기 연결이 약 15초 제한으로 실패했다. 직접 오류는 `timed out handshaking with MCP server after 14.9999986s`다. 앞선 브라우저 실행 오류와 다른 단계이며, 독립 호출 성공만으로 Codex 재연결 완료를 판단할 수 없다.
+- 전역 `~/.codex/config.toml`의 `mcp_servers.playwright.startup_timeout_sec`만 15.0→60.0으로 변경했다. 전체 TOML 객체 전후 대조로 다른 설정이 같음을 확인했다. 기존 Chromium 실행 경로·`--isolated`는 유지했다. npm registry 조회는 91~281ms였으므로 네트워크 지연을 원인으로 단정하지 않는다. 동시 서버 시작 부하 등 초기화 지연의 근본 원인은 미확정이다.
+- 저장 설정 기반 독립 검증은 초기화 5.05초·도구 25개 조회·`browser_navigate(about:blank)`·`browser_close` 모두 성공(종료 0)했다. 이는 다음 Codex 시작 시 타임아웃 재발이 없음을 보증하지 않는다.
+- 공식 App Server 문서와 설치 CLI의 생성 프로토콜에서 reload/status 경로를 확인했다. 로컬 proxy를 통한 연결 시도는 두 번 모두 initialize 응답 제한을 넘겨 종료했으며 실제 reload 요청을 보내지 않았다. 현재 대화에는 Playwright 도구가 여전히 없으므로 세션 재연결은 미검증이다. 같은 경로의 재시도는 중단했다.
+- Q-32를 WAIT로 정정했다. 해제 조건은 다음 Codex 연결에서 60초 설정 반영·도구 노출·실제 브라우저 호출 성공이다. 큐는 `AUTO 0 / APPROVE 0 / DECIDE 0 / WAIT 5`이며 Q-32·Q-23 해제 시각은 미정, 고정 달력 대기는 Q-07의 2026-11-26이다.
+- 제품 코드·운영 데이터·다른 MCP 인증은 변경하지 않았다. 이 로컬 설정 기록은 Q-31 최소 정책 요약 1회 저장 승인 범위에 포함되지 않아 OpenViking 추가 전송은 하지 않는다. 제품 이슈의 외부 상태 변경도 수행하지 않는다.
+- 이번 문서 변경 검증: Node 22.23.2 `npm run lint`·`npm run build`(TypeScript 포함)·`git diff --check`·`npm run continuity:check` 통과. 제품 코드 변경이 없어 단위 테스트는 재실행하지 않았다. 앞선 전체 검증 결과와 이번 진단 검증을 구분한다. 문서 2개를 직접 대조하고 main 원자적 커밋·푸시로 기록한다.
