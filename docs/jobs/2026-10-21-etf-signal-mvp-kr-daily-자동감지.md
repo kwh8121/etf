@@ -4,7 +4,7 @@
 
 ## 로컬 세션 대조·수신 확인 (2026-10-21)
 
-- 저장소의 `origin/main` 자동 기록을 fast-forward로 반영했다. KR daily run `39521755861`은 성공했고, job 로그는 `completed`에 2026-10-19·20, `blocked=null`, 기준일 2026-10-20 보고 `reported=true`, `kiwoomStatus=COMPLETE`를 기록했다.
+- 저장소의 `origin/main` 자동 기록을 fast-forward로 반영했다. KR daily run `39521755861`은 2026-10-21 00:30:42Z에 생성되어 00:30:47Z에 job을 시작하고 성공했다. job 로그는 `completed`에 2026-10-19·20, `blocked=null`, 기준일 2026-10-20 보고 `reported=true`, `kiwoomStatus=COMPLETE`를 기록했다. 이번 세션에서는 runner journal을 조회하지 않아 timer 정시 실행과 다음 기동 따라잡기는 판정하지 않았다.
 - 운영 DB 읽기 전용 `npm run verify:kr-candidate -- 20261020` (Node 22.23.2): `ok:true`, run `4a155f32-bc6e-52fd-aaa7-5096cd70ca95` `COMPLETED`, 고정 8유형 각 10행과 가변 신호 12행(신규 상장 7·거래대금 급증 5), 총 92행, 보고 표식 1건·중복 run 없음, KRX `TRADING_COMPLETE`, 원천 재계산·상장 이력 감사 통과. 사용자 Telegram 실수신 확인으로 정확성 기준 확정 관측일에 산입했다. 메시지 헤더 링크 날짜와 360px 표시는 별도 확인하지 않았다.
 - 같은 방식으로 기준일 2026-10-19도 읽기 전용 검증했다: `ok:true`, run `20dc68cc-2886-52fa-a86d-19c316cb0aa5`, 95행, 보고 표식 1건·중복 run 없음, 원천 재계산·상장 이력 감사 통과. 별도 Telegram 실수신 확인은 아직 없어 후보로 유지한다.
 - `docs/plans/NEXT.md` Q-08을 정확성 기준 확정 관측일 3일(10-15·16·20)과 10-19 미확정 후보로 갱신했다. `docs/plans/kr-daily-watermark.json`은 클라우드 기록의 최신 run `39521755861`·기준일 2026-10-20을 반영한다.
