@@ -10,6 +10,7 @@ import {
   type SignalDirection,
   type SignalPeriod,
 } from "@/lib/dashboard/kr-signal-view";
+import { formatKrRelativeStrength } from "@/lib/signals/kr-relative-strength";
 
 const PERIOD_OPTIONS = [
   { value: "daily", label: "일간" },
@@ -164,6 +165,11 @@ export function SignalRankList({
                 <span className="break-words [overflow-wrap:anywhere] line-clamp-2">
                   {row.name}
                 </span>
+                {row.relativeStrength !== undefined && (
+                  <span className="block text-xs text-muted-foreground">
+                    {formatKrRelativeStrength(row.relativeStrength)}
+                  </span>
+                )}
                 {changes.rankInCodes.has(row.code) && (
                   <span className="text-xs font-medium text-muted-foreground">
                     랭크인

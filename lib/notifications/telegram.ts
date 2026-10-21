@@ -1,4 +1,5 @@
 import { escapeTelegramHtml } from "./etf-detail-link.ts";
+import { KR_RELATIVE_STRENGTH_DISCLOSURE } from "../signals/kr-relative-strength.ts";
 
 const TELEGRAM_MAX_MESSAGE_LENGTH = 4_096;
 
@@ -38,6 +39,7 @@ export function formatTelegramReport(
       `원천: ${input.source}`,
       `실행: ${input.runId}`,
       disclosure,
+      KR_RELATIVE_STRENGTH_DISCLOSURE,
       ...(input.webUrl ? [`상세: ${input.webUrl}`] : []),
     ].join("\n"),
   );

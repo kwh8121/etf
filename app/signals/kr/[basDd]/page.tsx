@@ -21,6 +21,12 @@ import {
   isUsEtfP1Enabled,
   US_ETF_P1_DISCLOSURE,
 } from "@/lib/signals/us-etf-movers";
+import {
+  createKrRelativeStrengthMap,
+  krRelativeStrengthKey,
+  KR_RELATIVE_STRENGTH_DISCLOSURE,
+} from "@/lib/signals/kr-relative-strength";
+import { readKrRelativeStrengthMarketRows } from "@/lib/signals/kr-relative-strength-store";
 import { createClient } from "@/lib/supabase/server";
 
 export const instant = false;
@@ -84,9 +90,28 @@ export default async function KrSignalDatePage({
         .order("rank")
     : { data: [], error: null };
 
-  const rows = ((signalRows ?? []) as SignalDailyDatabaseRow[]).map(
-    toDashboardSignalRow,
+  const signalRowsForView = (
+    (signalRows ?? []) as SignalDailyDatabaseRow[]
+  ).map(toDashboardSignalRow);
+  const relativeMarketRows = await readKrRelativeStrengthMarketRows(
+    supabase,
+    basDd,
+    signalRowsForView,
+  ).catch(() => {
+    console.warn("KR relative-strength data unavailable for the web view");
+    return { currentRows: [], startRows: [] };
+  });
+  const relativeStrengthByKey = createKrRelativeStrengthMap(
+    signalRowsForView,
+    relativeMarketRows.currentRows,
+    relativeMarketRows.startRows,
   );
+  const rows = signalRowsForView.map((row) => {
+    const key = krRelativeStrengthKey(row.signalType, row.code);
+    return relativeStrengthByKey.has(key)
+      ? { ...row, relativeStrength: relativeStrengthByKey.get(key) ?? null }
+      : row;
+  });
   const sections = createDashboardSignalSections(rows);
   const qualityMessage =
     latestRun?.status === "COMPLETED" && sections.length > 0
@@ -209,6 +234,9 @@ export default async function KrSignalDatePage({
         <p className="text-sm text-muted-foreground">
           5거래일 값은 KRX 종가 기준 가격수익률이며 분배금·기업행동 조정
           총수익률이 아닙니다.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {KR_RELATIVE_STRENGTH_DISCLOSURE}
         </p>
       </header>
 

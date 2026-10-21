@@ -125,14 +125,21 @@ describe("Telegram reports", () => {
           },
         ],
       },
-      150,
+      300,
     );
 
     expect(messages.length).toBeGreaterThan(1);
-    expect(messages.every((message) => message.length <= 150)).toBe(true);
+    expect(messages.every((message) => message.length <= 300)).toBe(true);
     expect(
       messages.every((message) =>
         message.includes("[ETF 신호][KR][COMPLETED] 2026-09-18"),
+      ),
+    ).toBe(true);
+    expect(
+      messages.every((message) =>
+        message.includes(
+          "지수 대비는 ETF 가격수익률에서 해당 ETF 추적지수의 가격수익률을 뺀 값",
+        ),
       ),
     ).toBe(true);
     expect(
@@ -163,6 +170,7 @@ describe("Telegram reports", () => {
       "원천: KRX etf_bydd_trd",
       "실행: run-1",
       "5거래일 값은 KRX 종가 기준 가격수익률이며 분배금·기업행동 조정 총수익률이 아닙니다.",
+      "지수 대비는 ETF 가격수익률에서 해당 ETF 추적지수의 가격수익률을 뺀 값이며, 분배금·기업행사 조정 총수익률은 아닙니다.",
     ].join("\n");
     const expected = [
       `${legacyHeader}\n\n일간 상승\n1. ETF +1.00%\n\n자동매매 또는 매수·매도 추천이 아닌 탐색 결과입니다.`,

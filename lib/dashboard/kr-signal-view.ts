@@ -1,3 +1,5 @@
+import type { KrRelativeStrengthValue } from "../signals/kr-relative-strength";
+
 export interface DashboardSignalRow {
   code: string;
   signalType: string;
@@ -6,6 +8,7 @@ export interface DashboardSignalRow {
   value: number | null;
   valueUnit: string | null;
   rank: number | null;
+  relativeStrength?: KrRelativeStrengthValue | null;
 }
 
 export interface DashboardSignalSection {

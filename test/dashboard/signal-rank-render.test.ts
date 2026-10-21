@@ -2,7 +2,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { DirectionList, KrSignalBoard } from "../../components/kr-signal-board";
+import {
+  DirectionList,
+  KrSignalBoard,
+  SignalRankList,
+} from "../../components/kr-signal-board";
 import { UsSignalBoard } from "../../components/us-signal-board";
 import {
   selectVariableSections,
@@ -27,6 +31,36 @@ function row(
 }
 
 describe("웹 랭크 변동 표시", () => {
+  it("ETF 수익률과 함께 추적지수 대비 차이를 표시한다", () => {
+    const html = renderToStaticMarkup(
+      createElement(SignalRankList, {
+        rows: [
+          {
+            ...row("ETF", "ETF 이름"),
+            relativeStrength: {
+              benchmarkName: "KOSPI 200",
+              benchmarkReturn: 2,
+              excessReturn: 1.25,
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain("KOSPI 200 대비 +1.25%p");
+  });
+
+  it("비교값이 없을 때도 ETF 신호와 함께 비교 불가를 표시한다", () => {
+    const html = renderToStaticMarkup(
+      createElement(SignalRankList, {
+        rows: [{ ...row("ETF", "ETF 이름"), relativeStrength: null }],
+      }),
+    );
+
+    expect(html).toContain("지수 비교 불가");
+    expect(html).toContain("ETF 이름");
+  });
+
   it("이름이 바뀌어도 종목 코드가 같으면 유지하고 새 진입과 이탈만 표시한다", () => {
     const html = renderToStaticMarkup(
       createElement(DirectionList, {

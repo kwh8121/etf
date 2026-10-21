@@ -3,13 +3,23 @@ import { fileURLToPath } from "node:url";
 
 import { getRequiredServerSecret } from "../lib/config/server-env.ts";
 import { resolveKrSignalWebUrl } from "../lib/config/web-url.ts";
-import { formatEtfDetailLink } from "../lib/notifications/etf-detail-link.ts";
+import {
+  escapeTelegramHtml,
+  formatEtfDetailLink,
+} from "../lib/notifications/etf-detail-link.ts";
 import {
   formatTelegramReport,
   sendTelegramMessages,
   type TelegramReportSection,
 } from "../lib/notifications/telegram.ts";
 import { formatReportedRankChangeLines } from "../lib/signals/report-rank-changes.ts";
+import {
+  createKrRelativeStrengthMap,
+  formatKrRelativeStrength,
+  krRelativeStrengthKey,
+  type KrRelativeStrengthValue,
+} from "../lib/signals/kr-relative-strength.ts";
+import { readKrRelativeStrengthMarketRows } from "../lib/signals/kr-relative-strength-store.ts";
 import {
   auditKrListingCorrectionProposals,
   auditRunAccuracy,
@@ -67,6 +77,34 @@ export async function reportLatestKrxSignals(
   const previousRows = previousRun
     ? await readSignalRows(client, previousRun.id)
     : null;
+  const relativeSignals = rows.map((row) => ({
+    code: row.code,
+    signalType: row.signal_type,
+    value: row.value,
+    valueUnit: row.value_unit,
+  }));
+  let relativeMarketRows: Awaited<
+    ReturnType<typeof readKrRelativeStrengthMarketRows>
+  > = {
+    currentRows: [],
+    startRows: [],
+  };
+  try {
+    relativeMarketRows = await readKrRelativeStrengthMarketRows(
+      client,
+      latest.bas_dd,
+      relativeSignals,
+    );
+  } catch {
+    console.warn(
+      "KR tracked-index comparison data unavailable; report continues",
+    );
+  }
+  const relativeStrengthByKey = createKrRelativeStrengthMap(
+    relativeSignals,
+    relativeMarketRows.currentRows,
+    relativeMarketRows.startRows,
+  );
 
   const messages = formatTelegramReport({
     market: "KR",
@@ -74,7 +112,7 @@ export async function reportLatestKrxSignals(
     status: latest.status,
     runId: latest.id,
     source: "KRX etf_bydd_trd, Kiwoom ka10099",
-    sections: createSections(rows, previousRows),
+    sections: createSections(rows, previousRows, relativeStrengthByKey),
     webUrl: resolveKrSignalWebUrl(latest.bas_dd),
     html: true,
   });
@@ -92,6 +130,7 @@ export async function reportLatestKrxSignals(
 function createSections(
   rows: readonly SignalDailyRow[],
   previousRows: readonly SignalDailyRow[] | null,
+  relativeStrengthByKey: ReadonlyMap<string, KrRelativeStrengthValue | null>,
 ): TelegramReportSection[] {
   const groups = new Map<string, SignalDailyRow[]>();
   const previousGroups = new Map<string, SignalDailyRow[]>();
@@ -115,8 +154,23 @@ function createSections(
       lines: formatReportedRankChangeLines(
         entries,
         previousRows ? (previousGroups.get(key) ?? []) : null,
-        (entry) =>
-          `${entry.rank ?? "-"}. ${formatEtfDetailLink("KR", entry.code, entry.name)} ${formatValue(entry)}`,
+        (entry) => {
+          const relativeKey = krRelativeStrengthKey(
+            entry.signal_type,
+            entry.code,
+          );
+          const relativeStrength = relativeStrengthByKey.get(relativeKey);
+          const relativeLabel = relativeStrengthByKey.has(relativeKey)
+            ? ` · ${escapeTelegramHtml(
+                formatKrRelativeStrength(relativeStrength ?? null),
+              )}`
+            : "";
+          return `${entry.rank ?? "-"}. ${formatEtfDetailLink(
+            "KR",
+            entry.code,
+            entry.name,
+          )} ${formatValue(entry)}${relativeLabel}`;
+        },
         (entry) =>
           `${entry.rank ?? "-"}. ${formatEtfDetailLink("KR", entry.code, entry.name)}`,
       ),

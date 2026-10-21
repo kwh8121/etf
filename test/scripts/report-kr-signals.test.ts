@@ -27,6 +27,20 @@ const telegramMocks = vi.hoisted(() => ({
   ),
   sendTelegramMessages: vi.fn(),
 }));
+const relativeStrengthMocks = vi.hoisted(() => ({
+  currentRows: [] as Array<{
+    code: string;
+    idxNm: string | null;
+    idxClose: number | string | null;
+    idxFlucRt: number | string | null;
+  }>,
+  startRows: [] as Array<{
+    code: string;
+    idxNm: string | null;
+    idxClose: number | string | null;
+    idxFlucRt: number | string | null;
+  }>,
+}));
 
 let signalRuns: RunRow[] = [];
 let signalRowsByRunId = new Map<string, SignalRow[]>();
@@ -151,6 +165,12 @@ vi.mock("../../lib/signals/data-accuracy.ts", () => ({
   auditKrListingCorrectionProposals:
     accuracyMocks.auditKrListingCorrectionProposals,
 }));
+vi.mock("../../lib/signals/kr-relative-strength-store.ts", () => ({
+  readKrRelativeStrengthMarketRows: vi.fn(async () => ({
+    currentRows: relativeStrengthMocks.currentRows,
+    startRows: relativeStrengthMocks.startRows,
+  })),
+}));
 
 import { sendTelegramMessages } from "../../lib/notifications/telegram";
 import { reportLatestKrxSignals } from "../../scripts/report-kr-signals";
@@ -196,7 +216,9 @@ describe("KR signal reporting", () => {
     signalRowsByRunId.set("previous-run", [row(2, { code: "360750", name: "TIGER <ETF>" })]);
     await reportLatestKrxSignals(true, "generated-run");
     expect(telegramMocks.formatTelegramReport).toHaveBeenCalledWith(expect.objectContaining({ html: true }));
-    const lines = telegramMocks.formatTelegramReport.mock.results[0].value.join("\n");
+    const lines = telegramMocks.formatTelegramReport.mock.results[0].value.join(
+      "\n",
+    );
     expect(lines).toContain('<a href="https://m.stock.naver.com/domestic/stock/069500/total">KODEX S&amp;P</a>');
     expect(lines).toContain('<a href="https://m.stock.naver.com/domestic/stock/360750/total">TIGER &lt;ETF&gt;</a>');
     expect(sendTelegramMessages).toHaveBeenCalledWith(expect.objectContaining({ parseMode: "HTML" }));
@@ -212,6 +234,8 @@ describe("KR signal reporting", () => {
       ["generated-run", [row(1)]],
       ["previous-run", [row(2)]],
     ]);
+    relativeStrengthMocks.currentRows = [];
+    relativeStrengthMocks.startRows = [];
     accuracyMocks.auditRunAccuracy.mockResolvedValue(okRunAccuracy());
     accuracyMocks.auditKrListingCorrectionProposals.mockResolvedValue(okListingAccuracy());
   });
@@ -311,5 +335,55 @@ describe("KR signal reporting", () => {
     expect(telegramMocks.formatTelegramReport.mock.results[0].value).toContainEqual(
       expect.stringContaining("ETF 1001"),
     );
+  });
+
+  it("adds escaped tracked-index return differences to price rows", async () => {
+    signalRowsByRunId.set("generated-run", [
+      row(1, {
+        code: "069500",
+        name: "KODEX 200",
+        signal_type: "daily_price_gain",
+        value: 2.4,
+        value_unit: "percent",
+      }),
+      row(2, {
+        code: "360750",
+        name: "TIGER 5일",
+        signal_type: "five_day_price_gain",
+        value: 5.5,
+        value_unit: "percent",
+      }),
+    ]);
+    relativeStrengthMocks.currentRows = [
+      { code: "069500", idxNm: "KOSPI <200>", idxClose: 350, idxFlucRt: 1.1 },
+      { code: "360750", idxNm: "NASDAQ 100", idxClose: 220, idxFlucRt: 0.2 },
+    ];
+    relativeStrengthMocks.startRows = [
+      { code: "360750", idxNm: "NASDAQ 100", idxClose: 200, idxFlucRt: 0 },
+    ];
+
+    await reportLatestKrxSignals(false, "generated-run");
+
+    const lines = telegramMocks.formatTelegramReport.mock.results[0].value.join(
+      "\n",
+    );
+    expect(lines).toContain("KOSPI &lt;200&gt; 대비 +1.30%p");
+    expect(lines).toContain("NASDAQ 100 대비 -4.50%p");
+  });
+
+  it("labels the comparison unavailable when tracked-index data is missing", async () => {
+    signalRowsByRunId.set("generated-run", [
+      row(1, {
+        code: "069500",
+        signal_type: "daily_price_gain",
+        value: 2.4,
+        value_unit: "percent",
+      }),
+    ]);
+
+    await reportLatestKrxSignals(false, "generated-run");
+
+    const lines = telegramMocks.formatTelegramReport.mock.results[0].value.join("\n");
+    expect(lines).toContain("지수 비교 불가");
   });
 });
