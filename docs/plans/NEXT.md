@@ -6,8 +6,10 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `AUTO` Q-39 추천 연구 데이터 계약·TDD 상세 실행안 작성 (Q-41 완료로 해제)
-  - 산출물: `docs/plans/implementation/etf-recommendation-data-contract.md`, `etf-recommendation-implementation-plan.md`. `superpowers:writing-plans`로 작성한다. 조사 보고서 7절의 실측(분배락 추정 등급, 가격 기준 예비 연구)을 반영하고 4절 수치 중 Q-40 결과에 의존하는 벤치마크는 미확정으로 남긴다.
+- [ ] `DECIDE` Q-43 추천 예비 연구 구현 실행 방식 선택·계획 검토 (Q-39 결과)
+  - 계획: [구현 실행안](implementation/etf-recommendation-implementation-plan.md) 8 Task(지수 백필, 이력 저장소, 분배락 추정, 적격 종목군, 모멘텀 후보, 가상 포트폴리오, 성과 지표, 연구 CLI), [데이터 계약](implementation/etf-recommendation-data-contract.md). 로컬 연구 경로이며 운영 DB·daily·Telegram과 분리한다.
+  - 선택지: A안 Subagent-driven(Task마다 구현·리뷰 분리, 가장 철저, 비용 큼, 권장: 8 Task가 인터페이스로 이어져 오류 파급이 큼) / B안 Native(이 세션에서 직접 구현 후 마지막에 한 번 리뷰, 빠름).
+  - 해제: 계획 검토와 실행 방식 선택. 선택 후 Task 1부터 `AUTO`로 진행한다. Q-42는 Task 7 벤치마크에만 영향을 주므로 구현을 막지 않는다.
 
 - [ ] `DECIDE` Q-42 총수익 벤치마크 대안 선택 (Q-40 결과)
   - 근거: KOSPI 시리즈 일별시세정보 승인 후 재탐침 결과 `코스피 200`은 가격지수뿐이고 총수익(TR) 지수는 없다(조사 보고서 8절). KRX 시리즈 서비스는 401.
@@ -16,6 +18,9 @@
 
 - [x] `DONE` Q-40 KRX 지수 서비스 이용 신청 (2026-10-23, A안)
   - 결과: 사용자가 KOSPI 시리즈 일별시세정보 승인을 확인했고 `idx/kospi_dd_trd` 200, 54개 지수. `코스피 200` 가격지수는 있으나 TR 지수는 없음. KRX 시리즈는 401. 분배금 원천은 조사 후 재요청한다(미착수).
+
+- [x] `DONE` Q-39 추천 연구 데이터 계약·TDD 상세 실행안 작성 (2026-10-23)
+  - 산출물: `docs/plans/implementation/etf-recommendation-data-contract.md`, `etf-recommendation-implementation-plan.md`. 데이터 계약은 가격 기준 예비 연구(`estimated` 등급)로 한정하고 G1·G3 근거로 쓰지 않는다. 벤치마크는 Q-42 전 잠정.
 
 - [x] `DONE` Q-41 가격수익률 예비 연구용 KRX 백필 (2026-10-23 사용자 착수 승인)
   - 결과: 2019-01-02~2026-10-22 평일 2,037회 읽기 호출, 거래일 1,915·휴장일 122·불량 0. 로컬 `research-data/`(gitignore)에만 저장, DB 쓰기 없음. 품질·분배락 추정 결과는 조사 보고서 7절.
