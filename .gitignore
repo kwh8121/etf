@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local agent/tool session state
 .omx/
+
+# 추천 연구 로컬 산출물
+/research-data/
