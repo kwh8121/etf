@@ -54,3 +54,33 @@
 1. 초안 14절 D1~D4의 범위·주기·성과 기준·위험·비용을 검토한다(Q-35).
 2. 외부 등록 승인 시 중복 검색 뒤 Linear 이슈를 생성하고 read-back한다(Q-36). 승인 전에는 로컬 문서를 정본으로 유지한다.
 3. 기존 M6의 실제 다음 거래일 관측을 계속한다. 초안 작성으로 M6 완료나 Q-09 착수를 선언하지 않는다.
+
+## 추가 작업 — Telegram 수신 이상 문의 조사와 분할 메시지 순번 (세션 중단, 이어서 진행)
+
+### 조사 결과
+
+- 사용자 문의: "한국 ETF 정보는 전송이 안 되고 미국만 2회 발송됐다."
+- 증거: timer 09:30 KR dispatch 성공 → run `39878559645` 성공, run `ca96f0e3-31a5-52f4-a837-dd75e5896061`의 `notes.telegram_reported_at` 09:38:18 KST(발송 성공 뒤에만 기록). 읽기 전용 dry-run `report-kr-signals.ts` 결과 `messageCount:6`. US run `1bb5900a-f43e-50cf-a807-7c213cb730c3` `messageCount:2`(10:01).
+- 사용자가 KR 6통을 09:38에 수신했다고 확인했다. 오류가 아니라 US 2통이 KR 6통보다 늦게 와서 생긴 착시로 결론 냈다.
+- 날짜 `2026-10-22`는 KRX 기준일이다. timer가 09:30 KST에 실행되고 `missingWeekdays`가 오늘을 제외(`day < end`)하므로 직전 완료 거래일을 보고하는 의도된 동작이다.
+- 여러 통은 Telegram 4,096자 제한 때문이다. KR은 10개 유형×10행에 HTML 링크가 붙고, 모든 조각에 헤더(원천·실행·면책·상세 링크)가 반복된다.
+- 운영 DB 쓰기·Telegram 발송·timer 변경은 하지 않았다.
+
+### 코드 변경 (미커밋)
+
+- `lib/notifications/telegram.ts`: 2통 이상으로 나뉘면 각 조각 헤더 첫 줄 끝에 ` (n/N)`을 붙인다. 한 통이면 기존과 동일. 순번 길이 8자를 분할 시 미리 확보해 `maxLength`를 지킨다. 분할 로직은 `splitTelegramChunks`로 분리했다.
+- `test/notifications/telegram.test.ts`: 분할 시 순번(KR·US)과 한 통이면 순번 없음 테스트 2건 추가. RED 확인 뒤 구현했다.
+
+### 검증 상태
+
+- 통과: 대상 6개 파일 54건, `npx tsc --noEmit`, 변경 파일 eslint.
+- 미완료: 전체 `npm test`에서 1건 실패(334/335), 실패 항목과 이번 변경과의 관련성은 미식별. `npm run lint`는 `mem0_doc_search.ts`의 `no-explicit-any` 4건을 보고했으나 git 미추적이며 저장소 안에서 파일을 찾지 못했다. `npm run build`는 최종 통과를 확인하지 못했다.
+- 커밋·푸시는 하지 않았다.
+
+### 다음 작업
+
+1. `npx vitest run --reporter=verbose`로 실패 1건을 식별한다. `git stash`로 변경을 빼고 같은 테스트를 돌려 이번 변경 때문인지 가린다.
+2. lint 경고 출처 파일을 찾고, 이번 변경과 무관하면 별도 기록한다.
+3. `npm test`·`npx tsc --noEmit`·`npm run lint`·`npm run build`가 통과하면 `feat: 텔레그램 분할 메시지에 순번 표시`로 커밋하고 `main`에 푸시한다.
+4. 선택 사항(`DECIDE`): 헤더에 `기준일` 라벨 추가, 면책 문구를 첫 통에만 넣어 통 수 줄이기. 보고 포맷이 바뀌므로 사용자 결정 후 진행한다.
+5. 세션 종료 기록(`npm run continuity:check`, Linear, OpenViking)은 아직 하지 않았다.
