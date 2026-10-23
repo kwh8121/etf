@@ -6,13 +6,22 @@
 
 ## 큐 (위에서부터 실행)
 
-- [ ] `AUTO` Q-38 ER-1 추천 연구 데이터 확보 가능성 조사 (읽기 전용, Q-35 결정에 따름)
-  - 범위: 기존 저장 자료의 실제 기간·결측·기업행동·상장폐지·분류 범위를 읽기 전용으로 조사하고, KRX 자료 공식 제공 시각·분배금·KOSPI 200 총수익지수·개장가·섹터 분류 원천의 공식 문서·이용 조건을 대조한다. 산출물은 `docs/references/etf-recommendation-data-feasibility.md`다.
-  - 경계: 운영 DB는 읽기 전용 조회만, 값·비밀 미출력. 외부 원천 가입·유료 구독·자격 증명·운영 쓰기가 필요하면 조사 결과에 정확한 대상과 대안을 적고 `APPROVE`로 분리한다.
-  - 완료 조건: 타당성 보고서에 G1 통과 가능 여부 또는 구체적 차단 목록, 8.1절 구간 충족 여부, 4절 제안값의 확정·수정안을 기록한다.
+- [ ] `APPROVE` Q-40 추천 연구 원천 확보 승인 (Q-38 차단 B1~B3)
+  - 근거: [데이터 확보 가능성 조사](../references/etf-recommendation-data-feasibility.md). 현재 `KRX_API_KEY`는 지수 서비스가 401이고, 분배금·유형/섹터 분류 원천이 없다.
+  - 대상: (a) KRX Open API 지수 서비스 이용 신청 및 KOSPI 200 총수익지수 제공 여부 확인(권한·계정 변경), (b) 분배금 원천 후보 조사 결과에 따른 이용 신청(비용·약관 발생 시). 신청서에는 비밀값을 넣지 않는다.
+  - 선택지: A안 (a)만 먼저 신청하고 (b)는 조사 후 재요청(권장) / B안 (a)(b) 동시 승인 / C안 외부 원천 없이 가격수익률 예비 연구로 한정.
 
-- [ ] `WAIT` Q-39 추천 연구 데이터 계약·TDD 상세 실행안 작성 (해제: Q-38 완료)
-  - 산출물: `docs/plans/implementation/etf-recommendation-data-contract.md`, `etf-recommendation-implementation-plan.md`. G0 최종 종료(수치 고정) 후 `superpowers:writing-plans`로 작성한다.
+- [ ] `DECIDE` Q-41 가격수익률 예비 연구 경로 착수 여부 (Q-38 결과)
+  - 내용: KRX ETF API로 2019-01 이후 일별 자료 약 1,900회 읽기 호출을 로컬 파일로 백필(DB 쓰기·운영 변경 없음)하고, 후보 규칙·시점·체결·비용 로직을 `분배금 미반영 예비 결과`로 먼저 구현·검증한다. G3 근거로는 쓰지 않는다.
+  - 권장안: 착수. Q-40 승인 대기와 병행 가능하며 기능 로직을 먼저 검증한다. 호출 한도 문서 확인 후 요청 간격을 두고 실행한다.
+  - 선택지: 착수(권장) / Q-40 해소까지 대기.
+
+- [ ] `WAIT` Q-39 추천 연구 데이터 계약·TDD 상세 실행안 작성 (해제: Q-41 결정, 그리고 4절 수치 고정은 Q-40 결과)
+  - 산출물: `docs/plans/implementation/etf-recommendation-data-contract.md`, `etf-recommendation-implementation-plan.md`. `superpowers:writing-plans`로 작성한다.
+
+- [x] `DONE` Q-38 ER-1 추천 연구 데이터 확보 가능성 조사 (2026-10-23, 읽기 전용)
+  - 결과: 운영 DB는 45거래일뿐(기준 274 미달). KRX ETF API는 2010년까지 날짜별 조회가 되고 폐지 종목이 과거 응답에 포함돼 당시 종목군 복원 근거가 있다. 분배금·총수익지수(401)·유형/섹터 분류는 차단. G1 미통과.
+  - 산출물: [데이터 확보 가능성 조사](../references/etf-recommendation-data-feasibility.md). 호출은 KRX GET 읽기 전용이며 응답 원문·키는 저장하지 않았다.
 
 - [x] `DONE` Q-35 시장 초과수익 목표 ETF 추천 기능 범위 결정 (2026-10-23 사용자: D1~D5 권장안 확정)
   - 계획: [시장 초과수익 목표 ETF 추천 기능 개발 계획 v0.3](2026-10-23-etf-market-outperformance-recommendation-draft.md). 확정은 범위·연구 착수 결정이며 구현·운영 전환 승인과 구분한다.
